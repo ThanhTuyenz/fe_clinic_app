@@ -3,13 +3,14 @@ import { colors } from '../theme/colors.js'
 
 export default function PrimaryButton({ title, onPress, disabled, loading, variant = 'primary' }) {
   const isSecondary = variant === 'secondary'
+  const isBrand = variant === 'brand'
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.button,
-        isSecondary ? styles.secondary : styles.primary,
+        isSecondary ? styles.secondary : isBrand ? styles.brand : styles.primary,
         (disabled || loading) && styles.disabled,
         pressed && !disabled && !loading && styles.pressed,
       ]}
@@ -33,6 +34,9 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.primary,
+  },
+  brand: {
+    backgroundColor: colors.brandBlue,
   },
   secondary: {
     backgroundColor: colors.surface,

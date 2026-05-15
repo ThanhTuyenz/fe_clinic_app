@@ -66,7 +66,7 @@ export default function MyAppointmentsScreen({ navigation }) {
   }
 
   return (
-    <ScreenShell title="Lịch khám của tôi" subtitle="Theo dõi và quản lý các lịch hẹn đã đặt.">
+    <ScreenShell title="Lịch sử đặt khám" subtitle="Theo dõi và quản lý các lịch hẹn đã đặt.">
       <MessageBanner message={error} />
       {loading ? <Text style={styles.muted}>Đang tải lịch khám…</Text> : null}
       {!loading && !rows.length ? <Text style={styles.muted}>Bạn chưa có lịch khám nào.</Text> : null}

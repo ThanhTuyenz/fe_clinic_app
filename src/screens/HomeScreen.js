@@ -1,21 +1,17 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { listDepartments } from '../api/departments.js'
 import { listDoctors } from '../api/doctors.js'
 import DoctorAvatar from '../components/DoctorAvatar.js'
 import ScreenShell from '../components/ScreenShell.js'
-import { clearSession, getSession } from '../lib/session.js'
-import { getDoctorFullName, getUserDisplayName, getUserInitials, resolvePatientCode } from '../lib/user.js'
+import { getSession } from '../lib/session.js'
+import { getDoctorFullName } from '../lib/user.js'
 import { colors } from '../theme/colors.js'
 
 const DEPT_CARD_W = 200
 const DOCTOR_CARD_W = 168
-
-function firstName(displayName) {
-  if (!displayName || typeof displayName !== 'string') return ''
-  return displayName.trim().split(/\s+/)[0] || ''
-}
 
 export default function HomeScreen({ navigation }) {
   const [session, setSession] = useState({ token: '', user: null })
@@ -42,43 +38,34 @@ export default function HomeScreen({ navigation }) {
     }, [loadData]),
   )
 
-  async function handleLogout() {
-    await clearSession()
-    setSession({ token: '', user: null })
-  }
-
-  const displayName = getUserDisplayName(session.user)
-  const patientCode = resolvePatientCode(session.user)
-  const namePart = firstName(displayName)
-
   const quickTiles = useMemo(
     () => [
       {
         key: 'book',
         label: 'Đặt lịch',
         hint: 'Chọn bác sĩ & giờ',
-        icon: '📅',
+        iconName: 'calendar-outline',
         onPress: () => navigation.navigate('Appointment'),
       },
       {
         key: 'mine',
-        label: 'Lịch của tôi',
+        label: 'Lịch sử đặt khám',
         hint: 'Theo dõi hẹn',
-        icon: '🗓️',
+        iconName: 'receipt-outline',
         onPress: () => navigation.navigate('MyAppointmentsTab'),
       },
       {
         key: 'ai',
         label: 'Trợ lý AI',
         hint: 'Hỏi đáp nhanh',
-        icon: '💬',
+        iconName: 'chatbubble-ellipses-outline',
         onPress: () => navigation.navigate('AIChatTab'),
       },
       {
         key: 'dept',
         label: 'Khoa khám',
         hint: `${departments.length || '…'} khoa`,
-        icon: '🏥',
+        iconName: 'medkit-outline',
         onPress: () => navigation.navigate('Appointment'),
       },
     ],
@@ -87,41 +74,17 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <ScreenShell title={null} subtitle={null}>
-      <View style={styles.topRow}>
-        <View style={styles.topRowText}>
+      <View style={styles.topHeader}>
+        <Image source={require('../../assets/logo.png')} style={styles.topLogo} resizeMode="contain" />
+        <View style={styles.topHeaderText}>
           <Text style={styles.brand}>VitaCare</Text>
-          <Text style={styles.greeting}>
-            {session.token ? (namePart ? `Xin chào, ${namePart}` : 'Xin chào') : 'Xin chào'}
-          </Text>
           <Text style={styles.greetingSub}>
             {session.token ? 'Chúc bạn một ngày khỏe mạnh.' : 'Đăng nhập để quản lý lịch khám dễ dàng hơn.'}
           </Text>
         </View>
-        <Image source={require('../../assets/logo.png')} style={styles.topLogo} resizeMode="contain" />
       </View>
 
-      {session.token ? (
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getUserInitials(session.user)}</Text>
-          </View>
-          <View style={styles.profileBody}>
-            <Text style={styles.profileName} numberOfLines={1}>
-              {displayName || 'Bệnh nhân'}
-            </Text>
-            <Text style={styles.profileMeta} numberOfLines={1}>
-              Mã BN · {patientCode}
-            </Text>
-          </View>
-          <Pressable
-            onPress={handleLogout}
-            hitSlop={12}
-            style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutPressed]}
-          >
-            <Text style={styles.logout}>Đăng xuất</Text>
-          </Pressable>
-        </View>
-      ) : (
+      {!session.token ? (
         <View style={styles.authRow}>
           <Pressable
             style={({ pressed }) => [styles.authPrimary, pressed && styles.authPressed]}
@@ -136,20 +99,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.authGhostLabel}>Đăng ký</Text>
           </Pressable>
         </View>
-      )}
-
-      <Pressable
-        style={({ pressed }) => [styles.heroBanner, pressed && styles.heroPressed]}
-        onPress={() => navigation.navigate('Appointment')}
-      >
-        <Text style={styles.heroEyebrow}>Đặt lịch trực tuyến</Text>
-        <Text style={styles.heroTitle}>Lịch khám trong vài bước</Text>
-        <Text style={styles.heroText}>Chọn khoa, bác sĩ và giờ phù hợp — xác nhận ngay trên điện thoại.</Text>
-        <View style={styles.heroCta}>
-          <Text style={styles.heroCtaText}>Đặt lịch ngay</Text>
-          <Text style={styles.heroCtaArrow}>→</Text>
-        </View>
-      </Pressable>
+      ) : null}
 
       <Text style={styles.sectionHeading}>Tiện ích</Text>
       <View style={styles.tileGrid}>
@@ -159,7 +109,9 @@ export default function HomeScreen({ navigation }) {
             style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
             onPress={tile.onPress}
           >
-            <Text style={styles.tileIcon}>{tile.icon}</Text>
+            <View style={styles.tileIconWrap}>
+              <Ionicons name={tile.iconName} size={24} color={colors.primary} />
+            </View>
             <Text style={styles.tileLabel}>{tile.label}</Text>
             <Text style={styles.tileHint}>{tile.hint}</Text>
           </Pressable>
@@ -265,16 +217,16 @@ const shadowCard = Platform.select({
 })
 
 const styles = StyleSheet.create({
-  topRow: {
+  topHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 18,
-    gap: 12,
+    gap: 14,
   },
-  topRowText: {
+  topHeaderText: {
     flex: 1,
     minWidth: 0,
+    justifyContent: 'center',
   },
   brand: {
     fontSize: 12,
@@ -282,77 +234,17 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  greeting: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.4,
-    lineHeight: 30,
+    marginBottom: 4,
   },
   greetingSub: {
-    marginTop: 6,
     fontSize: 14,
     lineHeight: 20,
     color: colors.textMuted,
   },
   topLogo: {
-    width: 52,
-    height: 52,
-    marginTop: 4,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadowCard,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.infoBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: colors.primaryDark,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  profileBody: {
-    flex: 1,
-    marginLeft: 12,
-    minWidth: 0,
-  },
-  profileName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  profileMeta: {
-    color: colors.textMuted,
-    marginTop: 3,
-    fontSize: 13,
-  },
-  logoutBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  logoutPressed: {
-    opacity: 0.7,
-  },
-  logout: {
-    color: colors.danger,
-    fontWeight: '600',
-    fontSize: 14,
+    width: 80,
+    height: 80,
+    flexShrink: 0,
   },
   authRow: {
     flexDirection: 'row',
@@ -389,67 +281,6 @@ const styles = StyleSheet.create({
   },
   authGhostLabel: {
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  heroBanner: {
-    borderRadius: 22,
-    padding: 20,
-    backgroundColor: colors.primary,
-    marginBottom: 22,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primaryDark,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      },
-      android: { elevation: 6 },
-      default: {},
-    }),
-  },
-  heroPressed: {
-    opacity: 0.94,
-  },
-  heroEyebrow: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  heroTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    marginBottom: 8,
-  },
-  heroText: {
-    color: 'rgba(255,255,255,0.92)',
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 16,
-  },
-  heroCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    gap: 6,
-  },
-  heroCtaText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  heroCtaArrow: {
-    color: '#fff',
     fontWeight: '700',
     fontSize: 16,
   },
@@ -501,8 +332,13 @@ const styles = StyleSheet.create({
     opacity: 0.92,
     transform: [{ scale: 0.98 }],
   },
-  tileIcon: {
-    fontSize: 26,
+  tileIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.infoBg,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 10,
   },
   tileLabel: {

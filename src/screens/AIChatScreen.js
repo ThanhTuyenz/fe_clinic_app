@@ -79,11 +79,16 @@ export default function AIChatScreen({ navigation }) {
         state,
         signal: controller.signal,
       })
-      const reply = String(data?.reply || data?.message || data?.answer || data?.text || '').trim()
-      if (reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
+      const assistant = data?.assistant
+      if (assistant?.role && assistant?.content != null && String(assistant.content).trim()) {
+        setMessages((prev) => [...prev, { role: assistant.role, content: String(assistant.content).trim() }])
       } else {
-        setError('Máy chủ không trả nội dung trả lời. Kiểm tra backend (route /api/ai/chat và khóa dịch vụ AI).')
+        const reply = String(data?.reply || data?.message || data?.answer || data?.text || '').trim()
+        if (reply) {
+          setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
+        } else {
+          setError('Máy chủ không trả nội dung trả lời. Kiểm tra backend (route /api/ai/chat và khóa dịch vụ AI).')
+        }
       }
       if (data?.state && typeof data.state === 'object') {
         setState(data.state)

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, View } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
@@ -15,8 +14,11 @@ import PersonalInfoScreen from '../screens/PersonalInfoScreen.js'
 import ProfileScreen from '../screens/ProfileScreen.js'
 import RegisterScreen from '../screens/RegisterScreen.js'
 import VerifyOtpScreen from '../screens/VerifyOtpScreen.js'
+import SplashScreen from '../components/SplashScreen.js'
 import { getSession } from '../lib/session.js'
 import { colors } from '../theme/colors.js'
+
+const SPLASH_MIN_MS = 1600
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -43,8 +45,8 @@ function MainTabs() {
         name="MyAppointmentsTab"
         component={MyAppointmentsScreen}
         options={{
-          title: 'Lịch khám',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
+          title: 'Lịch sử đặt khám',
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -74,7 +76,7 @@ export default function AppNavigator() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const { token } = await getSession()
+      const [{ token }] = await Promise.all([getSession(), new Promise((resolve) => setTimeout(resolve, SPLASH_MIN_MS))])
       if (!cancelled) {
         setInitialRouteName(token ? 'MainTabs' : 'Login')
         setReady(true)
@@ -86,11 +88,7 @@ export default function AppNavigator() {
   }, [])
 
   if (!ready) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    )
+    return <SplashScreen />
   }
 
   return (
