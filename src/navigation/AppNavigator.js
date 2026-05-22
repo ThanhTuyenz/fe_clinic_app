@@ -6,10 +6,16 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import AIChatScreen from '../screens/AIChatScreen.js'
 import AppointmentDetailScreen from '../screens/AppointmentDetailScreen.js'
 import AppointmentScreen from '../screens/AppointmentScreen.js'
+import ChangePasswordScreen from '../screens/ChangePasswordScreen.js'
+import ChooseAppointmentDateScreen from '../screens/ChooseAppointmentDateScreen.js'
+import ChooseAppointmentSlotScreen from '../screens/ChooseAppointmentSlotScreen.js'
+import ChooseDoctorScreen from '../screens/ChooseDoctorScreen.js'
+import ChooseSpecialtyScreen from '../screens/ChooseSpecialtyScreen.js'
+import DoctorInfoScreen from '../screens/DoctorInfoScreen.js'
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen.js'
 import HomeScreen from '../screens/HomeScreen.js'
 import LoginScreen from '../screens/LoginScreen.js'
 import MyAppointmentsScreen from '../screens/MyAppointmentsScreen.js'
-import ChangePasswordScreen from '../screens/ChangePasswordScreen.js'
 import PersonalInfoScreen from '../screens/PersonalInfoScreen.js'
 import ProfileScreen from '../screens/ProfileScreen.js'
 import RegisterScreen from '../screens/RegisterScreen.js'
@@ -102,16 +108,22 @@ export default function AppNavigator() {
         }}
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Đăng nhập' }} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ title: 'Quên mật khẩu' }} />
         <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Đăng ký' }} />
         <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} options={{ title: 'Xác thực OTP' }} />
         <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} options={{ title: 'Thông tin cá nhân' }} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Đổi mật khẩu' }} />
-        <Stack.Screen name="Appointment" component={AppointmentScreen} options={{ title: 'Đặt lịch khám' }} />
+        <Stack.Screen name="ChooseDoctor" component={ChooseDoctorScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChooseSpecialty" component={ChooseSpecialtyScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChooseAppointmentDate" component={ChooseAppointmentDateScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="ChooseAppointmentSlot" component={ChooseAppointmentSlotScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="DoctorInfo" component={DoctorInfoScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Appointment" component={AppointmentScreen} options={{ headerShown: false }} />
         <Stack.Screen
           name="AppointmentDetail"
           component={AppointmentDetailScreen}
-          options={{ title: 'Chi tiết lịch khám' }}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,8 +1,9 @@
-/** @typedef {'pending' | 'confirmed' | 'done' | 'cancelled'} AppointmentStatusKind */
+/** @typedef {'booked' | 'done' | 'cancelled'} AppointmentStatusKind */
 
 const EXAMINED = new Set(['examined', 'completed', 'done'])
 
 /**
+ * Nhóm trạng thái cho UI bệnh nhân (pending / confirmed gộp thành booked).
  * @param {string | undefined | null} status
  * @returns {AppointmentStatusKind}
  */
@@ -12,8 +13,7 @@ export function getAppointmentStatusKind(status) {
     .trim()
   if (s === 'cancelled' || s === 'canceled') return 'cancelled'
   if (EXAMINED.has(s)) return 'done'
-  if (s === 'confirmed') return 'confirmed'
-  return 'pending'
+  return 'booked'
 }
 
 /**
@@ -23,22 +23,19 @@ export function getAppointmentStatusLabel(status) {
   const k = getAppointmentStatusKind(status)
   if (k === 'cancelled') return 'Đã hủy'
   if (k === 'done') return 'Đã khám'
-  if (k === 'confirmed') return 'Đã xác nhận'
-  return 'Chờ xác nhận'
+  return 'Đã đặt lịch'
 }
 
-/** Gợi ý màu badge / chú thích (không phụ thuộc theme RN) */
+/** Màu badge trạng thái (bg / chữ / viền / chấm) */
 export const appointmentStatusPalette = {
-  pending: { bg: '#fffbeb', text: '#b45309', border: '#fcd34d' },
-  confirmed: { bg: 'rgba(13, 148, 136, 0.12)', text: '#0f766e', border: '#5eead4' },
-  done: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe' },
-  cancelled: { bg: '#fef2f2', text: '#b91c1c', border: '#fecaca' },
+  booked: { bg: '#e6f7f4', text: '#0d9488', border: '#99f6e4', dot: '#14b8a6' },
+  done: { bg: '#eef4ff', text: '#1d4ed8', border: '#bfdbfe', dot: '#3b82f6' },
+  cancelled: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', dot: '#ef4444' },
 }
 
-/** Các dòng chú thích cố định cho UI */
+/** Các dòng chú thích cố định cho UI bệnh nhân */
 export const APPOINTMENT_STATUS_LEGEND = [
-  { kind: 'pending', label: 'Chờ xác nhận', hint: 'Phòng khám sẽ duyệt lịch' },
-  { kind: 'confirmed', label: 'Đã xác nhận', hint: 'Vui lòng đến đúng giờ' },
+  { kind: 'booked', label: 'Đã đặt lịch', hint: 'Lịch đã được ghi nhận. Vui lòng đến đúng giờ khám.' },
   { kind: 'done', label: 'Đã khám', hint: 'Hoàn tất buổi khám' },
   { kind: 'cancelled', label: 'Đã hủy', hint: 'Lịch không còn hiệu lực' },
 ]

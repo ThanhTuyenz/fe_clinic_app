@@ -1,930 +1,1756 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
 import {
+
   ActivityIndicator,
+
+  Alert,
+
   FlatList,
+
   Platform,
+
   Pressable,
+
   ScrollView,
+
   StatusBar,
+
   StyleSheet,
+
   Text,
+
   View,
+
 } from 'react-native'
+
 import { useFocusEffect } from '@react-navigation/native'
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { createAppointment, getAvailability, listMyAppointments } from '../api/appointments.js'
+
+import Ionicons from '@expo/vector-icons/Ionicons'
+
+import { createAppointment, getAvailability, getDoctorScheduleDates } from '../api/appointments.js'
+
 import { listDoctors } from '../api/doctors.js'
+
+import { listSpecialties } from '../api/specialties.js'
+
 import DoctorAvatar from '../components/DoctorAvatar.js'
+
 import MessageBanner from '../components/MessageBanner.js'
+
 import PrimaryButton from '../components/PrimaryButton.js'
+
 import TextField from '../components/TextField.js'
-import {
-  getAppointmentSpecialtyLine,
-  getAppointmentServiceLine,
-  getClinicTitle,
-  getTicketDisplay,
-  resolveAppointmentPatientLine,
-} from '../lib/appointmentCard.js'
-import { getAppointmentStatusKind, getAppointmentStatusLabel } from '../lib/appointmentStatus.js'
+
 import { getSession } from '../lib/session.js'
+
+import { DUPLICATE_PENDING_DOCTOR_MESSAGE, SLOT_OVERLAP_APPOINTMENT_MESSAGE, fetchBlockingForNewSlot, fetchBlockingPendingForDoctor } from '../lib/bookingConstraints.js'
+
+import { formatDoctorPriceVi } from '../lib/doctorProfileUi.js'
 import { formatDateVi, getDoctorFullName } from '../lib/user.js'
+
 import { colors } from '../theme/colors.js'
+
+
 
 const WEEKDAY_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
 
-const STATUS_FILTER_TABS = [
-  { id: 'all', label: 'Tất cả' },
-  { id: 'pending', label: 'Chờ xác nhận' },
-  { id: 'confirmed', label: 'Đã xác nhận' },
-  { id: 'done', label: 'Đã khám' },
-  { id: 'cancelled', label: 'Đã hủy' },
-]
+
 
 function toDateKey(date) {
+
   const pad = (n) => String(n).padStart(2, '0')
+
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+
 }
+
+
 
 function buildNextDays(count = 14) {
+
   const rows = []
+
   const base = new Date()
+
   base.setHours(0, 0, 0, 0)
+
   const todayKey = toDateKey(base)
+
   for (let i = 0; i < count; i += 1) {
+
     const d = new Date(base)
+
     d.setDate(base.getDate() + i)
+
     const key = toDateKey(d)
+
     rows.push({
+
       key,
+
       weekday: WEEKDAY_VI[d.getDay()],
+
       dayNum: d.getDate(),
+
       monthNum: d.getMonth() + 1,
+
       isToday: key === todayKey,
+
       labelFull: formatDateVi(d),
+
     })
+
   }
+
   return rows
+
 }
 
-function compareAppointmentsDesc(a, b) {
-  const da = String(a?.appointmentDate || a?.date || '')
-  const db = String(b?.appointmentDate || b?.date || '')
-  const byDate = db.localeCompare(da)
-  if (byDate !== 0) return byDate
-  return String(b?.startTime || '').localeCompare(String(a?.startTime || ''))
-}
 
-function getAppointmentRowId(a) {
-  return String(a?.id || a?._id || '')
-}
-
-function statusValueColor(kind) {
-  if (kind === 'pending' || kind === 'cancelled') return colors.danger
-  if (kind === 'confirmed') return colors.brandBlue
-  return colors.textMuted
-}
 
 function SectionCard({ title, hint, children }) {
+
   return (
+
     <View style={styles.sectionCard}>
+
       <View style={styles.sectionHeader}>
+
         <Text style={styles.sectionTitle}>{title}</Text>
+
         {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+
       </View>
+
       {children}
+
     </View>
+
   )
+
 }
 
-function TicketCard({ appointment, sessionUser, onOpenDetail }) {
-  const id = getAppointmentRowId(appointment)
-  const ticket = getTicketDisplay(appointment)
-  const { name: patientName } = resolveAppointmentPatientLine(appointment, sessionUser)
-  const service = getAppointmentServiceLine(appointment)
-  const specialty = getAppointmentSpecialtyLine(appointment)
-  const dateRaw = appointment?.appointmentDate || appointment?.date
-  const dateLabel = dateRaw ? formatDateVi(dateRaw) : '—'
-  const timeLabel = String(appointment?.startTime || '').trim() || '—'
-  const statusKind = getAppointmentStatusKind(appointment?.status)
-  const statusLabel = getAppointmentStatusLabel(appointment?.status)
-  const statusColor = statusValueColor(statusKind)
 
-  return (
-    <Pressable
-      onPress={() => id && onOpenDetail(id, appointment)}
-      style={({ pressed }) => [styles.ticketCard, pressed && styles.ticketCardPressed]}
-    >
-      <View style={styles.ticketTop}>
-        <Text style={styles.ticketCodeLine}>
-          <Text style={styles.ticketCodeMuted}>Mã phiếu: </Text>
-          <Text style={styles.ticketCodeBold}>{ticket}</Text>
-        </Text>
-        <Text style={styles.detailLink}>Xem chi tiết ›</Text>
-      </View>
-      <Text style={styles.patientNameCaps} numberOfLines={2}>
-        {patientName.toUpperCase()}
-      </Text>
-      <View style={styles.dashLine} />
-      <Text style={styles.clinicNameCaps}>{getClinicTitle()}</Text>
-      <View style={styles.kvRow}>
-        <Text style={styles.kvLabel}>Dịch vụ</Text>
-        <Text style={styles.kvValue}>{service}</Text>
-      </View>
-      <View style={styles.kvRow}>
-        <Text style={styles.kvLabel}>Chuyên khoa</Text>
-        <Text style={styles.kvValue}>{specialty}</Text>
-      </View>
-      <View style={styles.kvRow}>
-        <Text style={styles.kvLabel}>Ngày giờ</Text>
-        <Text style={styles.kvValue}>
-          {dateLabel} · {timeLabel}
-        </Text>
-      </View>
-      <View style={[styles.kvRow, styles.kvRowLast]}>
-        <Text style={styles.kvLabel}>Trạng thái</Text>
-        <Text style={[styles.kvStatusValue, { color: statusColor }]}>{statusLabel}</Text>
-      </View>
-    </Pressable>
-  )
-}
 
-export default function AppointmentScreen({ navigation }) {
+export default function AppointmentScreen({ navigation, route }) {
+
   const insets = useSafeAreaInsets()
+
   const days = useMemo(() => buildNextDays(), [])
+
   const [token, setToken] = useState('')
-  const [sessionUser, setSessionUser] = useState(null)
+
   const [doctors, setDoctors] = useState([])
+
   const [selectedDoctorId, setSelectedDoctorId] = useState('')
+
   const [selectedDate, setSelectedDate] = useState(days[0]?.key || '')
+
   const [slots, setSlots] = useState([])
+
+  const [slotShifts, setSlotShifts] = useState([])
+
+  const [scheduleDates, setScheduleDates] = useState([])
+
+  const [datesLoading, setDatesLoading] = useState(false)
+
   const [selectedSlot, setSelectedSlot] = useState('')
+
   const [note, setNote] = useState('')
+
   const [error, setError] = useState('')
+
   const [info, setInfo] = useState('')
+
   const [loading, setLoading] = useState(false)
+
   const [slotsLoading, setSlotsLoading] = useState(false)
-  const [myAppointments, setMyAppointments] = useState([])
-  const [myListLoading, setMyListLoading] = useState(false)
-  const [statusFilter, setStatusFilter] = useState('all')
+
+  const [screenLoading, setScreenLoading] = useState(true)
+
+  const [prefillDate, setPrefillDate] = useState('')
+
+  const [bookingMode, setBookingMode] = useState('doctor')
+
+  const [hideDoctorPicker, setHideDoctorPicker] = useState(false)
+
+  const [specialties, setSpecialties] = useState([])
+
+  const [selectedSpecialtyId, setSelectedSpecialtyId] = useState('')
+
+
 
   const loadScreen = useCallback(async () => {
+
     setError('')
+
     const session = await getSession()
+
     if (!session.token) {
-      navigation.navigate('Login', { message: 'Vui lòng đăng nhập để đặt lịch khám.' })
+
+      navigation.navigate('Login', { message: 'Vui lòng đăng nhập để đăng ký lịch khám.' })
+
       return
+
     }
+
     setToken(session.token)
-    setSessionUser(session.user || null)
+
+    setScreenLoading(true)
+
     try {
-      const doctorRows = await listDoctors()
+
+      const [doctorRows, specRows] = await Promise.all([listDoctors(), listSpecialties().catch(() => [])])
+
       setDoctors(doctorRows)
+
+      setSpecialties(Array.isArray(specRows) ? specRows : [])
+
       if (!selectedDoctorId && doctorRows[0]?.id) {
+
         setSelectedDoctorId(doctorRows[0].id)
+
       }
+
     } catch (err) {
+
       setError(err.message || 'Không tải được danh sách bác sĩ.')
+
+    } finally {
+
+      setScreenLoading(false)
+
     }
+
   }, [navigation, selectedDoctorId])
 
-  const loadSlots = useCallback(async () => {
-    if (!token || !selectedDoctorId || !selectedDate) return
-    setSlotsLoading(true)
-    setError('')
-    try {
-      const data = await getAvailability({ token, doctorId: selectedDoctorId, date: selectedDate })
-      const nextSlots = (data?.slots || data?.availableSlots || [])
-        .map((slot) => (typeof slot === 'string' ? slot : slot?.startTime))
-        .filter(Boolean)
-      setSlots(nextSlots)
-      setSelectedSlot('')
-    } catch (err) {
-      setSlots([])
-      setError(err.message || 'Không lấy được khung giờ.')
-    } finally {
-      setSlotsLoading(false)
+
+
+  const loadScheduleDates = useCallback(async () => {
+
+    if (!token || !selectedDoctorId) {
+
+      setScheduleDates([])
+
+      return
+
     }
+
+    setDatesLoading(true)
+
+    try {
+
+      const from = days[0]?.key
+
+      const to = days[days.length - 1]?.key
+
+      const dates = await getDoctorScheduleDates({ token, doctorId: selectedDoctorId, from, to })
+
+      setScheduleDates(dates)
+
+      if (prefillDate && dates.includes(prefillDate)) {
+        setSelectedDate(prefillDate)
+        setPrefillDate('')
+      } else if (dates.length && (!selectedDate || !dates.includes(selectedDate))) {
+        setSelectedDate(dates[0])
+      }
+
+    } catch {
+
+      setScheduleDates([])
+
+    } finally {
+
+      setDatesLoading(false)
+
+    }
+
+  }, [days, prefillDate, selectedDate, selectedDoctorId, token])
+
+
+
+  const loadSlots = useCallback(async () => {
+
+    if (!token || !selectedDoctorId || !selectedDate) return
+
+    setSlotsLoading(true)
+
+    setError('')
+
+    try {
+
+      const data = await getAvailability({ token, doctorId: selectedDoctorId, date: selectedDate })
+
+      setSlots(data.slots || [])
+
+      setSlotShifts(data.shifts || [])
+
+      setSelectedSlot('')
+
+    } catch (err) {
+
+      setSlots([])
+
+      setSlotShifts([])
+
+      setError(err.message || 'Không lấy được khung giờ.')
+
+    } finally {
+
+      setSlotsLoading(false)
+
+    }
+
   }, [selectedDate, selectedDoctorId, token])
 
-  const loadMyAppointments = useCallback(async () => {
-    if (!token) {
-      setMyAppointments([])
-      setMyListLoading(false)
-      return
-    }
-    setMyListLoading(true)
-    try {
-      const rows = await listMyAppointments({ token })
-      const sorted = Array.isArray(rows) ? [...rows].sort(compareAppointmentsDesc) : []
-      setMyAppointments(sorted.slice(0, 80))
-    } catch {
-      setMyAppointments([])
-    } finally {
-      setMyListLoading(false)
-    }
-  }, [token])
 
-  const filteredAppointments = useMemo(() => {
-    if (statusFilter === 'all') return myAppointments
-    return myAppointments.filter((a) => getAppointmentStatusKind(a?.status) === statusFilter)
-  }, [myAppointments, statusFilter])
 
   useFocusEffect(
     useCallback(() => {
+      const doctorId = route.params?.doctorId
+      const appointmentDate = route.params?.appointmentDate
+      const mode = route.params?.bookingMode
+      if (doctorId) setSelectedDoctorId(String(doctorId))
+      if (appointmentDate) {
+        const key = String(appointmentDate).slice(0, 10)
+        if (/^\d{4}-\d{2}-\d{2}$/.test(key)) setPrefillDate(key)
+      }
+      if (mode === 'specialty' || mode === 'date' || mode === 'doctor') {
+        setBookingMode(mode)
+        if (mode !== 'specialty') setSelectedSpecialtyId('')
+      }
+      if (mode === 'specialty' || mode === 'date') {
+        setHideDoctorPicker(false)
+      } else if (mode === 'doctor' && !route.params?.hideDoctorPicker) {
+        setHideDoctorPicker(false)
+      }
+      if (route.params?.hideDoctorPicker) {
+        setHideDoctorPicker(true)
+      }
+      if (doctorId || appointmentDate || mode || route.params?.hideDoctorPicker) {
+        navigation.setParams({
+          doctorId: undefined,
+          appointmentDate: undefined,
+          bookingMode: undefined,
+          hideDoctorPicker: undefined,
+        })
+      }
+    }, [navigation, route.params?.appointmentDate, route.params?.bookingMode, route.params?.doctorId, route.params?.hideDoctorPicker]),
+  )
+
+  useFocusEffect(
+
+    useCallback(() => {
+
       loadScreen()
+
     }, [loadScreen]),
+
   )
 
+
+
   useFocusEffect(
+
     useCallback(() => {
+
+      loadScheduleDates()
+
+    }, [loadScheduleDates]),
+
+  )
+
+
+
+  useFocusEffect(
+
+    useCallback(() => {
+
       loadSlots()
+
     }, [loadSlots]),
+
   )
 
-  useFocusEffect(
-    useCallback(() => {
-      loadMyAppointments()
-    }, [loadMyAppointments]),
-  )
 
-  const openDetail = useCallback(
-    (appointmentId, appointment) => {
-      navigation.navigate('AppointmentDetail', { appointmentId, appointment })
-    },
-    [navigation],
-  )
+
+  const visibleDays = useMemo(() => {
+
+    if (!scheduleDates.length) return days
+
+    const set = new Set(scheduleDates)
+
+    return days.filter((d) => set.has(d.key))
+
+  }, [days, scheduleDates])
+
+
+
+  const filteredDoctors = useMemo(() => {
+
+    if (!selectedSpecialtyId) return doctors
+
+    const spec = specialties.find((s) => String(s.id || s._id || '') === selectedSpecialtyId)
+
+    const specName = String(spec?.name || spec?.specialtyName || '').trim().toLowerCase()
+
+    return doctors.filter((d) => {
+
+      const sid = String(d.specialtyID || d.specialtyId || d.specialty_id || '').trim()
+
+      if (sid && sid === selectedSpecialtyId) return true
+
+      if (!specName) return false
+
+      const dn = String(d.specialtyName || d.specialty || '').trim().toLowerCase()
+
+      if (!dn) return false
+
+      return dn === specName || dn.includes(specName) || specName.includes(dn)
+
+    })
+
+  }, [doctors, selectedSpecialtyId, specialties])
+
+
+
+  const specialtyChipData = useMemo(() => {
+
+    const rows = specialties
+
+      .map((s) => ({
+
+        id: String(s.id || s._id || ''),
+
+        name: String(s.name || s.specialtyName || '').trim() || '—',
+
+      }))
+
+      .filter((s) => s.id)
+
+    return [{ id: '', name: 'Tất cả' }, ...rows]
+
+  }, [specialties])
+
+
+
+  const heroTitleText = useMemo(() => {
+
+    if (hideDoctorPicker && bookingMode === 'doctor') return 'Chọn ngày khám'
+
+    return 'Đăng ký lịch khám'
+
+  }, [hideDoctorPicker, bookingMode])
+
+
+
+  const heroSubText = useMemo(() => {
+
+    if (hideDoctorPicker && bookingMode === 'doctor') {
+
+      return 'Chọn ngày còn lịch trống, sau đó chọn khung giờ.'
+
+    }
+
+    if (bookingMode === 'specialty') return 'Chọn chuyên khoa, bác sĩ, ngày và giờ phù hợp'
+
+    if (bookingMode === 'date') return 'Chọn ngày trước, sau đó chọn bác sĩ và giờ'
+
+    return 'Chọn bác sĩ, ngày và giờ phù hợp'
+
+  }, [bookingMode, hideDoctorPicker])
+
+
+
+  useEffect(() => {
+
+    const ids = new Set(filteredDoctors.map((d) => d.id))
+
+    if (selectedDoctorId && !ids.has(selectedDoctorId)) {
+
+      setSelectedDoctorId(filteredDoctors[0]?.id || '')
+
+    }
+
+  }, [filteredDoctors, selectedDoctorId])
+
+
 
   async function handleBook() {
+
     setError('')
+
     setInfo('')
+
     if (!selectedDoctorId || !selectedDate || !selectedSlot) {
+
       setError('Vui lòng chọn bác sĩ, ngày và khung giờ.')
+
       return
+
     }
-    setLoading(true)
+
     try {
-      const data = await createAppointment({
-        token,
+
+      const block = await fetchBlockingForNewSlot(token, {
+
         doctorId: selectedDoctorId,
+
         appointmentDate: selectedDate,
+
         startTime: selectedSlot,
-        note,
+
       })
-      const appointment = data?.appointment || null
-      const appointmentId = appointment?.id || appointment?._id || data?.id
-      setInfo('Đặt lịch thành công.')
-      loadMyAppointments()
-      if (appointmentId) {
-        navigation.navigate('AppointmentDetail', { appointmentId, appointment })
+
+      if (block?.kind === 'doctor') {
+
+        Alert.alert('Thông báo', DUPLICATE_PENDING_DOCTOR_MESSAGE)
+
+        return
+
       }
-    } catch (err) {
-      setError(err.message || 'Đặt lịch thất bại.')
-    } finally {
-      setLoading(false)
+
+      if (block?.kind === 'overlap') {
+
+        Alert.alert('Thông báo', SLOT_OVERLAP_APPOINTMENT_MESSAGE)
+
+        return
+
+      }
+
+    } catch {
+
+      /* bỏ qua */
+
     }
+
+    setLoading(true)
+
+    try {
+
+      const data = await createAppointment({
+
+        token,
+
+        doctorId: selectedDoctorId,
+
+        appointmentDate: selectedDate,
+
+        startTime: selectedSlot,
+
+        note,
+
+      })
+
+      const appointment = data?.appointment || null
+
+      const appointmentId = appointment?.id || appointment?._id || data?.id
+
+      if (appointmentId) {
+        navigation.navigate('AppointmentDetail', {
+          appointmentId,
+          appointment,
+          bookingSuccess: true,
+          successMessage: data?.message || 'Đăng ký lịch khám thành công!',
+        })
+      } else {
+        setInfo(data?.message || 'Đăng ký lịch khám thành công.')
+      }
+
+    } catch (err) {
+
+      const msg = err?.data?.message || err.message || 'Đăng ký lịch thất bại.'
+      setError(msg)
+
+    } finally {
+
+      setLoading(false)
+
+    }
+
   }
+
+
 
   const selectedDoctor = doctors.find((d) => d.id === selectedDoctorId)
 
-  return (
-    <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.brandBlue} />
-      <View style={[styles.hero, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.heroTop}>
-          {navigation.canGoBack() ? (
-            <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={12}>
-              <Text style={styles.backIcon}>‹</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.backBtnPlaceholder} />
-          )}
-          <Text style={styles.heroTitle} numberOfLines={2}>
-            Danh sách phiếu khám bệnh
-          </Text>
-          <View style={styles.backBtnPlaceholder} />
-        </View>
-      </View>
-
-      <View style={styles.filterBar}>
-        <ScrollView
+  function renderSpecialtyChips() {
+    return (
+      <SectionCard title="Chuyên khoa" hint="Chọn chuyên khoa để lọc bác sĩ">
+        <FlatList
           horizontal
+          data={specialtyChipData}
+          keyExtractor={(item, index) => String(item.id || `all-${index}`)}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsRow}
-        >
-          {STATUS_FILTER_TABS.map((tab) => {
-            const active = statusFilter === tab.id
+          contentContainerStyle={styles.hRow}
+          renderItem={({ item }) => {
+            const active = selectedSpecialtyId === item.id
             return (
               <Pressable
-                key={tab.id}
-                onPress={() => setStatusFilter(tab.id)}
+                onPress={() => setSelectedSpecialtyId(item.id)}
                 style={({ pressed }) => [
-                  styles.filterChip,
-                  active ? styles.filterChipActive : styles.filterChipIdle,
-                  pressed && styles.filterChipPressed,
+                  styles.specialtyChip,
+                  active && styles.specialtyChipActive,
+                  pressed && styles.specialtyChipPressed,
                 ]}
               >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tab.label}</Text>
+                <Text style={[styles.specialtyChipText, active && styles.specialtyChipTextActive]} numberOfLines={2}>
+                  {item.name}
+                </Text>
               </Pressable>
             )
-          })}
-        </ScrollView>
-        {!myListLoading ? (
-          <Text style={styles.filterHint} numberOfLines={1}>
-            {filteredAppointments.length} phiếu
-            {statusFilter !== 'all' ? ` · ${STATUS_FILTER_TABS.find((t) => t.id === statusFilter)?.label || ''}` : ''}
-          </Text>
-        ) : null}
-      </View>
+          }}
+        />
+      </SectionCard>
+    )
+  }
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 28 }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <MessageBanner message={info} tone="info" />
-        <MessageBanner message={error} />
-
-        <View style={styles.listSection}>
-          {myListLoading ? (
-            <View style={styles.listLoading}>
-              <ActivityIndicator color={colors.brandBlue} size="small" />
-              <Text style={styles.listLoadingText}>Đang tải danh sách…</Text>
-            </View>
-          ) : filteredAppointments.length ? (
-            filteredAppointments.map((a, index) => (
-              <TicketCard
-                key={getAppointmentRowId(a) || `appt-${index}`}
-                appointment={a}
-                sessionUser={sessionUser}
-                onOpenDetail={openDetail}
-              />
-            ))
-          ) : (
-            <View style={styles.listEmpty}>
-              <Text style={styles.listEmptyTitle}>Không có phiếu phù hợp</Text>
-              <Text style={styles.listEmptySub}>Đổi bộ lọc trạng thái hoặc đặt lịch mới bên dưới.</Text>
-            </View>
-          )}
+  function renderDoctorSummary() {
+    if (!selectedDoctor) return null
+    const spec = String(selectedDoctor.specialtyName || selectedDoctor.specialty || '').trim() || '—'
+    return (
+      <SectionCard title="Bác sĩ" hint="Bạn có thể đổi người khám nếu cần">
+        <View style={styles.doctorSummaryRow}>
+          <DoctorAvatar doctor={selectedDoctor} size={48} style={styles.doctorSummaryAvatar} />
+          <View style={styles.doctorSummaryMeta}>
+            <Text style={styles.doctorSummaryName} numberOfLines={2}>
+              {getDoctorFullName(selectedDoctor)}
+            </Text>
+            <Text style={styles.doctorSummarySpec} numberOfLines={2}>
+              {spec}
+            </Text>
+            {formatDoctorPriceVi(selectedDoctor) ? (
+              <Text style={styles.doctorSummaryPrice}>{formatDoctorPriceVi(selectedDoctor)}</Text>
+            ) : null}
+          </View>
+          <Pressable onPress={() => navigation.navigate('ChooseDoctor')} hitSlop={8}>
+            <Text style={styles.doctorSummaryLink}>Đổi bác sĩ</Text>
+          </Pressable>
         </View>
+      </SectionCard>
+    )
+  }
 
-        <Text style={styles.bookingSectionTitle}>Đặt lịch khám mới</Text>
-        <Text style={styles.bookingSectionSub}>Chọn bác sĩ, ngày khám và khung giờ phù hợp.</Text>
-
-        <SectionCard title="Bác sĩ" hint="Vuốt ngang để xem thêm">
-          {!doctors.length ? (
-            <Text style={styles.emptyInline}>Chưa có bác sĩ trong hệ thống.</Text>
-          ) : (
-            <FlatList
-              horizontal
-              data={doctors}
-              keyExtractor={(item, index) => String(item.id || item._id || index)}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.hRow}
-              renderItem={({ item }) => {
-                const active = item.id === selectedDoctorId
-                return (
-                  <Pressable
-                    onPress={() => setSelectedDoctorId(item.id)}
-                    style={({ pressed }) => [
-                      styles.doctorCard,
-                      active && styles.doctorCardActive,
-                      pressed && styles.doctorCardPressed,
-                    ]}
-                  >
-                    <DoctorAvatar doctor={item} size={44} style={active ? styles.doctorAvatarRing : undefined} />
-                    <Text style={[styles.doctorName, active && styles.doctorNameActive]} numberOfLines={2}>
-                      {getDoctorFullName(item)}
-                    </Text>
-                  </Pressable>
-                )
-              }}
-            />
-          )}
-        </SectionCard>
-
-        <SectionCard title="Ngày khám" hint={selectedDoctor ? `Với ${getDoctorFullName(selectedDoctor)}` : undefined}>
+  function renderDoctorSection() {
+    return (
+      <SectionCard
+        title="Bác sĩ"
+        hint={bookingMode === 'date' ? 'Chọn bác sĩ phù hợp ngày đã chọn' : 'Vuốt ngang để xem thêm'}
+      >
+        {!doctors.length ? (
+          <Text style={styles.emptyInline}>Chưa có bác sĩ trong hệ thống.</Text>
+        ) : !filteredDoctors.length ? (
+          <Text style={styles.emptyInline}>Không có bác sĩ cho chuyên khoa này. Chọn chuyên khoa khác.</Text>
+        ) : (
           <FlatList
             horizontal
-            data={days}
-            keyExtractor={(item) => item.key}
+            data={filteredDoctors}
+            keyExtractor={(item, index) => String(item.id || item._id || index)}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.hRow}
             renderItem={({ item }) => {
-              const active = item.key === selectedDate
+              const active = item.id === selectedDoctorId
               return (
                 <Pressable
-                  onPress={() => setSelectedDate(item.key)}
+                  onPress={async () => {
+                    if (!token) return
+                    try {
+                      const hit = await fetchBlockingPendingForDoctor(token, String(item.id || item._id || ''))
+                      if (hit) {
+                        Alert.alert('Thông báo', DUPLICATE_PENDING_DOCTOR_MESSAGE)
+                        return
+                      }
+                    } catch {
+                      /* bỏ qua */
+                    }
+                    setSelectedDoctorId(item.id)
+                  }}
                   style={({ pressed }) => [
-                    styles.dateChip,
-                    active && styles.dateChipActive,
-                    pressed && styles.dateChipPressed,
+                    styles.doctorCard,
+                    active && styles.doctorCardActive,
+                    pressed && styles.doctorCardPressed,
                   ]}
                 >
-                  <Text style={[styles.dateChipTop, active && styles.dateChipTopActive]}>
-                    {item.isToday ? 'Hôm nay' : item.weekday}
+                  <DoctorAvatar doctor={item} size={44} style={active ? styles.doctorAvatarRing : undefined} />
+                  <Text style={[styles.doctorName, active && styles.doctorNameActive]} numberOfLines={2}>
+                    {getDoctorFullName(item)}
                   </Text>
-                  <Text style={[styles.dateChipDay, active && styles.dateChipDayActive]}>
-                    {item.dayNum}/{item.monthNum}
-                  </Text>
-                  <Text style={[styles.dateChipSub, active && styles.dateChipSubActive]} numberOfLines={1}>
-                    {item.labelFull}
-                  </Text>
+                  {formatDoctorPriceVi(item) ? (
+                    <Text style={[styles.doctorPrice, active && styles.doctorPriceActive]} numberOfLines={1}>
+                      {formatDoctorPriceVi(item)}
+                    </Text>
+                  ) : null}
                 </Pressable>
               )
             }}
           />
-        </SectionCard>
+        )}
+      </SectionCard>
+    )
+  }
 
-        <SectionCard title="Khung giờ" hint={slotsLoading || !slots.length ? undefined : `${slots.length} suất trống`}>
-          {slotsLoading ? (
-            <View style={styles.slotsLoading}>
-              <ActivityIndicator color={colors.brandBlue} size="small" />
-              <Text style={styles.slotsLoadingText}>Đang tải lịch trống…</Text>
-            </View>
-          ) : slots.length ? (
-            <View style={styles.slotGrid}>
-              {slots.map((slot) => {
-                const active = slot === selectedSlot
-                return (
-                  <Pressable
-                    key={slot}
-                    onPress={() => setSelectedSlot(slot)}
-                    style={({ pressed }) => [
-                      styles.slot,
-                      active && styles.slotActive,
-                      pressed && styles.slotPressed,
-                    ]}
-                  >
-                    <Text style={[styles.slotText, active && styles.slotTextActive]}>{slot}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
+  function renderDateSection() {
+    return (
+      <SectionCard
+        title="Ngày khám"
+        hint={
+          datesLoading
+            ? 'Đang tải lịch…'
+            : selectedDoctor
+              ? `Với ${getDoctorFullName(selectedDoctor)}`
+              : bookingMode === 'date'
+                ? 'Sau đó chọn bác sĩ phù hợp'
+                : undefined
+        }
+      >
+        {!datesLoading && scheduleDates.length > 0 && !visibleDays.length ? (
+          <Text style={styles.emptyInline}>Bác sĩ không có lịch trong 28 ngày tới.</Text>
+        ) : null}
+        <FlatList
+          horizontal
+          data={visibleDays.length ? visibleDays : days}
+          keyExtractor={(item) => item.key}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.hRow}
+          renderItem={({ item }) => {
+            const active = item.key === selectedDate
+            return (
+              <Pressable
+                onPress={() => setSelectedDate(item.key)}
+                style={({ pressed }) => [
+                  styles.dateChip,
+                  active && styles.dateChipActive,
+                  pressed && styles.dateChipPressed,
+                ]}
+              >
+                <Text style={[styles.dateChipTop, active && styles.dateChipTopActive]}>
+                  {item.isToday ? 'Hôm nay' : item.weekday}
+                </Text>
+                <Text style={[styles.dateChipDay, active && styles.dateChipDayActive]}>
+                  {item.dayNum}/{item.monthNum}
+                </Text>
+                <Text style={[styles.dateChipSub, active && styles.dateChipSubActive]} numberOfLines={1}>
+                  {item.labelFull}
+                </Text>
+              </Pressable>
+            )
+          }}
+        />
+      </SectionCard>
+    )
+  }
+
+
+
+  return (
+
+    <View style={styles.root}>
+
+      <StatusBar barStyle="light-content" backgroundColor={colors.brandBlue} />
+
+      <View style={[styles.hero, { paddingTop: insets.top + 8 }]}>
+
+        <View style={styles.heroRow}>
+
+          {navigation.canGoBack() ? (
+
+            <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBtn}>
+
+              <Ionicons name="chevron-back" size={26} color="#fff" />
+
+            </Pressable>
+
           ) : (
-            <View style={styles.slotsEmpty}>
-              <Text style={styles.slotsEmptyTitle}>Không còn khung giờ</Text>
-              <Text style={styles.slotsEmptySub}>Thử chọn ngày khác hoặc bác sĩ khác.</Text>
-            </View>
-          )}
-        </SectionCard>
 
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Ghi chú</Text>
-            <Text style={styles.sectionHint}>Tùy chọn</Text>
+            <View style={styles.backBtnPlaceholder} />
+
+          )}
+
+          <View style={styles.heroTextWrap}>
+
+            <Text style={styles.heroTitle}>{heroTitleText}</Text>
+
+            <Text style={styles.heroSub}>{heroSubText}</Text>
+
           </View>
-          <TextField
-            label=""
-            value={note}
-            onChangeText={setNote}
-            placeholder="Triệu chứng, thuốc đang dùng hoặc yêu cầu khám"
-            multiline
-          />
+
+          <Pressable onPress={() => navigation.navigate('MainTabs')} hitSlop={12} style={styles.backBtn} accessibilityLabel="Về trang chủ">
+
+            <Ionicons name="home-outline" size={24} color="#fff" />
+
+          </Pressable>
+
         </View>
 
-        <PrimaryButton
-          title={loading ? 'Đang đặt lịch…' : 'Xác nhận đặt lịch'}
-          onPress={handleBook}
-          loading={loading}
-          variant="brand"
-        />
+      </View>
+
+
+
+      <ScrollView
+
+        style={styles.scroll}
+
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 28 }]}
+
+        keyboardShouldPersistTaps="handled"
+
+        showsVerticalScrollIndicator={false}
+
+      >
+
+        <MessageBanner message={info} tone="info" />
+
+        <MessageBanner message={error} />
+
+
+
+        {screenLoading ? (
+
+          <View style={styles.screenLoading}>
+
+            <ActivityIndicator color={colors.brandBlue} size="large" />
+
+            <Text style={styles.screenLoadingText}>Đang tải…</Text>
+
+          </View>
+
+        ) : (
+
+          <>
+
+            {bookingMode === 'specialty' ? renderSpecialtyChips() : null}
+
+            {bookingMode === 'date' ? (
+
+              <>
+
+                {renderDateSection()}
+
+                {renderDoctorSection()}
+
+              </>
+
+            ) : hideDoctorPicker && bookingMode === 'doctor' ? (
+
+              <>
+
+                {renderDateSection()}
+
+                {renderDoctorSummary()}
+
+              </>
+
+            ) : (
+
+              <>
+
+                {renderDoctorSection()}
+
+                {renderDateSection()}
+
+              </>
+
+            )}
+
+
+
+            <SectionCard title="Khung giờ" hint={slotsLoading || !slots.length ? undefined : `${slots.length} suất trống`}>
+
+              {slotsLoading ? (
+
+                <View style={styles.slotsLoading}>
+
+                  <ActivityIndicator color={colors.brandBlue} size="small" />
+
+                  <Text style={styles.slotsLoadingText}>Đang tải lịch trống…</Text>
+
+                </View>
+
+              ) : slotShifts.length ? (
+
+                <View style={styles.shiftBlocks}>
+
+                  {slotShifts.map((shift) => (
+
+                    <View key={shift.shiftID || shift.name} style={styles.shiftBlock}>
+
+                      <Text style={styles.shiftLabel}>
+
+                        {shift.name}
+
+                        {shift.startTime && shift.endTime ? ` · ${shift.startTime}–${shift.endTime}` : ''}
+
+                      </Text>
+
+                      <View style={styles.slotGrid}>
+
+                        {(shift.slots || []).map((slot) => {
+
+                          const active = slot === selectedSlot
+
+                          return (
+
+                            <Pressable
+
+                              key={`${shift.shiftID}-${slot}`}
+
+                              onPress={() => setSelectedSlot(slot)}
+
+                              style={({ pressed }) => [
+
+                                styles.slot,
+
+                                active && styles.slotActive,
+
+                                pressed && styles.slotPressed,
+
+                              ]}
+
+                            >
+
+                              <Text style={[styles.slotText, active && styles.slotTextActive]}>{slot}</Text>
+
+                            </Pressable>
+
+                          )
+
+                        })}
+
+                      </View>
+
+                    </View>
+
+                  ))}
+
+                </View>
+
+              ) : slots.length ? (
+
+                <View style={styles.slotGrid}>
+
+                  {slots.map((slot) => {
+
+                    const active = slot === selectedSlot
+
+                    return (
+
+                      <Pressable
+
+                        key={slot}
+
+                        onPress={() => setSelectedSlot(slot)}
+
+                        style={({ pressed }) => [
+
+                          styles.slot,
+
+                          active && styles.slotActive,
+
+                          pressed && styles.slotPressed,
+
+                        ]}
+
+                      >
+
+                        <Text style={[styles.slotText, active && styles.slotTextActive]}>{slot}</Text>
+
+                      </Pressable>
+
+                    )
+
+                  })}
+
+                </View>
+
+              ) : (
+
+                <View style={styles.slotsEmpty}>
+
+                  <Text style={styles.slotsEmptyTitle}>Không còn khung giờ</Text>
+
+                  <Text style={styles.slotsEmptySub}>
+
+                    {scheduleDates.length && !scheduleDates.includes(selectedDate)
+
+                      ? 'Bác sĩ không làm việc ngày này. Chọn ngày khác.'
+
+                      : 'Thử chọn ngày khác hoặc bác sĩ khác.'}
+
+                  </Text>
+
+                </View>
+
+              )}
+
+            </SectionCard>
+
+
+
+            <View style={styles.sectionCard}>
+
+              <View style={styles.sectionHeader}>
+
+                <Text style={styles.sectionTitle}>Ghi chú</Text>
+
+                <Text style={styles.sectionHint}>Tùy chọn</Text>
+
+              </View>
+
+              <TextField
+
+                label=""
+
+                value={note}
+
+                onChangeText={setNote}
+
+                placeholder="Triệu chứng, thuốc đang dùng hoặc yêu cầu khám"
+
+                multiline
+
+              />
+
+            </View>
+
+
+
+            <PrimaryButton
+
+              title={loading ? 'Đang đăng ký…' : 'Xác nhận đăng ký lịch khám'}
+
+              onPress={handleBook}
+
+              loading={loading}
+
+              variant="brand"
+
+            />
+
+
+
+            <Pressable
+
+              onPress={() => navigation.navigate('MainTabs', { screen: 'MyAppointmentsTab' })}
+
+              style={({ pressed }) => [styles.historyLink, pressed && styles.historyLinkPressed]}
+
+            >
+
+              <Text style={styles.historyLinkText}>Xem lịch sử đặt khám</Text>
+
+            </Pressable>
+
+          </>
+
+        )}
+
       </ScrollView>
+
     </View>
+
   )
+
 }
 
+
+
 const cardShadow = Platform.select({
+
   ios: {
+
     shadowColor: '#0f172a',
+
     shadowOffset: { width: 0, height: 4 },
+
     shadowOpacity: 0.08,
+
     shadowRadius: 10,
+
   },
+
   android: { elevation: 2 },
+
   default: {},
+
 })
 
+
+
 const styles = StyleSheet.create({
+
   root: {
+
     flex: 1,
+
     backgroundColor: colors.pageCanvas,
+
   },
+
   hero: {
+
     backgroundColor: colors.brandBlue,
+
     paddingBottom: 16,
+
     paddingHorizontal: 12,
-    overflow: 'hidden',
+
   },
-  heroTop: {
+
+  heroRow: {
+
     flexDirection: 'row',
+
     alignItems: 'center',
+
     justifyContent: 'space-between',
-    zIndex: 1,
+
   },
+
   backBtn: {
+
     width: 40,
+
     height: 40,
+
     alignItems: 'center',
+
     justifyContent: 'center',
+
   },
+
   backBtnPlaceholder: {
+
     width: 40,
+
     height: 40,
+
   },
-  backIcon: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '300',
-    marginTop: -4,
-  },
-  heroTitle: {
+
+  heroTextWrap: {
+
     flex: 1,
-    textAlign: 'center',
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+
+    alignItems: 'center',
+
     paddingHorizontal: 4,
+
   },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-  },
-  filterBar: {
-    backgroundColor: colors.surface,
-    paddingTop: 12,
-    paddingBottom: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: { elevation: 2 },
-      default: {},
-    }),
-  },
-  filterHint: {
-    marginTop: 10,
-    fontSize: 12,
-    color: '#8b95a1',
-    fontWeight: '500',
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingRight: 4,
-  },
-  filterChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-    marginRight: 2,
-  },
-  filterChipIdle: {
-    backgroundColor: '#eef1f5',
-  },
-  filterChipActive: {
-    backgroundColor: colors.brandBlue,
-  },
-  filterChipPressed: {
-    opacity: 0.88,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5c6670',
-  },
-  filterChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  listSection: {
-    gap: 12,
-    marginBottom: 8,
-  },
-  listLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 24,
-    justifyContent: 'center',
-  },
-  listLoadingText: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  listEmpty: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  listEmptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  listEmptySub: {
-    marginTop: 6,
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  ticketCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.9)',
-    ...cardShadow,
-  },
-  ticketCardPressed: {
-    opacity: 0.96,
-  },
-  ticketTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 10,
-  },
-  ticketCodeLine: {
-    flex: 1,
-    fontSize: 14,
-  },
-  ticketCodeMuted: {
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  ticketCodeBold: {
-    color: colors.text,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  detailLink: {
-    color: colors.brandBlue,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  patientNameCaps: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: 0.2,
-    lineHeight: 24,
-  },
-  dashLine: {
-    height: 1,
-    backgroundColor: '#cfd8e3',
-    marginVertical: 12,
-    borderStyle: 'dashed',
-  },
-  clinicNameCaps: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.brandBlue,
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  kvRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 16,
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  kvRowLast: {
-    borderBottomWidth: 0,
-    paddingTop: 8,
-  },
-  kvLabel: {
-    width: 96,
-    fontSize: 14,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  kvValue: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '600',
-    textAlign: 'right',
-    lineHeight: 20,
-  },
-  kvStatusValue: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '800',
-    textAlign: 'right',
-  },
-  bookingSectionTitle: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.brandBlue,
-  },
-  bookingSectionSub: {
-    marginTop: 4,
-    marginBottom: 12,
-    fontSize: 14,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  sectionCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.95)',
-    ...cardShadow,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
-  },
-  sectionTitle: {
+
+  heroTitle: {
+
+    color: '#fff',
+
     fontSize: 17,
+
     fontWeight: '700',
-    color: colors.text,
-    letterSpacing: -0.2,
-  },
-  sectionHint: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '500',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-  hRow: {
-    gap: 10,
-    paddingRight: 4,
-  },
-  emptyInline: {
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  doctorCard: {
-    width: 132,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.pageCanvas,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  doctorCardActive: {
-    borderColor: colors.brandBlue,
-    backgroundColor: colors.brandBlueSoft,
-  },
-  doctorCardPressed: {
-    opacity: 0.92,
-  },
-  doctorAvatarRing: {
-    borderWidth: 2,
-    borderColor: colors.brandBlue,
-  },
-  doctorName: {
-    marginTop: 8,
+
     textAlign: 'center',
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 13,
-    lineHeight: 17,
+
   },
-  doctorNameActive: {
-    color: colors.brandBlueDark,
-  },
-  dateChip: {
-    minWidth: 76,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.pageCanvas,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginRight: 10,
-  },
-  dateChipActive: {
-    borderColor: colors.brandBlue,
-    backgroundColor: colors.brandBlueSoft,
-  },
-  dateChipPressed: {
-    opacity: 0.92,
-  },
-  dateChipTop: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  dateChipTopActive: {
-    color: colors.brandBlueDark,
-  },
-  dateChipDay: {
+
+  heroSub: {
+
     marginTop: 4,
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
+
+    color: 'rgba(255,255,255,0.88)',
+
+    fontSize: 13,
+
+    textAlign: 'center',
+
   },
-  dateChipDayActive: {
-    color: colors.brandBlueDark,
+
+  scroll: {
+
+    flex: 1,
+
   },
-  dateChipSub: {
-    marginTop: 2,
-    fontSize: 10,
-    color: colors.textMuted,
-    maxWidth: 88,
-  },
-  dateChipSubActive: {
-    color: colors.brandBlueDark,
-    opacity: 0.85,
-  },
-  slotsLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  slotsLoadingText: {
-    color: colors.textMuted,
-    fontSize: 14,
-  },
-  slotGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  slot: {
-    minWidth: 76,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.pageCanvas,
-    alignItems: 'center',
-  },
-  slotActive: {
-    borderColor: colors.brandBlue,
-    backgroundColor: colors.brandBlueSoft,
-  },
-  slotPressed: {
-    opacity: 0.9,
-  },
-  slotText: {
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 15,
-    letterSpacing: -0.2,
-  },
-  slotTextActive: {
-    color: colors.brandBlueDark,
-    fontWeight: '700',
-  },
-  slotsEmpty: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    borderRadius: 14,
-    paddingVertical: 20,
+
+  scrollContent: {
+
     paddingHorizontal: 16,
+
+    paddingTop: 16,
+
+    gap: 12,
+
+  },
+
+  screenLoading: {
+
     alignItems: 'center',
-    backgroundColor: colors.pageCanvas,
+
+    paddingVertical: 48,
+
+    gap: 12,
+
   },
-  slotsEmptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  slotsEmptySub: {
-    marginTop: 4,
-    fontSize: 13,
+
+  screenLoadingText: {
+
     color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
+
+    fontSize: 14,
+
   },
+
+  sectionCard: {
+
+    backgroundColor: colors.surface,
+
+    borderRadius: 16,
+
+    padding: 16,
+
+    borderWidth: 1,
+
+    borderColor: 'rgba(226, 232, 240, 0.95)',
+
+    ...cardShadow,
+
+  },
+
+  sectionHeader: {
+
+    flexDirection: 'row',
+
+    alignItems: 'baseline',
+
+    justifyContent: 'space-between',
+
+    gap: 12,
+
+    marginBottom: 14,
+
+  },
+
+  sectionTitle: {
+
+    fontSize: 17,
+
+    fontWeight: '700',
+
+    color: colors.text,
+
+    letterSpacing: -0.2,
+
+  },
+
+  sectionHint: {
+
+    fontSize: 12,
+
+    color: colors.textMuted,
+
+    fontWeight: '500',
+
+    flexShrink: 1,
+
+    textAlign: 'right',
+
+  },
+
+  hRow: {
+
+    gap: 10,
+
+    paddingRight: 4,
+
+  },
+
+  emptyInline: {
+
+    color: colors.textMuted,
+
+    fontSize: 14,
+
+    lineHeight: 20,
+
+  },
+
+  doctorCard: {
+
+    width: 132,
+
+    borderWidth: 1.5,
+
+    borderColor: colors.border,
+
+    backgroundColor: colors.pageCanvas,
+
+    borderRadius: 14,
+
+    paddingVertical: 12,
+
+    paddingHorizontal: 10,
+
+    alignItems: 'center',
+
+    marginRight: 10,
+
+  },
+
+  doctorCardActive: {
+
+    borderColor: colors.brandBlue,
+
+    backgroundColor: colors.brandBlueSoft,
+
+  },
+
+  doctorCardPressed: {
+
+    opacity: 0.92,
+
+  },
+
+  doctorAvatarRing: {
+
+    borderWidth: 2,
+
+    borderColor: colors.brandBlue,
+
+  },
+
+  doctorName: {
+
+    marginTop: 8,
+
+    textAlign: 'center',
+
+    color: colors.text,
+
+    fontWeight: '600',
+
+    fontSize: 13,
+
+    lineHeight: 17,
+
+  },
+
+  doctorNameActive: {
+
+    color: colors.brandBlueDark,
+
+  },
+
+  doctorPrice: {
+
+    marginTop: 4,
+
+    textAlign: 'center',
+
+    fontSize: 12,
+
+    fontWeight: '800',
+
+    color: colors.primary,
+
+  },
+
+  doctorPriceActive: {
+
+    color: colors.brandBlueDark,
+
+  },
+
+  doctorSummaryRow: {
+
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 12,
+
+  },
+
+  doctorSummaryAvatar: {
+
+    borderRadius: 12,
+
+  },
+
+  doctorSummaryMeta: {
+
+    flex: 1,
+
+    minWidth: 0,
+
+  },
+
+  doctorSummaryName: {
+
+    fontSize: 15,
+
+    fontWeight: '700',
+
+    color: colors.text,
+
+  },
+
+  doctorSummarySpec: {
+
+    marginTop: 4,
+
+    fontSize: 13,
+
+    color: colors.textMuted,
+
+    lineHeight: 18,
+
+  },
+
+  doctorSummaryPrice: {
+
+    marginTop: 6,
+
+    fontSize: 14,
+
+    fontWeight: '800',
+
+    color: colors.primary,
+
+  },
+
+  doctorSummaryLink: {
+
+    fontSize: 14,
+
+    fontWeight: '700',
+
+    color: colors.brandBlue,
+
+  },
+
+  specialtyChip: {
+
+    maxWidth: 200,
+
+    minHeight: 72,
+
+    justifyContent: 'center',
+
+    borderWidth: 1.5,
+
+    borderColor: colors.border,
+
+    backgroundColor: colors.pageCanvas,
+
+    borderRadius: 14,
+
+    paddingVertical: 10,
+
+    paddingHorizontal: 14,
+
+    marginRight: 10,
+
+  },
+
+  specialtyChipActive: {
+
+    borderColor: colors.brandBlue,
+
+    backgroundColor: colors.brandBlueSoft,
+
+  },
+
+  specialtyChipPressed: {
+
+    opacity: 0.92,
+
+  },
+
+  specialtyChipText: {
+
+    fontSize: 13,
+
+    fontWeight: '600',
+
+    color: colors.text,
+
+    lineHeight: 18,
+
+  },
+
+  specialtyChipTextActive: {
+
+    color: colors.brandBlueDark,
+
+  },
+
+  dateChip: {
+
+    minWidth: 76,
+
+    alignItems: 'center',
+
+    borderWidth: 1.5,
+
+    borderColor: colors.border,
+
+    backgroundColor: colors.pageCanvas,
+
+    borderRadius: 14,
+
+    paddingVertical: 10,
+
+    paddingHorizontal: 12,
+
+    marginRight: 10,
+
+  },
+
+  dateChipActive: {
+
+    borderColor: colors.brandBlue,
+
+    backgroundColor: colors.brandBlueSoft,
+
+  },
+
+  dateChipPressed: {
+
+    opacity: 0.92,
+
+  },
+
+  dateChipTop: {
+
+    fontSize: 11,
+
+    fontWeight: '700',
+
+    color: colors.textMuted,
+
+    textTransform: 'uppercase',
+
+    letterSpacing: 0.4,
+
+  },
+
+  dateChipTopActive: {
+
+    color: colors.brandBlueDark,
+
+  },
+
+  dateChipDay: {
+
+    marginTop: 4,
+
+    fontSize: 20,
+
+    fontWeight: '800',
+
+    color: colors.text,
+
+    letterSpacing: -0.5,
+
+  },
+
+  dateChipDayActive: {
+
+    color: colors.brandBlueDark,
+
+  },
+
+  dateChipSub: {
+
+    marginTop: 2,
+
+    fontSize: 10,
+
+    color: colors.textMuted,
+
+    maxWidth: 88,
+
+  },
+
+  dateChipSubActive: {
+
+    color: colors.brandBlueDark,
+
+    opacity: 0.85,
+
+  },
+
+  slotsLoading: {
+
+    flexDirection: 'row',
+
+    alignItems: 'center',
+
+    gap: 10,
+
+    paddingVertical: 8,
+
+  },
+
+  slotsLoadingText: {
+
+    color: colors.textMuted,
+
+    fontSize: 14,
+
+  },
+
+  shiftBlocks: {
+
+    gap: 14,
+
+  },
+
+  shiftBlock: {
+
+    gap: 8,
+
+  },
+
+  shiftLabel: {
+
+    fontSize: 13,
+
+    fontWeight: '700',
+
+    color: colors.brandBlueDark,
+
+  },
+
+  slotGrid: {
+
+    flexDirection: 'row',
+
+    flexWrap: 'wrap',
+
+    gap: 10,
+
+  },
+
+  slot: {
+
+    minWidth: 76,
+
+    paddingHorizontal: 12,
+
+    paddingVertical: 12,
+
+    borderRadius: 12,
+
+    borderWidth: 1.5,
+
+    borderColor: colors.border,
+
+    backgroundColor: colors.pageCanvas,
+
+    alignItems: 'center',
+
+  },
+
+  slotActive: {
+
+    borderColor: colors.brandBlue,
+
+    backgroundColor: colors.brandBlueSoft,
+
+  },
+
+  slotPressed: {
+
+    opacity: 0.9,
+
+  },
+
+  slotText: {
+
+    color: colors.text,
+
+    fontWeight: '600',
+
+    fontSize: 15,
+
+    letterSpacing: -0.2,
+
+  },
+
+  slotTextActive: {
+
+    color: colors.brandBlueDark,
+
+    fontWeight: '700',
+
+  },
+
+  slotsEmpty: {
+
+    borderWidth: 1.5,
+
+    borderColor: colors.border,
+
+    borderStyle: 'dashed',
+
+    borderRadius: 14,
+
+    paddingVertical: 20,
+
+    paddingHorizontal: 16,
+
+    alignItems: 'center',
+
+    backgroundColor: colors.pageCanvas,
+
+  },
+
+  slotsEmptyTitle: {
+
+    fontSize: 15,
+
+    fontWeight: '700',
+
+    color: colors.text,
+
+  },
+
+  slotsEmptySub: {
+
+    marginTop: 4,
+
+    fontSize: 13,
+
+    color: colors.textMuted,
+
+    textAlign: 'center',
+
+    lineHeight: 18,
+
+  },
+
+  historyLink: {
+
+    alignItems: 'center',
+
+    paddingVertical: 8,
+
+  },
+
+  historyLinkPressed: {
+
+    opacity: 0.75,
+
+  },
+
+  historyLinkText: {
+
+    color: colors.brandBlue,
+
+    fontSize: 15,
+
+    fontWeight: '600',
+
+  },
+
 })
+
+

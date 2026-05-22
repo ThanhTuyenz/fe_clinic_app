@@ -57,6 +57,9 @@ export default function LoginScreen({ navigation, route }) {
           <Pressable onPress={() => navigation.navigate('Register')}>
             <Text style={styles.link}>Chưa có tài khoản? Đăng ký</Text>
           </Pressable>
+          <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
+            <Text style={styles.link}>Quên mật khẩu?</Text>
+          </Pressable>
           <Pressable onPress={() => navigation.navigate('MainTabs')}>
             <Text style={styles.mutedLink}>Về trang chủ</Text>
           </Pressable>

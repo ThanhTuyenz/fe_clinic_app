@@ -7,5 +7,13 @@ export async function listSpecialties() {
   if (!res.ok) {
     throw new Error(data.message || 'Không lấy được danh sách chuyên khoa.')
   }
-  return data?.specialties || []
+  const raw = Array.isArray(data?.specialties) ? data.specialties : []
+  return raw
+    .map((s) => {
+      const id = String(s.id || s._id || s.specialtyID || s.specialtyId || '').trim()
+      const name = String(s.name || s.specialtyName || '').trim()
+      const deptID = String(s.deptID || s.deptId || '').trim()
+      return { ...s, id, name: name || id || '—', deptID }
+    })
+    .filter((s) => s.id)
 }

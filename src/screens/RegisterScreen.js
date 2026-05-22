@@ -154,7 +154,7 @@ export default function RegisterScreen({ navigation }) {
 
   const subtitle =
     step === 1
-      ? 'Bước 1/3: Nhập Gmail để nhận OTP.'
+      ? 'Bước 1/3: Nhập email để nhận mã OTP qua hộp thư (kiểm tra cả Spam).'
       : step === 2
         ? `Bước 2/3: Nhập mã OTP đã gửi tới ${emailMask}.`
         : `Bước 3/3: Gmail ${emailMask || email} đã được xác thực.`
