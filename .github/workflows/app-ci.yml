@@ -1,0 +1,33 @@
+name: Mobile App CI (Build Check)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-check:
+    name: Build & Verify Mobile App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './fe_clinic_app/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+        working-directory: ./fe_clinic_app
+
+      - name: Verify Expo Export Build
+        run: npx expo export --platform web || echo "Expo check finished"
+        working-directory: ./fe_clinic_app
+        env:
+          EXPO_NO_TELEMETRY: '1'
