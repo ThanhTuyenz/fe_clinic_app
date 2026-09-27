@@ -3,10 +3,14 @@
     "name": "VitaCare Clinic",
     "slug": "fe_clinic_app",
     "version": "1.0.0",
+    "scheme": "vitacare",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "plugins": [
+      "expo-router"
+    ],
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",

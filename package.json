@@ -1,26 +1,53 @@
 {
   "name": "fe_clinic_app",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "scripts": {
+    "dev": "expo start",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "@hookform/resolvers": "^5.9.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.16.0",
     "@react-navigation/native": "^7.2.4",
     "@react-navigation/native-stack": "^7.15.0",
-    "expo": "~54.0.33",
+    "@tanstack/react-query": "^5.104.0",
+    "axios": "^1.20.0",
+    "dayjs": "^1.11.23",
+    "expo": "~54.0.37",
+    "expo-constants": "~18.0.14",
+    "expo-image": "~3.0.11",
+    "expo-image-picker": "~17.0.11",
+    "expo-linking": "~8.0.12",
+    "expo-notifications": "~0.32.17",
+    "expo-router": "~6.0.24",
     "expo-status-bar": "~3.0.9",
+    "nativewind": "^4.2.7",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-hook-form": "^7.89.0",
     "react-native": "0.81.5",
+    "react-native-calendars": "^1.1314.0",
     "react-native-qrcode-svg": "^6.3.21",
+    "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "0.5.1",
+    "tailwindcss": "^3.4.19",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "babel-preset-expo": "~54.0.10",
+    "typescript": "~5.9.2"
+  }
 }
