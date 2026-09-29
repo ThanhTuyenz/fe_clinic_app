@@ -23,6 +23,9 @@ export const Input: React.FC<InputProps> = ({
   isPassword = false,
   containerClassName = '',
   className = '',
+  style,
+  onFocus,
+  onBlur,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false)
@@ -30,19 +33,24 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View className={`w-full mb-3.5 ${containerClassName}`}>
       {label && (
-        <Text className="text-sm font-medium text-slate-700 mb-1.5">{label}</Text>
+        <Text className="text-xs font-semibold text-slate-700 mb-1.5">{label}</Text>
       )}
       <View
-        className={`flex-row items-center border rounded-xl px-3.5 bg-slate-50 ${
-          error ? 'border-red-500 bg-red-50/20' : 'border-slate-200 focus:border-sky-500'
+        className={`flex-row items-center border rounded-lg px-3.5 ${
+          error
+            ? 'border-rose-500 bg-rose-50/20'
+            : 'border-slate-200 bg-slate-50/60'
         }`}
       >
         {leftIcon && <View className="mr-2.5">{leftIcon}</View>}
         <TextInput
-          className={`flex-1 py-3 text-slate-800 text-base ${className}`}
+          className={`flex-1 py-3 text-slate-800 text-sm outline-none ${className}`}
           placeholderTextColor="#94a3b8"
           secureTextEntry={isPassword && !showPassword}
           autoCapitalize="none"
+          onFocus={onFocus}
+          onBlur={onBlur}
+          style={[{ outlineStyle: 'none' as any, outlineWidth: 0 as any }, style]}
           {...props}
         />
         {isPassword && (
@@ -53,13 +61,13 @@ export const Input: React.FC<InputProps> = ({
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={20}
+              size={18}
               color="#64748b"
             />
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text className="text-xs text-red-500 mt-1 ml-1">{error}</Text>}
+      {error && <Text className="text-xs text-rose-500 mt-1 ml-1">{error}</Text>}
     </View>
   )
 }

@@ -2,20 +2,24 @@ import { useEffect } from 'react'
 import { Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
 
-// Cấu hình thông báo khi app đang mở (Foreground)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-})
+// Cấu hình thông báo khi app đang mở (Foreground) - Chỉ chạy trên Native (iOS / Android)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  })
+}
 
 export function useNotifications() {
   useEffect(() => {
-    registerForPushNotificationsAsync()
+    if (Platform.OS !== 'web') {
+      registerForPushNotificationsAsync()
+    }
   }, [])
 
   async function registerForPushNotificationsAsync() {
@@ -25,7 +29,7 @@ export function useNotifications() {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#0284c7',
+          lightColor: '#059669',
         })
       }
 

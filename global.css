@@ -13,3 +13,21 @@ body,
   display: flex;
   flex-direction: column;
 }
+
+/* Tắt viền và hiệu ứng hover/focus/active của trình duyệt web */
+input,
+textarea,
+select,
+input:hover,
+textarea:hover,
+select:hover,
+input:focus,
+textarea:focus,
+select:focus,
+input:active,
+textarea:active,
+select:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+

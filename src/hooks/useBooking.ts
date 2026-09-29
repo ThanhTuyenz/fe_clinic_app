@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { doctorService } from '../services/doctorService'
-import { appointmentService, CreateAppointmentPayload } from '../services/appointmentService'
+import { appointmentService, CheckoutPayload } from '../services/appointmentService'
+import { getTomorrowDateString } from '../utils/date'
 
-export function useDoctorAvailability(doctorId?: string | number, date?: string) {
+export function useDoctorAvailability(doctorId?: string | number, date?: string, branchId?: string) {
+  const tomorrow = getTomorrowDateString()
   return useQuery({
-    queryKey: ['availability', doctorId, date],
-    queryFn: () => doctorService.getAvailability(doctorId!, date!),
-    enabled: Boolean(doctorId && date),
+    queryKey: ['availability', doctorId, date, branchId],
+    queryFn: () => doctorService.getAvailability(doctorId!, date!, branchId),
+    enabled: Boolean(doctorId && date && date >= tomorrow),
     staleTime: 1000 * 30, // 30 giây
     refetchInterval: 1000 * 60, // tự refetch mỗi 1 phút để cập nhật slot trống mới nhất
   })
@@ -15,13 +17,11 @@ export function useDoctorAvailability(doctorId?: string | number, date?: string)
 export function useCreateAppointment() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload: CreateAppointmentPayload) =>
-      appointmentService.createAppointment(payload),
-    onSuccess: (_, variables) => {
+    mutationFn: (payload: CheckoutPayload) =>
+      appointmentService.checkout(payload),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['myAppointments'] })
-      queryClient.invalidateQueries({
-        queryKey: ['availability', variables.doctorId, variables.appointmentDate],
-      })
+      queryClient.invalidateQueries({ queryKey: ['availability'] })
     },
   })
 }

@@ -10,13 +10,14 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#0284c7', // Sky 600
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
+          DEFAULT: '#059669', // Emerald 600
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
         },
         medical: {
           teal: '#0d9488',

@@ -6,8 +6,17 @@ import { PatientInfoFormValues } from '../utils/validation'
 interface BookingState {
   draft: BookingDraft
   step: number
+  setBranchId: (branchId: string) => void
+  setBookingMethod: (method: 'SPECIALTY_EXAM' | 'CONSULTATION' | 'HEALTH_PACKAGE' | 'AFTER_HOURS') => void
+  setSpecialty: (specialty: any) => void
+  setHealthPackage: (healthPackage: any) => void
+  setIsAfterHours: (isAfterHours: boolean) => void
   setDoctor: (doctor: Doctor) => void
-  setDateTime: (date: string, slot: string) => void
+  setDateTime: (date: string, slot: string, slotId?: string) => void
+  setPatientProfileId: (patientProfileId: string) => void
+  setSelectedProfile: (profile: any) => void
+  setVoucherCode: (code?: string) => void
+  setAppliedVoucher: (voucher: any) => void
   setPatientInfo: (info: PatientInfoFormValues) => void
   addPrescriptionImage: (uri: string) => void
   removePrescriptionImage: (index: number) => void
@@ -16,9 +25,16 @@ interface BookingState {
 }
 
 const initialDraft: BookingDraft = {
+  branchId: undefined,
+  bookingMethod: 'SPECIALTY_EXAM',
+  specialty: null,
+  healthPackage: null,
+  isAfterHours: false,
   doctor: null,
   date: '',
   slot: '',
+  slotId: undefined,
+  patientProfileId: undefined,
   patientType: 'self',
   patientName: '',
   patientPhone: '',
@@ -33,16 +49,69 @@ export const useBookingStore = create<BookingState>((set) => ({
   draft: initialDraft,
   step: 1,
 
+  setBranchId: (branchId) =>
+    set((state) => ({
+      draft: { ...state.draft, branchId },
+    })),
+
+  setBookingMethod: (bookingMethod) =>
+    set((state) => ({
+      draft: { ...state.draft, bookingMethod },
+    })),
+
+  setSpecialty: (specialty) =>
+    set((state) => ({
+      draft: { ...state.draft, specialty },
+    })),
+
+  setHealthPackage: (healthPackage) =>
+    set((state) => ({
+      draft: { ...state.draft, healthPackage },
+    })),
+
+  setIsAfterHours: (isAfterHours) =>
+    set((state) => ({
+      draft: { ...state.draft, isAfterHours },
+    })),
+
   setDoctor: (doctor: Doctor) =>
     set((state) => ({
-      draft: { ...state.draft, doctor },
+      draft: {
+        ...state.draft,
+        doctor,
+        branchId: (doctor as any).branchId || (doctor as any).branchAssignments?.[0]?.branch?.id || state.draft.branchId,
+      },
       step: 2,
     })),
 
-  setDateTime: (date: string, slot: string) =>
+  setDateTime: (date: string, slot: string, slotId?: string) =>
     set((state) => ({
-      draft: { ...state.draft, date, slot },
+      draft: { ...state.draft, date, slot, slotId },
       step: 3,
+    })),
+
+  setPatientProfileId: (patientProfileId: string) =>
+    set((state) => ({
+      draft: { ...state.draft, patientProfileId },
+    })),
+
+  setSelectedProfile: (selectedProfile: any) =>
+    set((state) => ({
+      draft: { ...state.draft, selectedProfile },
+    })),
+
+  setVoucherCode: (voucherCode?: string) =>
+    set((state) => ({
+      draft: { ...state.draft, voucherCode },
+    })),
+
+  setAppliedVoucher: (appliedVoucher: any) =>
+    set((state) => ({
+      draft: {
+        ...state.draft,
+        appliedVoucher,
+        voucherCode: appliedVoucher?.code || undefined,
+      },
     })),
 
   setPatientInfo: (info: PatientInfoFormValues) =>

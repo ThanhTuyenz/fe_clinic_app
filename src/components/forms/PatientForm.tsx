@@ -91,22 +91,22 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       className="flex-1"
     >
       {/* 1. Chọn đối tượng khám */}
-      <View className="bg-white p-4 rounded-2xl border border-slate-100 mb-3.5 shadow-sm">
+      <View className="bg-white p-4 rounded-lg border border-slate-100 mb-3.5 shadow-sm">
         <Text className="text-sm font-bold text-slate-800 mb-2.5">
           Đối tượng đặt khám
         </Text>
         <View className="flex-row">
           <TouchableOpacity
             onPress={() => setValue('patientType', 'self')}
-            className={`flex-1 py-2.5 rounded-xl border mr-2 items-center justify-center ${
+            className={`flex-1 py-2.5 rounded-lg border mr-2 items-center justify-center ${
               currentType === 'self'
-                ? 'bg-sky-50 border-sky-600'
+                ? 'bg-emerald-50 border-emerald-600'
                 : 'bg-white border-slate-200'
             }`}
           >
             <Text
               className={`font-semibold text-sm ${
-                currentType === 'self' ? 'text-sky-600' : 'text-slate-600'
+                currentType === 'self' ? 'text-emerald-700' : 'text-slate-600'
               }`}
             >
               👤 Cho bản thân
@@ -115,15 +115,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
 
           <TouchableOpacity
             onPress={() => setValue('patientType', 'relative')}
-            className={`flex-1 py-2.5 rounded-xl border ml-2 items-center justify-center ${
+            className={`flex-1 py-2.5 rounded-lg border ml-2 items-center justify-center ${
               currentType === 'relative'
-                ? 'bg-sky-50 border-sky-600'
+                ? 'bg-emerald-50 border-emerald-600'
                 : 'bg-white border-slate-200'
             }`}
           >
             <Text
               className={`font-semibold text-sm ${
-                currentType === 'relative' ? 'text-sky-600' : 'text-slate-600'
+                currentType === 'relative' ? 'text-emerald-700' : 'text-slate-600'
               }`}
             >
               👥 Cho người thân
@@ -133,7 +133,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       </View>
 
       {/* 2. Thông tin bệnh nhân */}
-      <View className="bg-white p-4 rounded-2xl border border-slate-100 mb-3.5 shadow-sm">
+      <View className="bg-white p-4 rounded-lg border border-slate-100 mb-3.5 shadow-sm">
         <Text className="text-sm font-bold text-slate-800 mb-2.5">
           Thông tin bệnh nhân
         </Text>
@@ -217,15 +217,15 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               <TouchableOpacity
                 key={gender}
                 onPress={() => setValue('patientGender', gender)}
-                className={`flex-1 py-2 rounded-xl border mr-2 items-center justify-center ${
+                className={`flex-1 py-2 rounded-lg border mr-2 items-center justify-center ${
                   isSelected
-                    ? 'bg-sky-50 border-sky-600'
+                    ? 'bg-emerald-50 border-emerald-600'
                     : 'bg-white border-slate-200'
                 }`}
               >
                 <Text
                   className={`text-xs font-semibold ${
-                    isSelected ? 'text-sky-600' : 'text-slate-600'
+                    isSelected ? 'text-emerald-700' : 'text-slate-600'
                   }`}
                 >
                   {label}
@@ -237,7 +237,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
       </View>
 
       {/* 3. Lý do khám & Triệu chứng */}
-      <View className="bg-white p-4 rounded-2xl border border-slate-100 mb-3.5 shadow-sm">
+      <View className="bg-white p-4 rounded-lg border border-slate-100 mb-3.5 shadow-sm">
         <Text className="text-sm font-bold text-slate-800 mb-2.5">
           Triệu chứng & Lý do khám *
         </Text>
@@ -252,7 +252,8 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 textAlignVertical="top"
                 placeholder="Mô tả triệu chứng bệnh, tiền sử bệnh án hoặc thuốc đang dùng..."
                 placeholderTextColor="#94a3b8"
-                className="border border-slate-200 rounded-xl p-3.5 text-slate-800 text-sm bg-slate-50 min-h-[90px]"
+                className="border border-slate-200 rounded-lg p-3.5 text-slate-800 text-sm bg-slate-50 min-h-[90px] outline-none"
+                style={{ outlineStyle: 'none' as any }}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -272,7 +273,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         </Text>
         <View className="flex-row flex-wrap items-center">
           {prescriptionImages.map((uri, idx) => (
-            <View key={idx} className="relative w-20 h-20 mr-2.5 mb-2.5 rounded-xl overflow-hidden border border-slate-200">
+            <View key={idx} className="relative w-20 h-20 mr-2.5 mb-2.5 rounded-lg overflow-hidden border border-slate-200">
               <Image source={{ uri }} className="w-full h-full" contentFit="cover" />
               <TouchableOpacity
                 onPress={() => onRemoveImage(idx)}
@@ -284,10 +285,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           ))}
           <TouchableOpacity
             onPress={handlePickImage}
-            className="w-20 h-20 rounded-xl border border-dashed border-sky-400 bg-sky-50/50 items-center justify-center mr-2.5 mb-2.5"
+            className="w-20 h-20 rounded-lg border border-dashed border-emerald-400 bg-emerald-50/50 items-center justify-center mr-2.5 mb-2.5"
           >
-            <Ionicons name="camera-outline" size={24} color="#0284c7" />
-            <Text className="text-[10px] font-semibold text-sky-600 mt-1">
+            <Ionicons name="camera-outline" size={24} color="#059669" />
+            <Text className="text-[10px] font-semibold text-emerald-700 mt-1">
               Thêm ảnh
             </Text>
           </TouchableOpacity>

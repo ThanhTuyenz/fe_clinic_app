@@ -24,6 +24,10 @@ export function getTodayDateString(): string {
   return dayjs().format('YYYY-MM-DD')
 }
 
+export function getTomorrowDateString(): string {
+  return dayjs().add(1, 'day').format('YYYY-MM-DD')
+}
+
 export function formatCurrencyVi(amount: number | string | undefined): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (num == null || isNaN(num)) return 'Đang cập nhật'

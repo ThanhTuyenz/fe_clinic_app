@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api, unwrapNestResponse } from './api'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -11,6 +11,7 @@ export const aiService = {
       messages: messages.filter((m) => m.content.trim()),
       state,
     })
-    return res.data as { reply: string; state?: any }
+    const data = unwrapNestResponse<any>(res.data)
+    return (data || res.data) as { reply: string; state?: any }
   },
 }

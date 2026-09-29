@@ -37,7 +37,7 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
   }
 
   return (
-    <SafeAreaView className={`flex-1 bg-white ${className}`}>
+    <SafeAreaView className={`flex-1 bg-white ${className}`} style={{ flex: 1 }}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       {(title || showBackButton || rightElement) && (
         <View className="flex-row items-center justify-between px-4 py-3 border-b border-slate-100 bg-white">
@@ -63,7 +63,7 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
           {rightElement && <View className="ml-2">{rightElement}</View>}
         </View>
       )}
-      <View className="flex-1 bg-slate-50/50">{children}</View>
+      <View className="flex-1 bg-slate-50/50" style={{ flex: 1 }}>{children}</View>
     </SafeAreaView>
   )
 }

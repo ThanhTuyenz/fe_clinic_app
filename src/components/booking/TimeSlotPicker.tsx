@@ -2,6 +2,8 @@ import React from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
 
+import { TimeSlot } from '../../types/appointment'
+
 // Danh sách slot giờ mặc định của phòng khám
 export const DEFAULT_CLINIC_SLOTS = [
   '08:00',
@@ -21,9 +23,9 @@ export const DEFAULT_CLINIC_SLOTS = [
 ]
 
 interface TimeSlotPickerProps {
-  availableSlots: string[] // ví dụ: ["08:00", "08:30", "09:00", ...]
+  availableSlots: Array<string | TimeSlot>
   selectedSlot: string
-  onSelectSlot: (slot: string) => void
+  onSelectSlot: (slot: string, slotId?: string) => void
   isLoading?: boolean
 }
 
@@ -33,14 +35,28 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   onSelectSlot,
   isLoading = false,
 }) => {
+  // Chuẩn hóa slots
+  const slotMap = React.useMemo(() => {
+    const map = new Map<string, { isAvailable: boolean; id?: string }>()
+    availableSlots.forEach((item) => {
+      if (typeof item === 'string') {
+        const timeKey = item.trim().slice(0, 5)
+        map.set(timeKey, { isAvailable: true })
+      } else if (item && item.startTime) {
+        const timeKey = String(item.startTime).trim().slice(0, 5)
+        map.set(timeKey, { isAvailable: item.isAvailable !== false, id: item.id })
+      }
+    })
+    return map
+  }, [availableSlots])
+
   // Phân chia ca sáng và ca chiều
   const morningSlots = DEFAULT_CLINIC_SLOTS.filter((s) => s < '12:00')
   const afternoonSlots = DEFAULT_CLINIC_SLOTS.filter((s) => s >= '12:00')
 
   const renderSlotButton = (slot: string) => {
-    // Nếu API trả về danh sách slot còn trống, kiểm tra xem slot này có nằm trong danh sách không
-    const isAvailable =
-      availableSlots.length > 0 ? availableSlots.includes(slot) : true
+    const slotInfo = slotMap.get(slot)
+    const isAvailable = availableSlots.length > 0 ? Boolean(slotInfo && slotInfo.isAvailable) : true
     const isSelected = selectedSlot === slot
 
     return (
@@ -48,12 +64,12 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
         key={slot}
         activeOpacity={0.7}
         disabled={!isAvailable || isLoading}
-        onPress={() => onSelectSlot(slot)}
-        className={`w-[22%] py-2.5 rounded-xl items-center justify-center m-1 border ${
+        onPress={() => onSelectSlot(slot, slotInfo?.id)}
+        className={`w-[22%] py-2.5 rounded-lg items-center justify-center m-1 border ${
           isSelected
-            ? 'bg-sky-600 border-sky-600'
+            ? 'bg-emerald-600 border-emerald-600'
             : isAvailable
-              ? 'bg-white border-slate-200 active:border-sky-400'
+              ? 'bg-white border-slate-200 active:border-emerald-400'
               : 'bg-slate-100 border-slate-100 opacity-40'
         }`}
       >

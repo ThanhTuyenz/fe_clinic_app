@@ -8,9 +8,10 @@ export default function BookingLayout() {
         contentStyle: { backgroundColor: '#ffffff' },
       }}
     >
-      <Stack.Screen name="select-doctor" />
-      <Stack.Screen name="select-datetime" />
+      <Stack.Screen name="index" />
       <Stack.Screen name="patient-info" />
+      <Stack.Screen name="confirm" />
+      <Stack.Screen name="payment" />
       <Stack.Screen name="[id]" />
     </Stack>
   )

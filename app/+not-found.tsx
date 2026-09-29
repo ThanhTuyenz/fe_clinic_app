@@ -13,7 +13,7 @@ export default function NotFoundScreen() {
         <Text className="text-slate-500 text-center mb-6">
           Đường dẫn bạn yêu cầu không tồn tại hoặc đã được di chuyển.
         </Text>
-        <Link href="/" className="bg-sky-600 px-6 py-3 rounded-xl">
+        <Link href="/" className="bg-emerald-600 px-6 py-3 rounded-lg">
           <Text className="text-white font-semibold">Về trang chủ</Text>
         </Link>
       </View>

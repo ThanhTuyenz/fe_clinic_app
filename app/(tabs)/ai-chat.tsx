@@ -73,16 +73,16 @@ export default function AiChatScreen() {
         }`}
       >
         <View
-          className={`p-3.5 rounded-2xl ${
+          className={`p-3.5 rounded-lg ${
             isUser
-              ? 'bg-sky-600 rounded-tr-none'
+              ? 'bg-emerald-600 rounded-tr-none'
               : 'bg-white border border-slate-100 rounded-tl-none shadow-xs'
           }`}
         >
           {!isUser && (
             <View className="flex-row items-center mb-1">
-              <Ionicons name="sparkles" size={13} color="#0d9488" />
-              <Text className="text-[11px] font-bold text-teal-700 ml-1">
+              <Ionicons name="sparkles" size={13} color="#059669" />
+              <Text className="text-[11px] font-bold text-emerald-700 ml-1">
                 Trợ lý VitaCare
               </Text>
             </View>
@@ -98,11 +98,11 @@ export default function AiChatScreen() {
 
         {!isUser && (
           <TouchableOpacity
-            onPress={() => router.push('/booking/select-doctor')}
-            className="self-start mt-1.5 flex-row items-center bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200"
+            onPress={() => router.push('/booking')}
+            className="self-start mt-1.5 flex-row items-center bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200"
           >
-            <Ionicons name="calendar-outline" size={14} color="#0d9488" />
-            <Text className="text-xs font-bold text-teal-700 ml-1">
+            <Ionicons name="calendar-outline" size={14} color="#059669" />
+            <Text className="text-xs font-bold text-emerald-700 ml-1">
               Đặt lịch theo gợi ý này
             </Text>
           </TouchableOpacity>
@@ -130,8 +130,8 @@ export default function AiChatScreen() {
           />
 
           {loading && (
-            <View className="flex-row items-center p-3 mb-2 bg-white rounded-2xl border border-slate-100 self-start shadow-xs">
-              <ActivityIndicator size="small" color="#0d9488" />
+            <View className="flex-row items-center p-3 mb-2 bg-white rounded-lg border border-slate-100 self-start shadow-xs">
+              <ActivityIndicator size="small" color="#059669" />
               <Text className="text-xs text-slate-500 font-medium ml-2">
                 Trợ lý AI đang phân tích triệu chứng...
               </Text>
@@ -149,7 +149,7 @@ export default function AiChatScreen() {
                   <TouchableOpacity
                     key={i}
                     onPress={() => handleSend(prompt)}
-                    className="bg-white border border-slate-200 px-3 py-1.5 rounded-full mr-1.5 mb-2 active:bg-slate-100"
+                    className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg mr-1.5 mb-2 active:bg-slate-100"
                   >
                     <Text className="text-xs text-slate-700">{prompt}</Text>
                   </TouchableOpacity>
@@ -159,20 +159,21 @@ export default function AiChatScreen() {
           )}
 
           {/* Input Chat Box */}
-          <View className="flex-row items-center bg-white rounded-2xl border border-slate-200 px-3 py-2 mb-3 shadow-xs">
+          <View className="flex-row items-center bg-white rounded-lg border border-slate-200 px-3 py-2 mb-3 shadow-xs">
             <TextInput
               placeholder="Nhập triệu chứng hoặc câu hỏi của bạn..."
               placeholderTextColor="#94a3b8"
               value={input}
               onChangeText={setInput}
-              className="flex-1 text-slate-800 text-sm py-1.5 max-h-24"
+              className="flex-1 text-slate-800 text-sm py-1.5 max-h-24 outline-none"
+              style={{ outlineStyle: 'none' as any }}
               multiline
             />
             <TouchableOpacity
               onPress={() => handleSend()}
               disabled={!input.trim() || loading}
-              className={`w-9 h-9 rounded-xl items-center justify-center ml-2 ${
-                input.trim() && !loading ? 'bg-sky-600' : 'bg-slate-100'
+              className={`w-9 h-9 rounded-lg items-center justify-center ml-2 ${
+                input.trim() && !loading ? 'bg-emerald-600' : 'bg-slate-100'
               }`}
             >
               <Ionicons

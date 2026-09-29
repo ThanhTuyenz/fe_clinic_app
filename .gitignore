@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# All markdown files (chỉ giữ lại duy nhất README.md)
+*.md
+*.MD
+!README.md
+!readme.md

@@ -1,5 +1,6 @@
-import { api } from './api'
+import { api, unwrapNestResponse } from './api'
 import { Department, Doctor, Specialty } from '../types/doctor'
+import { TimeSlot } from '../types/appointment'
 import { resolveApiBaseUrl } from '../constants/config'
 
 const DEFAULT_DOCTOR_AVATAR =
@@ -16,54 +17,177 @@ export function resolveDoctorAvatarUrl(rawUrl?: string): string {
 }
 
 export const doctorService = {
-  async getDoctors(): Promise<Doctor[]> {
-    const res = await api.get('/api/v1/doctors')
-    const raw = res.data?.doctors || []
-    return raw.map((d: any) => ({
-      ...d,
-      id: d.id || d._id,
-      avatar: resolveDoctorAvatarUrl(d.avatar || d.image || d.profileImage),
-    }))
+  async getDoctors(branchId?: string, specialtyId?: number, q?: string): Promise<Doctor[]> {
+    const res = await api.get('/api/v1/doctors', {
+      params: {
+        ...(branchId ? { branchId } : {}),
+        ...(specialtyId ? { specialtyId } : {}),
+        ...(q ? { q } : {}),
+      },
+    })
+    const rows = unwrapNestResponse<any[]>(res.data) || []
+    return (Array.isArray(rows) ? rows : []).map((d: any) => {
+      const primarySpecialty = d.specialties?.[0]?.specialty || d.specialty
+      const branchIdFound = d.user?.branchAssignments?.[0]?.branch?.id || d.branchId || branchId
+      return {
+        ...d,
+        id: d.id || d._id,
+        branchId: branchIdFound,
+        fullName: d.fullName || d.user?.fullName || d.name,
+        name: d.name || d.fullName || d.user?.fullName,
+        title: d.academicRank || d.title,
+        specialty_name: primarySpecialty?.name || d.specialty_name || 'Đa khoa',
+        specialty: primarySpecialty?.name || d.specialty || 'Đa khoa',
+        department: primarySpecialty?.name || d.department || 'Đa khoa',
+        consultation_fee: Number(d.consultationFee ?? d.consultation_fee ?? 0),
+        price: Number(d.consultationFee ?? d.price ?? 0),
+        rating: d.ratingAverage ?? d.rating ?? 5.0,
+        experience_years: d.experienceYears ?? d.experience_years ?? 0,
+        bio: d.biography || d.bio,
+        avatar: resolveDoctorAvatarUrl(d.avatarUrl || d.avatar || d.image || d.profileImage),
+      }
+    })
   },
 
-  async getDoctorById(id: string | number): Promise<Doctor> {
-    const res = await api.get(`/api/v1/doctors/${id}`)
-    const d = res.data?.doctor || res.data
-    return {
-      ...d,
-      id: d.id || d._id,
-      avatar: resolveDoctorAvatarUrl(d.avatar || d.image || d.profileImage),
+  async getDoctorById(id: string | number): Promise<Doctor | null> {
+    try {
+      const doctors = await this.getDoctors()
+      const found = doctors.find((d) => String(d.id) === String(id))
+      return found || null
+    } catch {
+      return null
+    }
+  },
+
+  async getBranches(): Promise<any[]> {
+    try {
+      const res = await api.get('/api/v1/branches')
+      const rows = unwrapNestResponse<any[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getSpecialties(): Promise<Specialty[]> {
+    try {
+      const res = await api.get('/api/v1/specialties')
+      const rows = unwrapNestResponse<Specialty[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
     }
   },
 
   async getDepartments(): Promise<Department[]> {
-    const res = await api.get('/api/v1/departments')
-    const raw = res.data?.departments || res.data?.data || res.data || []
-    return Array.isArray(raw)
-      ? raw.map((item: any) => ({
-          ...item,
-          id: item.id || item._id,
-          name: item.name || item.deptName || 'Khoa khám',
-        }))
-      : []
+    return this.getSpecialties() as Promise<Department[]>
   },
 
-  async getSpecialties(): Promise<Specialty[]> {
-    const res = await api.get('/api/v1/specialties')
-    const raw = res.data?.specialties || res.data || []
-    return Array.isArray(raw) ? raw : []
+  async getHealthPackages(branchId?: string): Promise<any[]> {
+    try {
+      const res = await api.get('/api/v1/services/packages/health', {
+        params: branchId ? { branchId } : undefined,
+      })
+      const rows = unwrapNestResponse<any[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch (err) {
+      console.warn('Could not fetch health packages', err)
+      return []
+    }
   },
 
-  async getAvailability(doctorId: string | number, date: string): Promise<string[]> {
-    const res = await api.get('/api/v1/appointments/availability', {
-      params: { doctorId, date },
-    })
-    const raw = res.data?.slots || res.data?.freeSlots || res.data?.availableSlots || []
-    if (!Array.isArray(raw)) return []
-    return raw
-      .map((slot: any) => (typeof slot === 'string' ? slot : slot?.startTime))
-      .map((t: any) => String(t || '').trim().slice(0, 5))
-      .filter(Boolean)
-      .sort()
+  async getSpecialtyPackages(branchId?: string): Promise<any[]> {
+    try {
+      const res = await api.get('/api/v1/services/packages/specialty', {
+        params: branchId ? { branchId } : undefined,
+      })
+      const rows = unwrapNestResponse<any[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getDoctorAvailableDates(doctorId: string, branchId?: string): Promise<string[]> {
+    try {
+      const res = await api.get(`/api/v1/doctors/${doctorId}/available-dates`, {
+        params: branchId ? { branchId } : undefined,
+      })
+      const rows = unwrapNestResponse<string[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getDoctorTimeslots(doctorId: string, branchId: string, date: string): Promise<TimeSlot[]> {
+    try {
+      const res = await api.get(`/api/v1/doctors/${doctorId}/timeslots`, {
+        params: { branchId, date },
+      })
+      const rows = unwrapNestResponse<TimeSlot[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getAvailability(doctorId: string | number, date: string, branchId?: string): Promise<TimeSlot[]> {
+    try {
+      let bId = branchId
+      if (!bId) {
+        const branches = await this.getBranches().catch(() => [])
+        bId = branches[0]?.id
+      }
+      return await this.getDoctorTimeslots(String(doctorId), bId || '', date)
+    } catch {
+      return []
+    }
+  },
+
+  async getPackageScheduleDates(packageId: string, branchId?: string): Promise<string[]> {
+    try {
+      const res = await api.get('/api/v1/services/schedule-dates', {
+        params: { packageId, branchId },
+      })
+      const rows = unwrapNestResponse<string[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getPackageTimeslots(packageId: string, date: string, branchId?: string): Promise<TimeSlot[]> {
+    try {
+      const res = await api.get('/api/v1/services/timeslots', {
+        params: { packageId, date, branchId },
+      })
+      const rows = unwrapNestResponse<TimeSlot[]>(res.data)
+      return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getBookingMethods(branchId?: string): Promise<any[]> {
+    try {
+      let targetBranchId = branchId
+      if (!targetBranchId) {
+        const branches = await this.getBranches().catch(() => [])
+        const activeBranch = branches.find((b: any) => b.code === 'VC-CENTRAL') || branches[0]
+        targetBranchId = activeBranch?.id
+      }
+
+      const res = await api.get('/api/v1/schedules/booking-methods', {
+        params: targetBranchId ? { branchId: targetBranchId } : undefined,
+      })
+      const rows = unwrapNestResponse<any[]>(res.data)
+      if (Array.isArray(rows) && rows.length > 0) {
+        return rows
+      }
+    } catch (err) {
+      console.warn('Could not fetch booking methods from backend', err)
+    }
+    return []
   },
 }

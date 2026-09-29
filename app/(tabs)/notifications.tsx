@@ -2,7 +2,7 @@ import React from 'react'
 import { FlatList, Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { ScreenShell } from '../../src/components/common/ScreenShell'
+import { ScreenShell } from '@/components/common'
 
 interface MockNotification {
   id: string
@@ -48,24 +48,38 @@ export default function NotificationsScreen() {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => router.push('/(tabs)/appointments')}
-        className={`p-4 rounded-2xl mb-3 border ${
+        className={`p-4 rounded-lg mb-3 border ${
           item.read
             ? 'bg-white border-slate-100'
-            : 'bg-sky-50/50 border-sky-200 shadow-xs'
+            : 'bg-emerald-50/50 border-emerald-200 shadow-xs'
         }`}
       >
         <View className="flex-row items-start">
           <View
-            className={`w-9 h-9 rounded-full items-center justify-center mr-3 mt-0.5 ${
+            className={`w-9 h-9 rounded-lg items-center justify-center mr-3 mt-0.5 border ${
               item.type === 'reminder'
-                ? 'bg-amber-100'
-                : 'bg-sky-100'
+                ? 'bg-amber-50 border-amber-200'
+                : item.type === 'promotion'
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-emerald-50 border-emerald-200'
             }`}
           >
             <Ionicons
-              name={item.type === 'reminder' ? 'time' : 'notifications'}
+              name={
+                item.type === 'reminder'
+                  ? 'time-outline'
+                  : item.type === 'promotion'
+                    ? 'pricetag-outline'
+                    : 'notifications-outline'
+              }
               size={18}
-              color={item.type === 'reminder' ? '#d97706' : '#0284c7'}
+              color={
+                item.type === 'reminder'
+                  ? '#d97706'
+                  : item.type === 'promotion'
+                    ? '#2563eb'
+                    : '#059669'
+              }
             />
           </View>
           <View className="flex-1">

@@ -23,40 +23,59 @@ export default function AppointmentsScreen() {
 
   const { data: appointments = [], isLoading, refetch, isRefetching } = useMyAppointments()
 
-  const upcomingList = appointments.filter(
-    (a) => a.status === 'pending' || a.status === 'confirmed' || a.status === 'in_progress'
-  )
+  const isUpcoming = (status?: string) => {
+    const s = (status || '').toUpperCase()
+    return s === 'HOLD' || s === 'CONFIRMED' || s === 'CHECKED_IN' || s === 'IN_EXAMINATION' || s === 'PENDING'
+  }
 
-  const historyList = appointments.filter(
-    (a) => a.status === 'completed' || a.status === 'cancelled'
-  )
+  const isHistory = (status?: string) => {
+    const s = (status || '').toUpperCase()
+    return s === 'COMPLETED' || s === 'CANCELLED'
+  }
+
+  const upcomingList = appointments.filter((a) => isUpcoming(a.status))
+  const historyList = appointments.filter((a) => isHistory(a.status))
 
   const displayedList = tab === 'upcoming' ? upcomingList : historyList
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (rawStatus?: string) => {
+    const status = (rawStatus || '').toUpperCase()
     switch (status) {
-      case 'confirmed':
+      case 'CONFIRMED':
         return (
-          <View className="bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+          <View className="bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
             <Text className="text-[11px] font-bold text-emerald-700">Đã xác nhận</Text>
           </View>
         )
-      case 'pending':
+      case 'CHECKED_IN':
         return (
-          <View className="bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-            <Text className="text-[11px] font-bold text-amber-700">Chờ duyệt</Text>
+          <View className="bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-blue-700">Đã tiếp đón</Text>
           </View>
         )
-      case 'completed':
+      case 'IN_EXAMINATION':
         return (
-          <View className="bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-full">
-            <Text className="text-[11px] font-bold text-sky-700">Đã khám xong</Text>
+          <View className="bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-sky-700">Đang khám</Text>
           </View>
         )
-      case 'cancelled':
+      case 'HOLD':
+      case 'PENDING':
+        return (
+          <View className="bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-amber-700">Chờ tiếp nhận</Text>
+          </View>
+        )
+      case 'COMPLETED':
+        return (
+          <View className="bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-emerald-700">Đã khám xong</Text>
+          </View>
+        )
+      case 'CANCELLED':
       default:
         return (
-          <View className="bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+          <View className="bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-lg">
             <Text className="text-[11px] font-bold text-rose-700">Đã hủy</Text>
           </View>
         )
@@ -66,19 +85,22 @@ export default function AppointmentsScreen() {
   const renderAppointmentItem = ({ item }: { item: Appointment }) => {
     const docName =
       item.doctor?.full_name || item.doctor?.fullName || item.doctor?.name || 'Bác sĩ chuyên khoa'
-    const dateFormatted = formatDateVi(item.appointment_date)
+    const serviceName =
+      item.healthPackage?.name || item.service?.name || docName
+    const dateFormatted = formatDateVi(item.appointmentDate || item.appointment_date || item.createdAt || new Date().toISOString())
     const slotTime = item.startTime || item.slot || '08:00'
+    const branchName = item.branch?.name || 'VitaCare Clinic'
 
     return (
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => router.push(`/booking/${item.id || item._id}`)}
-        className="bg-white rounded-2xl p-4 mb-3 border border-slate-100 shadow-sm"
+        className="bg-white rounded-lg p-4 mb-3 border border-slate-100 shadow-sm"
       >
         <View className="flex-row items-center justify-between pb-3 border-b border-slate-100">
           <View className="flex-row items-center flex-1 pr-2">
-            <View className="w-8 h-8 rounded-full bg-sky-50 items-center justify-center mr-2">
-              <Ionicons name="calendar-outline" size={16} color="#0284c7" />
+            <View className="w-8 h-8 rounded-lg bg-emerald-50 items-center justify-center mr-2">
+              <Ionicons name="calendar-outline" size={16} color="#059669" />
             </View>
             <Text className="text-sm font-bold text-slate-800">
               {dateFormatted}
@@ -90,13 +112,13 @@ export default function AppointmentsScreen() {
 
         <View className="pt-3 flex-row items-center justify-between">
           <View className="flex-1 pr-2">
-            <Text className="text-sm font-bold text-slate-800">{docName}</Text>
+            <Text className="text-sm font-bold text-slate-800">{serviceName}</Text>
             <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
-              {item.reason || item.symptoms || 'Khám tổng quát'}
+              {branchName} {item.queueNumber ? `• STT #${item.queueNumber}` : ''}
             </Text>
           </View>
           <View className="flex-row items-center">
-            <Ionicons name="qr-code-outline" size={20} color="#0284c7" />
+            <Ionicons name="qr-code-outline" size={20} color="#059669" />
             <Ionicons name="chevron-forward" size={18} color="#94a3b8" className="ml-1" />
           </View>
         </View>
@@ -108,8 +130,8 @@ export default function AppointmentsScreen() {
     return (
       <ScreenShell title="Lịch hẹn khám">
         <View className="flex-1 items-center justify-center p-6">
-          <View className="w-16 h-16 rounded-full bg-sky-50 items-center justify-center mb-3">
-            <Ionicons name="lock-closed-outline" size={32} color="#0284c7" />
+          <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mb-3">
+            <Ionicons name="lock-closed-outline" size={32} color="#059669" />
           </View>
           <Text className="text-lg font-bold text-slate-800 text-center">
             Đăng nhập để xem lịch hẹn
@@ -133,9 +155,9 @@ export default function AppointmentsScreen() {
       <View className="flex-row px-5 py-3 bg-white border-b border-slate-100">
         <TouchableOpacity
           onPress={() => setTab('upcoming')}
-          className={`flex-1 py-2 rounded-xl items-center mr-2 border ${
+          className={`flex-1 py-2 rounded-lg items-center mr-2 border ${
             tab === 'upcoming'
-              ? 'bg-sky-600 border-sky-600'
+              ? 'bg-emerald-600 border-emerald-600'
               : 'bg-slate-50 border-slate-200'
           }`}
         >
@@ -150,9 +172,9 @@ export default function AppointmentsScreen() {
 
         <TouchableOpacity
           onPress={() => setTab('history')}
-          className={`flex-1 py-2 rounded-xl items-center ml-2 border ${
+          className={`flex-1 py-2 rounded-lg items-center ml-2 border ${
             tab === 'history'
-              ? 'bg-sky-600 border-sky-600'
+              ? 'bg-emerald-600 border-emerald-600'
               : 'bg-slate-50 border-slate-200'
           }`}
         >
@@ -182,7 +204,7 @@ export default function AppointmentsScreen() {
               title="Đặt lịch khám mới"
               variant="outline"
               size="sm"
-              onPress={() => router.push('/booking/select-doctor')}
+              onPress={() => router.push('/booking')}
               className="mt-4"
             />
           </View>

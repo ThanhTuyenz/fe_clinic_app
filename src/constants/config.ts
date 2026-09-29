@@ -28,6 +28,7 @@ export function resolveApiBaseUrl(): string {
 
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'vitacare_auth_token',
+  REFRESH_TOKEN: 'vitacare_refresh_token',
   USER_DATA: 'vitacare_user_data',
   REMEMBER_ME: 'vitacare_remember_me',
 } as const

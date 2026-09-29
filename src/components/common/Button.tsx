@@ -32,21 +32,21 @@ export const Button: React.FC<ButtonProps> = ({
       case 'secondary':
         return 'bg-teal-600 active:bg-teal-700 text-white'
       case 'outline':
-        return 'bg-transparent border border-sky-600 active:bg-sky-50'
+        return 'bg-transparent border border-emerald-600 active:bg-emerald-50'
       case 'danger':
         return 'bg-red-500 active:bg-red-600 text-white'
       case 'ghost':
         return 'bg-transparent active:bg-gray-100'
       case 'primary':
       default:
-        return 'bg-sky-600 active:bg-sky-700 text-white'
+        return 'bg-emerald-600 active:bg-emerald-700 text-white'
     }
   }
 
   const getTextStyles = () => {
     switch (variant) {
       case 'outline':
-        return 'text-sky-600 font-semibold'
+        return 'text-emerald-700 font-semibold'
       case 'ghost':
         return 'text-gray-700 font-medium'
       default:
@@ -59,10 +59,10 @@ export const Button: React.FC<ButtonProps> = ({
       case 'sm':
         return 'py-2 px-3 rounded-lg text-sm'
       case 'lg':
-        return 'py-4 px-6 rounded-2xl text-lg'
+        return 'py-3.5 px-6 rounded-lg text-base'
       case 'md':
       default:
-        return 'py-3 px-4 rounded-xl text-base'
+        return 'py-3 px-4 rounded-lg text-base'
     }
   }
 
@@ -80,7 +80,7 @@ export const Button: React.FC<ButtonProps> = ({
       {isLoading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? '#0284c7' : '#ffffff'}
+          color={variant === 'outline' || variant === 'ghost' ? '#059669' : '#ffffff'}
         />
       ) : (
         <View className="flex-row items-center justify-center">

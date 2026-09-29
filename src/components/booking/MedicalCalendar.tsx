@@ -1,7 +1,6 @@
 import React from 'react'
 import { View } from 'react-native'
 import { Calendar, LocaleConfig } from 'react-native-calendars'
-import { getTodayDateString } from '../../utils/date'
 
 LocaleConfig.locales['vi'] = {
   monthNames: [
@@ -38,39 +37,52 @@ LocaleConfig.locales['vi'] = {
 }
 LocaleConfig.defaultLocale = 'vi'
 
+import { getTodayDateString, getTomorrowDateString } from '../../utils/date'
+
 interface MedicalCalendarProps {
   selectedDate: string // YYYY-MM-DD
   onSelectDate: (dateString: string) => void
+  availableDates?: string[]
 }
 
 export const MedicalCalendar: React.FC<MedicalCalendarProps> = ({
   selectedDate,
   onSelectDate,
+  availableDates = [],
 }) => {
-  const today = getTodayDateString()
+  const tomorrow = getTomorrowDateString()
 
-  const markedDates = {
-    [selectedDate]: {
+  const markedDates: Record<string, any> = {}
+
+  // Đánh dấu các ngày có lịch khám khả dụng từ backend
+  if (availableDates.length > 0) {
+    availableDates.forEach((d) => {
+      markedDates[d] = {
+        marked: true,
+        dotColor: '#059669',
+      }
+    })
+  }
+
+  // Đánh dấu ngày đang được chọn
+  if (selectedDate) {
+    markedDates[selectedDate] = {
+      ...(markedDates[selectedDate] || {}),
       selected: true,
-      selectedColor: '#0284c7',
+      selectedColor: '#059669',
       selectedTextColor: '#ffffff',
-    },
-    ...(selectedDate !== today
-      ? {
-          [today]: {
-            marked: true,
-            dotColor: '#0284c7',
-          },
-        }
-      : {}),
+    }
   }
 
   return (
-    <View className="bg-white rounded-2xl p-2 border border-slate-100 shadow-sm overflow-hidden mb-4">
+    <View className="bg-white rounded-lg p-2 border border-slate-100 shadow-sm overflow-hidden mb-4">
       <Calendar
-        minDate={today}
-        current={selectedDate || today}
-        onDayPress={(day: { dateString: string }) => onSelectDate(day.dateString)}
+        minDate={tomorrow}
+        current={selectedDate || tomorrow}
+        onDayPress={(day: { dateString: string }) => {
+          if (day.dateString < tomorrow) return
+          onSelectDate(day.dateString)
+        }}
         markedDates={markedDates}
         theme={{
           backgroundColor: '#ffffff',

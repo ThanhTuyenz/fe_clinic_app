@@ -30,17 +30,28 @@ export default function BookingConfirmationScreen() {
     appointment?.doctor?.fullName ||
     appointment?.doctor?.name ||
     'Bác sĩ chuyên khoa'
-  const dateFormatted = formatDateVi(appointment?.appointment_date || new Date().toISOString())
-  const slotTime = appointment?.startTime || appointment?.slot || '08:00'
-  const appointmentCode = appointment?.code || `VC-${String(id).slice(-6).toUpperCase()}`
+  const serviceTitle =
+    appointment?.healthPackage?.name ||
+    appointment?.service?.name ||
+    doctorName
+  const dateFormatted = formatDateVi(appointment?.appointment_date || appointment?.appointmentDate || new Date().toISOString())
+  const slotTime =
+    appointment?.startTime && appointment?.endTime
+      ? `${String(appointment.startTime).slice(0, 5)} - ${String(appointment.endTime).slice(0, 5)}`
+      : appointment?.startTime || appointment?.slot || '08:00'
+  const appointmentCode = appointment?.code || appointment?.bookingCode || `VC-${String(id).slice(-6).toUpperCase()}`
+  const qrString = appointment?.qrPayload || appointmentCode
+  const branchName = appointment?.branch?.name || appointment?.branch?.address || 'VitaCare Clinic, Tầng 2 Sảnh Khám Bệnh'
+  const roomName = appointment?.room?.name ? `Phòng ${appointment.room.name}` : null
+  const queueNum = appointment?.queueNumber
 
   return (
     <ScreenShell title="Phiếu khám bệnh">
       <ScrollView className="flex-1 px-5 py-4" showsVerticalScrollIndicator={false}>
         {/* Banner Chúc Mừng */}
         <View className="items-center mb-6">
-          <View className="w-16 h-16 rounded-full bg-emerald-50 items-center justify-center mb-3">
-            <Ionicons name="checkmark-circle" size={40} color="#10b981" />
+          <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mb-3">
+            <Ionicons name="checkmark-circle" size={40} color="#059669" />
           </View>
           <Text className="text-xl font-black text-slate-800 text-center">
             Đặt lịch khám thành công!
@@ -51,23 +62,25 @@ export default function BookingConfirmationScreen() {
         </View>
 
         {/* Thẻ Vé Khám Y Tế & Mã QR */}
-        <View className="bg-white rounded-3xl p-6 border border-slate-100 shadow-md mb-6 items-center">
+        <View className="bg-white rounded-lg p-6 border border-slate-100 shadow-md mb-6 items-center">
           <Text className="text-xs font-semibold text-slate-400 mb-1">
             MÃ PHIẾU KHÁM
           </Text>
-          <Text className="text-xl font-black text-sky-600 tracking-wider mb-5">
+          <Text className="text-xl font-black text-emerald-600 tracking-wider mb-2">
             {appointmentCode}
           </Text>
+          {Boolean(queueNum) && (
+            <View className="bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-md mb-4">
+              <Text className="text-xs font-bold text-emerald-800">
+                Số thứ tự dự kiến: #{queueNum}
+              </Text>
+            </View>
+          )}
 
           {/* QR Code */}
-          <View className="p-3 bg-white border border-slate-200 rounded-2xl shadow-xs mb-5">
+          <View className="p-3 bg-white border border-slate-200 rounded-lg shadow-xs mb-5">
             <QRCode
-              value={JSON.stringify({
-                code: appointmentCode,
-                id,
-                date: appointment?.appointment_date,
-                time: slotTime,
-              })}
+              value={qrString}
               size={160}
               color="#0f172a"
               backgroundColor="#ffffff"
@@ -84,8 +97,8 @@ export default function BookingConfirmationScreen() {
             ) : (
               <>
                 <View className="flex-row justify-between py-2">
-                  <Text className="text-xs text-slate-400">Bác sĩ khám</Text>
-                  <Text className="text-xs font-bold text-slate-800">{doctorName}</Text>
+                  <Text className="text-xs text-slate-400">Dịch vụ / Bác sĩ</Text>
+                  <Text className="text-xs font-bold text-slate-800 text-right max-w-[200px]">{serviceTitle}</Text>
                 </View>
                 <View className="flex-row justify-between py-2">
                   <Text className="text-xs text-slate-400">Thời gian</Text>
@@ -93,16 +106,22 @@ export default function BookingConfirmationScreen() {
                     {slotTime} - {dateFormatted}
                   </Text>
                 </View>
+                {roomName && (
+                  <View className="flex-row justify-between py-2">
+                    <Text className="text-xs text-slate-400">Phòng khám</Text>
+                    <Text className="text-xs font-bold text-slate-800">{roomName}</Text>
+                  </View>
+                )}
                 <View className="flex-row justify-between py-2">
                   <Text className="text-xs text-slate-400">Trạng thái</Text>
-                  <Text className="text-xs font-bold text-amber-600">
-                    Chờ tiếp nhận
+                  <Text className="text-xs font-bold text-emerald-600">
+                    {appointment?.status === 'HOLD' ? 'Đã giữ chỗ' : 'Sẵn sàng tiếp đón'}
                   </Text>
                 </View>
                 <View className="flex-row justify-between py-2">
-                  <Text className="text-xs text-slate-400">Địa chỉ</Text>
+                  <Text className="text-xs text-slate-400">Cơ sở khám</Text>
                   <Text className="text-xs font-medium text-slate-700 text-right max-w-[200px]">
-                    VitaCare Clinic, Tầng 2 Sảnh Khám Bệnh
+                    {branchName}
                   </Text>
                 </View>
               </>

@@ -29,20 +29,20 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onSelect && onSelect(doctor)}
-      className={`bg-white rounded-2xl p-4 mb-3 border flex-row items-center shadow-sm ${
-        selected ? 'border-sky-500 bg-sky-50/30' : 'border-slate-100'
+      className={`bg-white rounded-lg p-4 mb-3.5 border flex-row items-center shadow-xs ${
+        selected ? 'border-emerald-600 bg-emerald-50/40' : 'border-slate-100'
       }`}
     >
       <Image
         source={{ uri: doctor.avatar }}
-        className="w-18 h-18 rounded-2xl bg-slate-100 mr-3.5"
-        style={{ width: 72, height: 72, borderRadius: 16 }}
+        className="w-18 h-18 rounded-lg bg-emerald-50 mr-3.5"
+        style={{ width: 72, height: 72, borderRadius: 8 }}
         contentFit="cover"
         transition={200}
       />
       <View className="flex-1">
         <View className="flex-row items-center">
-          <Text className="text-xs font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full mr-1.5">
+          <Text className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg mr-1.5 border border-emerald-100">
             {title}
           </Text>
           <Text
@@ -53,7 +53,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
           </Text>
         </View>
 
-        <Text numberOfLines={1} className="text-sm text-slate-500 mt-1">
+        <Text numberOfLines={1} className="text-xs text-slate-500 mt-1">
           {specialty}
         </Text>
 
@@ -69,7 +69,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
               </Text>
             )}
           </View>
-          <Text className="text-sm font-bold text-teal-600">
+          <Text className="text-sm font-bold text-emerald-700">
             {formatCurrencyVi(fee)}
           </Text>
         </View>

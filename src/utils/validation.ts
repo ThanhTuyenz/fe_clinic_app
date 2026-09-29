@@ -19,6 +19,11 @@ export const registerSchema = z
     phone: z
       .string()
       .regex(phoneRegex, 'Số điện thoại không hợp lệ (gồm 10 chữ số).'),
+    email: z
+      .string()
+      .email('Email không đúng định dạng.')
+      .optional()
+      .or(z.literal('')),
     password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự.'),
     confirmPassword: z.string().min(6, 'Vui lòng xác nhận mật khẩu.'),
   })
