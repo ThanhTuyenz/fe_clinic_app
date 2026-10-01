@@ -29,7 +29,9 @@ export interface Doctor {
   department_name?: string
   specialty?: Specialty | string
   specialty_id?: string | number
+  specialtyId?: string | number
   specialty_name?: string
+  branchId?: string
   experience_years?: number
   price?: number
   consultation_fee?: number

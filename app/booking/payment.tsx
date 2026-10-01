@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,14 +15,18 @@ import { useBookingStore } from '../../src/store/useBookingStore'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { useNotifications } from '../../src/hooks/useNotifications'
 import { appointmentService } from '../../src/services/appointmentService'
-import { doctorService } from '../../src/services/doctorService'
-import { api } from '../../src/services/api'
+import {
+  paymentService,
+  PayosCreatePaymentResponse,
+} from '../../src/services/paymentService'
 import { formatCurrencyVi } from '../../src/utils/date'
+import { VietQrLogo } from '../../src/components/common/VietQrLogo'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
 import { BookingTimeline } from '../../src/components/booking/BookingTimeline'
+import { PayosDeepLinkModal } from '../../src/components/booking/PayosDeepLinkModal'
 
-type PaymentMethodType = 'MOMO' | 'VIETQR' | 'COUNTER'
+type PaymentMethodType = 'PAYOS' | 'VIETQR' | 'COUNTER'
 
 export default function BookingPaymentScreen() {
   const router = useRouter()
@@ -29,8 +34,11 @@ export default function BookingPaymentScreen() {
   const { draft, resetBooking } = useBookingStore()
   const { scheduleAppointmentReminder } = useNotifications()
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('MOMO')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [payosData, setPayosData] = useState<PayosCreatePaymentResponse | null>(null)
+  const [createdApptId, setCreatedApptId] = useState<string | null>(null)
+  const [isPayosModalVisible, setIsPayosModalVisible] = useState(false)
 
   const isPackage = draft.bookingMethod === 'HEALTH_PACKAGE' || Boolean(draft.healthPackage)
   const serviceName = isPackage
@@ -44,9 +52,33 @@ export default function BookingPaymentScreen() {
   const discountAmount = draft.appliedVoucher?.discountAmount || 0
   const totalAmount = Math.max(0, subtotal - discountAmount)
 
+  // Xử lý khi thanh toán PayOS thành công
+  const handlePaymentSuccess = () => {
+    setIsPayosModalVisible(false)
+    const targetId = createdApptId || 'new'
+
+    // Đặt lịch nhắc thông báo
+    const appointmentDateObj = new Date(draft.date)
+    const reminderDate = new Date(appointmentDateObj.getTime() - 24 * 60 * 60 * 1000)
+    scheduleAppointmentReminder(
+      targetId,
+      serviceName,
+      `${draft.slot} ngày ${draft.date}`,
+      reminderDate
+    )
+
+    resetBooking()
+    router.replace(`/booking/${targetId}`)
+  }
+
   // Handle final checkout and payment
   const handlePayment = async () => {
     try {
+      if (!paymentMethod) {
+        Alert.alert('Chưa chọn phương thức thanh toán', 'Vui lòng chọn một phương thức thanh toán để tiếp tục.')
+        return
+      }
+
       setIsSubmitting(true)
 
       const profileId = draft.patientProfileId || draft.selectedProfile?.id
@@ -54,22 +86,15 @@ export default function BookingPaymentScreen() {
         throw new Error('Chưa xác định hồ sơ người khám bệnh.')
       }
 
-      // Resolve slot ID
-      let slotId = draft.slotId
+      // slotId phải được lưu sẵn khi chọn giờ ở bước 2
+      const slotId = draft.slotId
       if (!slotId) {
-        if (draft.doctor?.id) {
-          const slots = await doctorService.getAvailability(draft.doctor.id, draft.date, draft.branchId)
-          const target = slots.find((s) => s.startTime?.slice(0, 5) === draft.slot.slice(0, 5))
-          slotId = target?.id
-        } else if (draft.healthPackage?.id) {
-          const slots = await doctorService.getPackageTimeslots(draft.healthPackage.id, draft.date, draft.branchId)
-          const target = slots.find((s) => s.startTime?.slice(0, 5) === draft.slot.slice(0, 5))
-          slotId = target?.id
-        }
-      }
-
-      if (!slotId) {
-        throw new Error('Không thể xác định khung giờ khám. Vui lòng quay lại bước 1 chọn lại giờ.')
+        Alert.alert(
+          'Cần chọn lại giờ khám',
+          'Thông tin khung giờ bị thiếu. Vui lòng quay lại bước chọn ngày & giờ và chọn lại.',
+          [{ text: 'Quay lại', onPress: () => router.back() }]
+        )
+        return
       }
 
       // 1. Call checkout API
@@ -87,22 +112,28 @@ export default function BookingPaymentScreen() {
         (result as any)?.appointment?.id ||
         'new'
 
-      const paymentId = result?.paymentId
+      // 2. Nếu chọn PayOS / VietQR: Khởi tạo phiên thanh toán PayOS thật & mở Modal Deep Link
+      if (paymentMethod === 'PAYOS' || paymentMethod === 'VIETQR') {
+        try {
+          const payosRes = await paymentService.createPayosPayment({
+            appointmentId,
+            amount: totalAmount,
+            description: `VC${String(appointmentId).slice(-6).toUpperCase()}`,
+          })
 
-      // 2. If MoMo or VietQR: trigger payment confirmation / simulation
-      if (paymentMethod === 'MOMO' && paymentId) {
-        try {
-          await api.post('/api/v1/payments/momo/simulate-success', { paymentId })
-        } catch {
-          // Continue if simulation fails
+          setCreatedApptId(appointmentId)
+          setPayosData(payosRes)
+          setIsPayosModalVisible(true)
+        } catch (payErr: any) {
+          Alert.alert(
+            'Không thể tạo mã thanh toán',
+            payErr?.message || 'Có lỗi khi kết nối cổng PayOS. Vui lòng thử lại hoặc chọn thanh toán tại quầy.',
+          )
         }
-      } else if (paymentMethod === 'VIETQR' && paymentId) {
-        try {
-          await api.post('/api/v1/payments/momo/simulate-success', { paymentId })
-        } catch {}
+        return
       }
 
-      // 3. Set notification reminder
+      // 3. Nếu chọn thanh toán tại quầy (COUNTER): Hoàn tất trực tiếp
       const appointmentDateObj = new Date(draft.date)
       const reminderDate = new Date(appointmentDateObj.getTime() - 24 * 60 * 60 * 1000)
       scheduleAppointmentReminder(
@@ -112,7 +143,6 @@ export default function BookingPaymentScreen() {
         reminderDate
       )
 
-      // 4. Reset booking store & navigate to Ticket pass
       resetBooking()
       router.replace(`/booking/${appointmentId}`)
     } catch (err: any) {
@@ -124,28 +154,10 @@ export default function BookingPaymentScreen() {
 
   const METHODS = [
     {
-      id: 'MOMO' as PaymentMethodType,
-      title: 'Ví điện tử MoMo',
-      desc: 'Thanh toán trực tuyến an toàn qua ví MoMo',
+      id: 'PAYOS' as PaymentMethodType,
+      title: 'Cổng thanh toán PayOS (VietQR)',
+      desc: 'Quét mã VietQR hoặc mở thẳng App Ngân hàng 24/7',
       badge: 'Khuyên dùng',
-      icon: 'wallet-outline',
-      iconColor: '#ec4899',
-    },
-    {
-      id: 'VIETQR' as PaymentMethodType,
-      title: 'Chuyển khoản ngân hàng (VietQR)',
-      desc: 'Quét mã QR chuyển khoản nhanh 24/7 từ mọi ngân hàng',
-      badge: null,
-      icon: 'qr-code-outline',
-      iconColor: '#059669',
-    },
-    {
-      id: 'COUNTER' as PaymentMethodType,
-      title: 'Thanh toán tại quầy tiếp đón',
-      desc: 'Thanh toán tiền mặt hoặc quẹt thẻ khi đến phòng khám',
-      badge: null,
-      icon: 'cash-outline',
-      iconColor: '#0284c7',
     },
   ]
 
@@ -160,39 +172,10 @@ export default function BookingPaymentScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 110 }}
         >
-          {/* Card 1: Số tiền thanh toán */}
-          <View className="bg-white border border-slate-200/90 rounded-lg p-4 mb-3.5 shadow-2xs">
-            <Text className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Tổng chi phí thanh toán
-            </Text>
-            <Text className="text-2xl font-black text-emerald-800 my-1">
-              {formatCurrencyVi(totalAmount)}
-            </Text>
-            <View className="flex-row items-center gap-2 mt-1">
-              <Text className="text-xs text-slate-600 font-medium">
-                {serviceName}
-              </Text>
-              <Text className="text-slate-300">•</Text>
-              <Text className="text-xs text-slate-500">
-                {draft.slot} ngày {draft.date}
-              </Text>
-            </View>
-            {discountAmount > 0 && (
-              <View className="mt-2 pt-2 border-t border-slate-100 flex-row items-center justify-between">
-                <Text className="text-xs text-emerald-700 font-medium">
-                  Đã áp dụng mã {draft.voucherCode || 'Ưu đãi'}:
-                </Text>
-                <Text className="text-xs font-bold text-emerald-700">
-                  - {formatCurrencyVi(discountAmount)}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Card 2: Chọn phương thức thanh toán */}
+          {/* Card: Chọn phương thức thanh toán */}
           <View className="bg-white border border-slate-200/90 rounded-lg p-4 mb-3.5 shadow-2xs">
             <Text className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-              Chọn phương thức thanh toán *
+              Phương thức thanh toán *
             </Text>
 
             <View className="gap-2.5">
@@ -203,12 +186,16 @@ export default function BookingPaymentScreen() {
                     key={m.id}
                     activeOpacity={0.8}
                     onPress={() => setPaymentMethod(m.id)}
-                    className="p-3.5 rounded-lg border border-slate-200/90 bg-white"
+                    className={`p-3.5 rounded-lg border transition-all ${isSelected
+                        ? 'border-slate-900 bg-slate-50/60'
+                        : 'border-slate-200 bg-white'
+                      }`}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center flex-1 pr-2">
-                        <View className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 items-center justify-center mr-3">
-                          <Ionicons name={m.icon as any} size={22} color={m.iconColor} />
+                        {/* Official VietQR Logo */}
+                        <View className="w-14 h-10 rounded bg-white border border-slate-200 items-center justify-center mr-3 px-1.5 shadow-2xs">
+                          <VietQrLogo width={48} height={15} />
                         </View>
                         <View className="flex-1">
                           <View className="flex-row items-center gap-2 flex-wrap">
@@ -227,11 +214,13 @@ export default function BookingPaymentScreen() {
                         </View>
                       </View>
 
-                      {/* Selected line checkmark */}
+                      {/* Radio Selection */}
                       {isSelected ? (
-                        <Ionicons name="checkmark" size={20} color="#059669" />
+                        <View className="w-5 h-5 rounded-full bg-slate-900 items-center justify-center">
+                          <Ionicons name="checkmark" size={13} color="#ffffff" />
+                        </View>
                       ) : (
-                        <View className="w-5" />
+                        <View className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
                       )}
                     </View>
                   </TouchableOpacity>
@@ -240,53 +229,10 @@ export default function BookingPaymentScreen() {
             </View>
           </View>
 
-          {/* Card 3: Thông tin chuyển khoản VietQR nếu chọn VIETQR */}
-          {paymentMethod === 'VIETQR' && (
-            <View className="bg-white border border-slate-200/90 rounded-lg p-4 mb-3.5 shadow-2xs">
-              <View className="flex-row items-center gap-2 mb-2.5">
-                <Ionicons name="information-circle-outline" size={18} color="#059669" />
-                <Text className="text-xs font-bold text-slate-900">
-                  Thông tin tài khoản nhận chuyển khoản
-                </Text>
-              </View>
-
-              <View className="bg-slate-50 rounded-lg p-3 space-y-1.5 border border-slate-200/80">
-                <View className="flex-row justify-between py-0.5">
-                  <Text className="text-xs text-slate-500">Ngân hàng:</Text>
-                  <Text className="text-xs font-bold text-slate-800">MB Bank (Quân Đội)</Text>
-                </View>
-                <View className="flex-row justify-between py-0.5">
-                  <Text className="text-xs text-slate-500">Số tài khoản:</Text>
-                  <Text className="text-xs font-extrabold text-emerald-800 tracking-wider">
-                    0987654321
-                  </Text>
-                </View>
-                <View className="flex-row justify-between py-0.5">
-                  <Text className="text-xs text-slate-500">Chủ tài khoản:</Text>
-                  <Text className="text-xs font-semibold text-slate-800">
-                    PHONG KHAM DA KHOA VITACARE
-                  </Text>
-                </View>
-                <View className="flex-row justify-between py-0.5">
-                  <Text className="text-xs text-slate-500">Số tiền:</Text>
-                  <Text className="text-xs font-bold text-slate-900">
-                    {formatCurrencyVi(totalAmount)}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between py-0.5">
-                  <Text className="text-xs text-slate-500">Nội dung:</Text>
-                  <Text className="text-xs font-bold text-emerald-700">
-                    VITACARE {user?.phone || 'KHAM'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Card 4: Cam kết y tế & Lưu ý */}
+          {/* Card: Cam kết y tế & Lưu ý */}
           <View className="bg-white border border-slate-200/90 rounded-lg p-3.5 mb-2 shadow-2xs">
             <View className="flex-row items-start gap-2">
-              <Ionicons name="shield-checkmark-outline" size={16} color="#059669" style={{ marginTop: 1 }} />
+              <Ionicons name="shield-checkmark-outline" size={16} color="#475569" style={{ marginTop: 1 }} />
               <View className="flex-1">
                 <Text className="text-xs font-bold text-slate-800">
                   Cam kết bảo mật & Quyền lợi khám
@@ -303,7 +249,7 @@ export default function BookingPaymentScreen() {
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex-row items-center justify-between">
           <View className="flex-1 mr-3">
             <Text className="text-[11px] text-slate-400 font-medium">Tổng thanh toán:</Text>
-            <Text className="text-base font-extrabold text-emerald-800 leading-tight">
+            <Text className="text-base font-extrabold text-slate-900 leading-tight">
               {formatCurrencyVi(totalAmount)}
             </Text>
           </View>
@@ -313,11 +259,20 @@ export default function BookingPaymentScreen() {
               title="Xác nhận thanh toán"
               onPress={handlePayment}
               isLoading={isSubmitting}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !paymentMethod}
               className="py-3 rounded-lg"
             />
           </View>
         </View>
+
+        {/* Modal Quét mã VietQR & Mở thẳng App Ngân hàng (Deep Linking) */}
+        <PayosDeepLinkModal
+          visible={isPayosModalVisible}
+          onClose={() => setIsPayosModalVisible(false)}
+          appointmentId={createdApptId || ''}
+          paymentData={payosData}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
       </KeyboardAvoidingView>
     </ScreenShell>
   )

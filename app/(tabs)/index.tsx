@@ -21,49 +21,55 @@ import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { BookingMethodsModal } from '../../src/components/booking/BookingMethodsModal'
 import { formatCurrencyVi } from '../../src/utils/date'
 
-// 1. Danh mục các phương thức khám bệnh dạng Card hình vuông có ảnh
+// 1. Danh mục 6 phương thức khám bệnh đồng bộ chuẩn từ Web & Backend
 const BOOKING_METHODS = [
   {
     id: 'specialty',
+    code: 'SPECIALTY_EXAM',
     name: 'Khám chuyên khoa',
     image: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&w=300&q=80',
     color: '#059669',
-    path: '/booking',
+    path: '/booking/specialty',
   },
   {
     id: 'doctor',
+    code: 'CONSULTATION',
     name: 'Khám cùng bác sĩ',
     image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=300&q=80',
     color: '#2563eb',
-    path: '/booking',
-  },
-  {
-    id: 'package',
-    name: 'Gói khám toàn diện',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&auto=format&fit=crop&q=80',
-    color: '#0f766e',
-    path: '/booking',
-  },
-  {
-    id: 'after-hours',
-    name: 'Khám ngoài giờ',
-    image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=300&q=80',
-    color: '#d97706',
-    path: '/booking',
+    path: '/booking/doctor',
   },
   {
     id: 'online',
+    code: 'ONLINE_CONSULTATION',
     name: 'Tư vấn online',
     image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=300&q=80',
-    color: '#0284c7',
-    path: '/(tabs)/ai-chat',
+    color: '#0f766e',
+    path: '/booking/online',
   },
   {
     id: 'followup',
-    name: 'Tái khám theo hẹn',
+    code: 'FOLLOWUP_EXAM',
+    name: 'Tái khám',
     image: 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=300&q=80',
     color: '#e11d48',
-    path: '/booking',
+    path: '/booking/doctor?flow=followup',
+  },
+  {
+    id: 'family',
+    code: 'FAMILY_BOOKING',
+    name: 'Khám gia đình',
+    image: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&w=300&q=80',
+    color: '#7c3aed',
+    path: '/booking/specialty?flow=family',
+  },
+  {
+    id: 'after-hours',
+    code: 'AFTER_HOURS',
+    name: 'Khám ngoài giờ',
+    image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=300&q=80',
+    color: '#d97706',
+    path: '/booking/after-hours',
   },
 ]
 
@@ -277,7 +283,7 @@ export default function HomeScreen() {
               </View>
             </View>
             <Text numberOfLines={1} className="text-xs font-medium text-slate-500 mt-1">
-              Xin chào, {patientName} 👋
+              Xin chào, {patientName}
             </Text>
           </View>
 
@@ -338,38 +344,38 @@ export default function HomeScreen() {
         </View>
 
         {/* ================= SECTION 2: HERO BANNER ĐẶT KHÁM ================= */}
-        <View className="px-5 pt-4">
-          <View className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 bg-emerald-600 rounded-lg p-5 shadow-sm relative overflow-hidden">
-            <View pointerEvents="none" className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-white/10" />
-            <View pointerEvents="none" className="absolute -bottom-8 right-24 w-24 h-24 rounded-full bg-teal-300/20" />
+        <View className="px-5 pt-3">
+          <View className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 bg-emerald-600 rounded-lg px-4 py-3 shadow-xs relative overflow-hidden">
+            <View pointerEvents="none" className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10" />
+            <View pointerEvents="none" className="absolute -bottom-8 right-24 w-20 h-20 rounded-full bg-teal-300/20" />
 
             <View className="flex-row items-end justify-between">
-              <View className="w-32 h-40 items-center justify-end -mb-5 -ml-1 mr-1">
+              <View className="w-24 h-28 items-center justify-end -mb-3 -ml-1 mr-2">
                 <Image
                   source={require('../../assets/images/doctor-hero.png')}
-                  style={{ width: 135, height: 165 }}
+                  style={{ width: 105, height: 122 }}
                   contentFit="contain"
                   contentPosition="bottom center"
                   transition={200}
                 />
               </View>
 
-              <View className="flex-1 pl-2 pb-1">
-                <Text className="text-white text-lg font-black tracking-tight leading-tight">
+              <View className="flex-1 pl-1 pb-0.5">
+                <Text className="text-white text-[15px] font-black tracking-tight leading-tight">
                   Khám bệnh online!
                 </Text>
-                <Text className="text-emerald-50 text-xs mt-1.5 leading-relaxed">
+                <Text className="text-emerald-50 text-[11px] mt-1 leading-tight">
                   Chủ động chọn bác sĩ & giờ khám không lo xếp hàng chờ đợi
                 </Text>
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={handleStartBooking}
-                  className="bg-white mt-3.5 py-2 px-4 rounded-lg self-start flex-row items-center shadow-xs"
+                  className="bg-white mt-2 py-1.5 px-3 rounded-md self-start flex-row items-center shadow-xs"
                 >
-                  <Text className="text-emerald-800 font-extrabold text-xs mr-1">
+                  <Text className="text-emerald-800 font-extrabold text-[11px] mr-1">
                     Đặt lịch ngay
                   </Text>
-                  <Ionicons name="arrow-forward" size={13} color="#047857" />
+                  <Ionicons name="arrow-forward" size={12} color="#047857" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -404,36 +410,34 @@ export default function HomeScreen() {
                     setSelectedMethod(method.id)
                     const store = useBookingStore.getState()
                     store.resetBooking()
-                    if (method.path === '/(tabs)/ai-chat') {
-                      router.push('/(tabs)/ai-chat')
-                    } else {
-                      router.push('/booking')
+                    store.setBookingMethod(method.code as any)
+                    if (method.id === 'after-hours') {
+                      store.setIsAfterHours(true)
                     }
+                    router.push(method.path as any)
                   }}
-                  className={`mr-2.5 px-4 py-2 rounded-lg border transition-all ${
-                    isSelected
+                  className={`mr-2.5 px-4 py-2 rounded-lg border transition-all ${isSelected
                       ? 'border-emerald-300'
                       : 'border-slate-200/90'
-                  }`}
+                    }`}
                   style={
                     isSelected
                       ? {
-                          backgroundColor: 'rgba(5, 150, 105, 0.08)',
-                          borderColor: 'rgba(5, 150, 105, 0.38)',
-                        }
+                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                        borderColor: 'rgba(5, 150, 105, 0.38)',
+                      }
                       : {
-                          backgroundColor: '#ffffff',
-                          borderColor: '#e2e8f0',
-                        }
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                      }
                   }
                 >
                   <Text
                     numberOfLines={1}
-                    className={`text-xs ${
-                      isSelected
+                    className={`text-xs ${isSelected
                         ? 'text-emerald-700 font-bold'
                         : 'text-slate-600 font-medium'
-                    }`}
+                      }`}
                   >
                     {method.name}
                   </Text>
@@ -503,7 +507,7 @@ export default function HomeScreen() {
                   <View className="mt-3 pt-2.5 border-t border-slate-100">
                     <View className="flex-row items-center justify-between mb-3">
                       <Text className="text-xs text-slate-400 font-medium">Chi phí trọn gói</Text>
-                      <Text className="text-base font-extrabold text-slate-900">
+                      <Text className="text-sm font-semibold text-slate-800">
                         {formatCurrencyVi(pkg.price)}
                       </Text>
                     </View>
@@ -622,7 +626,7 @@ export default function HomeScreen() {
                             </Text>
                             <Text className="text-xs text-slate-400 font-medium ml-1.5">• Giá khám</Text>
                           </View>
-                          <Text className="text-base font-extrabold text-slate-900">
+                          <Text className="text-sm font-semibold text-slate-800">
                             {formatCurrencyVi(fee)}
                           </Text>
                         </View>

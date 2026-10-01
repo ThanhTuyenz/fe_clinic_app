@@ -30,62 +30,95 @@ interface MethodMeta {
 
 import { useBookingStore } from '../../store/useBookingStore'
 
-// Bảng màu Y tế tự nhiên, tinh tế, êm mắt (không bị chói hay rực rỡ như màu AI mặc định)
+// Bảng màu Y tế tự nhiên, tinh tế, êm mắt
 const METHOD_CONFIGS: Record<string, Omit<MethodMeta, 'id' | 'title' | 'desc'>> = {
   SPECIALTY_EXAM: {
     icon: 'medkit-outline',
-    color: '#047857', // Xanh ngọc y tế trầm ấm, đáng tin cậy
-    bgColor: '#ecfdf5', // Nền mint pastel nhạt
+    color: '#047857',
+    bgColor: '#ecfdf5',
     borderColor: '#d1fae5',
-    path: '/booking?method=specialty',
-  },
-  HEALTH_PACKAGE: {
-    icon: 'shield-checkmark-outline',
-    color: '#0f766e', // Xanh teal mộc trầm an tâm
-    bgColor: '#f0fdfa', // Nền teal pastel thanh mát
-    borderColor: '#ccfbf1',
-    path: '/booking?method=package',
+    path: '/booking/specialty',
   },
   CONSULTATION: {
     icon: 'person-outline',
-    color: '#1d4ed8', // Xanh navy chuyên khoa chuẩn mực
-    bgColor: '#eff6ff', // Nền sapphire pastel êm dịu
+    color: '#1d4ed8',
+    bgColor: '#eff6ff',
     borderColor: '#dbeafe',
-    path: '/booking?method=doctor',
+    path: '/booking/doctor',
+  },
+  ONLINE_CONSULTATION: {
+    icon: 'videocam-outline',
+    color: '#0f766e',
+    bgColor: '#f0fdfa',
+    borderColor: '#ccfbf1',
+    path: '/booking/online',
+  },
+  FOLLOWUP_EXAM: {
+    icon: 'repeat-outline',
+    color: '#e11d48',
+    bgColor: '#fff1f2',
+    borderColor: '#ffe4e6',
+    path: '/booking/doctor?flow=followup',
+  },
+  FAMILY_BOOKING: {
+    icon: 'people-outline',
+    color: '#7c3aed',
+    bgColor: '#f5f3ff',
+    borderColor: '#ede9fe',
+    path: '/booking/specialty?flow=family',
   },
   AFTER_HOURS: {
     icon: 'time-outline',
-    color: '#b45309', // Vàng mật ong ấm áp như mẫu thông báo
-    bgColor: '#fefce8', // Nền kem bơ pastel trang nhã
+    color: '#b45309',
+    bgColor: '#fefce8',
     borderColor: '#fef08a',
-    path: '/booking?mode=after-hours',
+    path: '/booking/after-hours',
+  },
+  HEALTH_PACKAGE: {
+    icon: 'shield-checkmark-outline',
+    color: '#059669',
+    bgColor: '#ecfdf5',
+    borderColor: '#d1fae5',
+    path: '/booking/package',
   },
 }
 
-// Dữ liệu dự phòng đồng bộ danh mục phương thức khám chuẩn từ backend
+// Dữ liệu dự phòng đồng bộ 6 danh mục phương thức khám chuẩn từ backend
 const FALLBACK_METHODS: MethodMeta[] = [
   {
     id: 'specialty',
-    title: 'Đặt khám theo Chuyên khoa',
-    desc: 'Hơn 12 chuyên khoa mũi nhọn (Tim mạch, Mắt, Nhi, Da liễu, Tai Mũi Họng...)',
+    title: 'Khám Chuyên Khoa',
+    desc: 'Hơn 12 chuyên khoa mũi nhọn (Tim mạch, Mắt, Nhi, Da liễu...)',
     ...METHOD_CONFIGS.SPECIALTY_EXAM,
   },
   {
     id: 'doctor',
-    title: 'Khám cùng Bác sĩ Chuyên gia',
-    desc: 'Chủ động chọn bác sĩ CKI - CKII theo học vị, chuyên môn và lịch làm việc',
+    title: 'Khám Cùng Bác Sĩ',
+    desc: 'Chủ động chọn bác sĩ CKI - CKII theo học hàm và kinh nghiệm',
     ...METHOD_CONFIGS.CONSULTATION,
   },
   {
-    id: 'package',
-    title: 'Gói khám sức khỏe toàn diện',
-    desc: 'Đăng ký các gói khám tổng quát, tầm soát chuyên sâu định kỳ chuẩn y khoa',
-    ...METHOD_CONFIGS.HEALTH_PACKAGE,
+    id: 'online',
+    title: 'Tư Vấn Online',
+    desc: 'Gọi video 1:1 cùng bác sĩ, đọc kết quả xét nghiệm từ xa',
+    ...METHOD_CONFIGS.ONLINE_CONSULTATION,
+  },
+  {
+    id: 'followup',
+    title: 'Tái Khám',
+    desc: 'Đặt lịch tái khám với bác sĩ đã điều trị để theo dõi sức khỏe định kỳ',
+    ...METHOD_CONFIGS.FOLLOWUP_EXAM,
+  },
+  {
+    id: 'family',
+    title: 'Khám Gia Đình',
+    desc: 'Chăm sóc ông bà, cha mẹ và con nhỏ trên cùng một tài khoản',
+    ...METHOD_CONFIGS.FAMILY_BOOKING,
   },
   {
     id: 'after-hours',
-    title: 'Đặt khám ngoài giờ linh hoạt',
-    desc: 'Khung giờ 17:30 - 20:30 thuận tiện cho người bận rộn, không lo chờ đợi',
+    title: 'Khám Ngoài Giờ',
+    desc: '17:30 - 20:30 tiện lợi cho người bận rộn, không lo chờ đợi',
     ...METHOD_CONFIGS.AFTER_HOURS,
   },
 ]
@@ -139,6 +172,22 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
         setBookingMethod('SPECIALTY_EXAM')
         setIsAfterHours(false)
         router.push('/booking?method=specialty')
+      } else if (path.includes('doctor') || id.includes('consultation') || id.includes('doctor')) {
+        setBookingMethod('CONSULTATION')
+        setIsAfterHours(false)
+        router.push('/booking?method=doctor')
+      } else if (path.includes('online') || id.includes('online')) {
+        setBookingMethod('ONLINE_CONSULTATION')
+        setIsAfterHours(false)
+        router.push('/booking?method=online')
+      } else if (path.includes('followup') || id.includes('followup')) {
+        setBookingMethod('FOLLOWUP_EXAM')
+        setIsAfterHours(false)
+        router.push('/booking?method=followup')
+      } else if (path.includes('family') || id.includes('family')) {
+        setBookingMethod('FAMILY_BOOKING')
+        setIsAfterHours(false)
+        router.push('/booking?method=family')
       } else if (path.includes('package') || id.includes('package')) {
         setBookingMethod('HEALTH_PACKAGE')
         setIsAfterHours(false)
@@ -148,9 +197,9 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
         setIsAfterHours(true)
         router.push('/booking?mode=after-hours' as any)
       } else {
-        setBookingMethod('CONSULTATION')
+        setBookingMethod('SPECIALTY_EXAM')
         setIsAfterHours(false)
-        router.push('/booking?method=doctor')
+        router.push('/booking?method=specialty')
       }
     }, 150)
   }

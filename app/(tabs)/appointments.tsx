@@ -95,17 +95,17 @@ export default function AppointmentsScreen() {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => router.push(`/booking/${item.id || item._id}`)}
-        className="bg-white rounded-lg p-4 mb-3 border border-slate-100 shadow-sm"
+        className="bg-white rounded-lg p-4 mb-2.5 border border-slate-200/90"
       >
         <View className="flex-row items-center justify-between pb-3 border-b border-slate-100">
           <View className="flex-row items-center flex-1 pr-2">
-            <View className="w-8 h-8 rounded-lg bg-emerald-50 items-center justify-center mr-2">
-              <Ionicons name="calendar-outline" size={16} color="#059669" />
+            <View className="w-8 h-8 rounded-lg bg-slate-100 items-center justify-center mr-2.5">
+              <Ionicons name="calendar-outline" size={15} color="#475569" />
             </View>
             <Text className="text-sm font-bold text-slate-800">
               {dateFormatted}
             </Text>
-            <Text className="text-xs text-slate-500 ml-2">({slotTime})</Text>
+            <Text className="text-xs text-slate-500 ml-1.5">({slotTime})</Text>
           </View>
           {renderStatusBadge(item.status)}
         </View>
@@ -118,8 +118,8 @@ export default function AppointmentsScreen() {
             </Text>
           </View>
           <View className="flex-row items-center">
-            <Ionicons name="qr-code-outline" size={20} color="#059669" />
-            <Ionicons name="chevron-forward" size={18} color="#94a3b8" className="ml-1" />
+            <Ionicons name="qr-code-outline" size={18} color="#475569" />
+            <Ionicons name="chevron-forward" size={16} color="#94a3b8" className="ml-1" />
           </View>
         </View>
       </TouchableOpacity>
@@ -129,9 +129,9 @@ export default function AppointmentsScreen() {
   if (!isAuthenticated) {
     return (
       <ScreenShell title="Lịch hẹn khám">
-        <View className="flex-1 items-center justify-center p-6">
-          <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mb-3">
-            <Ionicons name="lock-closed-outline" size={32} color="#059669" />
+        <View className="flex-1 items-center justify-center p-6 bg-slate-50">
+          <View className="w-14 h-14 rounded-lg bg-slate-100 items-center justify-center mb-3">
+            <Ionicons name="lock-closed-outline" size={28} color="#475569" />
           </View>
           <Text className="text-lg font-bold text-slate-800 text-center">
             Đăng nhập để xem lịch hẹn
@@ -142,7 +142,7 @@ export default function AppointmentsScreen() {
           <Button
             title="Đăng nhập ngay"
             onPress={() => router.push('/(auth)/login')}
-            className="w-48"
+            className="w-48 py-3 rounded-lg"
           />
         </View>
       </ScreenShell>
@@ -151,74 +151,77 @@ export default function AppointmentsScreen() {
 
   return (
     <ScreenShell title="Lịch hẹn của tôi">
-      {/* Tabs Filter */}
-      <View className="flex-row px-5 py-3 bg-white border-b border-slate-100">
-        <TouchableOpacity
-          onPress={() => setTab('upcoming')}
-          className={`flex-1 py-2 rounded-lg items-center mr-2 border ${
-            tab === 'upcoming'
-              ? 'bg-emerald-600 border-emerald-600'
-              : 'bg-slate-50 border-slate-200'
-          }`}
-        >
-          <Text
-            className={`text-xs font-bold ${
-              tab === 'upcoming' ? 'text-white' : 'text-slate-600'
+      <View className="flex-1 bg-slate-50">
+        {/* Tabs Filter */}
+        <View className="flex-row px-4 py-2.5 bg-white border-b border-slate-200/80">
+          <TouchableOpacity
+            onPress={() => setTab('upcoming')}
+            className={`flex-1 py-2 rounded-lg items-center mr-1.5 border ${
+              tab === 'upcoming'
+                ? 'bg-slate-900 border-slate-900'
+                : 'bg-white border-slate-200'
             }`}
           >
-            Sắp tới ({upcomingList.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setTab('history')}
-          className={`flex-1 py-2 rounded-lg items-center ml-2 border ${
-            tab === 'history'
-              ? 'bg-emerald-600 border-emerald-600'
-              : 'bg-slate-50 border-slate-200'
-          }`}
-        >
-          <Text
-            className={`text-xs font-bold ${
-              tab === 'history' ? 'text-white' : 'text-slate-600'
-            }`}
-          >
-            Lịch sử ({historyList.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* List */}
-      <View className="flex-1 px-5 pt-3">
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#0284c7" className="py-8" />
-        ) : displayedList.length === 0 ? (
-          <View className="flex-1 items-center justify-center py-16">
-            <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />
-            <Text className="text-slate-500 text-sm font-medium mt-3">
-              {tab === 'upcoming'
-                ? 'Bạn không có lịch hẹn sắp tới nào.'
-                : 'Chưa có lịch sử khám bệnh.'}
+            <Text
+              className={`text-xs font-bold ${
+                tab === 'upcoming' ? 'text-white' : 'text-slate-600'
+              }`}
+            >
+              Sắp tới ({upcomingList.length})
             </Text>
-            <Button
-              title="Đặt lịch khám mới"
-              variant="outline"
-              size="sm"
-              onPress={() => router.push('/booking')}
-              className="mt-4"
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setTab('history')}
+            className={`flex-1 py-2 rounded-lg items-center ml-1.5 border ${
+              tab === 'history'
+                ? 'bg-slate-900 border-slate-900'
+                : 'bg-white border-slate-200'
+            }`}
+          >
+            <Text
+              className={`text-xs font-bold ${
+                tab === 'history' ? 'text-white' : 'text-slate-600'
+              }`}
+            >
+              Lịch sử ({historyList.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* List */}
+        <View className="flex-1 px-4 pt-3">
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#059669" className="py-8" />
+          ) : displayedList.length === 0 ? (
+            <View className="flex-1 items-center justify-center py-16">
+              <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />
+              <Text className="text-slate-500 text-sm font-medium mt-3">
+                {tab === 'upcoming'
+                  ? 'Bạn không có lịch hẹn sắp tới nào.'
+                  : 'Chưa có lịch sử khám bệnh.'}
+              </Text>
+              <Button
+                title="Đặt lịch khám mới"
+                variant="outline"
+                size="sm"
+                onPress={() => router.push('/booking')}
+                className="mt-4 py-2.5 rounded-lg"
+              />
+            </View>
+          ) : (
+            <FlatList
+              data={displayedList}
+              keyExtractor={(item) => String(item.id || item._id)}
+              renderItem={renderAppointmentItem}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              refreshControl={
+                <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+              }
             />
-          </View>
-        ) : (
-          <FlatList
-            data={displayedList}
-            keyExtractor={(item) => String(item.id || item._id)}
-            renderItem={renderAppointmentItem}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-            }
-          />
-        )}
+          )}
+        </View>
       </View>
     </ScreenShell>
   )

@@ -155,42 +155,42 @@ export function SelectModal<T = any>({
                     activeOpacity={item.disabled ? 1 : 0.65}
                     disabled={item.disabled}
                     onPress={() => handleSelect(item)}
-                    className={`flex-row items-center px-4 py-3 border-b border-slate-100/70 transition-colors ${
+                    className={`flex-row items-center px-4 py-3.5 border-b border-slate-100 transition-colors ${
                       item.disabled
                         ? 'opacity-40 bg-slate-50'
                         : isSelected
-                          ? 'bg-emerald-50/70'
-                          : 'active:bg-slate-50'
+                          ? 'bg-slate-50/80'
+                          : 'bg-white active:bg-slate-50'
                     }`}
                   >
                     {/* Avatar if exists */}
                     {item.avatar ? (
                       <Image
                         source={{ uri: item.avatar }}
-                        style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }}
+                        style={{ width: 42, height: 42, borderRadius: 21, marginRight: 12 }}
                         contentFit="cover"
                       />
                     ) : null}
 
                     {/* Text info */}
-                    <View className="flex-1 mr-2">
-                      <View className="flex-row items-center flex-wrap gap-1.5">
+                    <View className="flex-1 mr-3">
+                      <View className="flex-row items-center flex-wrap gap-1.5 mb-0.5">
                         <Text
-                          className={`text-sm font-semibold ${
-                            isSelected ? 'text-emerald-900 font-bold' : 'text-slate-800'
+                          className={`text-sm ${
+                            isSelected ? 'text-slate-900 font-bold' : 'text-slate-800 font-medium'
                           }`}
                         >
                           {item.title}
                         </Text>
                         {item.badge ? (
                           <View
-                            className={`px-1.5 py-0.5 rounded text-[10px] ${
-                              item.badgeColor || 'bg-emerald-100'
+                            className={`px-2 py-0.5 rounded text-[10px] ${
+                              item.badgeColor || 'bg-slate-100 border border-slate-200'
                             }`}
                           >
                             <Text
-                              className={`text-[10px] font-bold ${
-                                item.badgeColor ? 'text-slate-800' : 'text-emerald-800'
+                              className={`text-[10px] font-semibold ${
+                                item.badgeColor ? 'text-slate-800' : 'text-slate-700'
                               }`}
                             >
                               {item.badge}
@@ -201,9 +201,7 @@ export function SelectModal<T = any>({
 
                       {item.subtitle ? (
                         <Text
-                          className={`text-xs mt-0.5 ${
-                            isSelected ? 'text-emerald-700' : 'text-slate-500'
-                          }`}
+                          className="text-xs text-slate-500 leading-relaxed"
                           numberOfLines={2}
                         >
                           {item.subtitle}
@@ -212,13 +210,13 @@ export function SelectModal<T = any>({
                     </View>
 
                     {/* Radio / Check indicator */}
-                    <View className="ml-2">
+                    <View className="ml-1">
                       {isSelected ? (
-                        <View className="w-5 h-5 rounded-full bg-emerald-600 items-center justify-center">
+                        <View className="w-5 h-5 rounded-full bg-emerald-600 items-center justify-center shadow-xs">
                           <Ionicons name="checkmark" size={13} color="#ffffff" />
                         </View>
                       ) : (
-                        <View className="w-5 h-5 rounded-full border border-slate-300" />
+                        <View className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
                       )}
                     </View>
                   </TouchableOpacity>

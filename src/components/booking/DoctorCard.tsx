@@ -29,47 +29,56 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onSelect && onSelect(doctor)}
-      className={`bg-white rounded-lg p-4 mb-3.5 border flex-row items-center shadow-xs ${
-        selected ? 'border-emerald-600 bg-emerald-50/40' : 'border-slate-100'
+      className={`bg-white rounded-lg p-3 mb-2.5 border flex-row items-center shadow-xs ${
+        selected ? 'border-emerald-600 bg-emerald-50/40' : 'border-slate-200'
       }`}
     >
       <Image
         source={{ uri: doctor.avatar }}
-        className="w-18 h-18 rounded-lg bg-emerald-50 mr-3.5"
-        style={{ width: 72, height: 72, borderRadius: 8 }}
+        className="w-16 h-16 rounded-lg bg-emerald-50 mr-3"
+        style={{ width: 64, height: 64, borderRadius: 8 }}
         contentFit="cover"
         transition={200}
       />
       <View className="flex-1">
-        <View className="flex-row items-center">
-          <Text className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg mr-1.5 border border-emerald-100">
-            {title}
-          </Text>
-          <Text
-            numberOfLines={1}
-            className="text-base font-bold text-slate-800 flex-1"
-          >
-            {name}
-          </Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1 mr-2">
+            <Text className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mr-1.5 border border-emerald-100">
+              {title}
+            </Text>
+            <Text
+              numberOfLines={1}
+              className="text-sm font-bold text-slate-900 flex-1"
+            >
+              {name}
+            </Text>
+          </View>
+          {selected ? (
+            <View className="w-5 h-5 rounded-full bg-emerald-600 items-center justify-center">
+              <Ionicons name="checkmark" size={13} color="#ffffff" />
+            </View>
+          ) : (
+            <View className="w-5 h-5 rounded-full border border-slate-300" />
+          )}
         </View>
 
         <Text numberOfLines={1} className="text-xs text-slate-500 mt-1">
           {specialty}
         </Text>
 
-        <View className="flex-row items-center justify-between mt-2.5">
+        <View className="flex-row items-center justify-between mt-2">
           <View className="flex-row items-center">
-            <Ionicons name="star" size={14} color="#f59e0b" />
+            <Ionicons name="star" size={13} color="#f59e0b" />
             <Text className="text-xs font-semibold text-slate-700 ml-1">
               {doctor.rating || 5.0}
             </Text>
             {Boolean(doctor.experience_years) && (
-              <Text className="text-xs text-slate-400 ml-2">
+              <Text className="text-xs text-slate-400 ml-1.5">
                 • {doctor.experience_years} năm KN
               </Text>
             )}
           </View>
-          <Text className="text-sm font-bold text-emerald-700">
+          <Text className="text-xs font-semibold text-slate-800">
             {formatCurrencyVi(fee)}
           </Text>
         </View>

@@ -33,6 +33,7 @@ export const doctorService = {
         ...d,
         id: d.id || d._id,
         branchId: branchIdFound,
+        specialtyId: primarySpecialty?.id || d.specialties?.[0]?.specialtyId || d.specialtyId || d.specialtyID,
         fullName: d.fullName || d.user?.fullName || d.name,
         name: d.name || d.fullName || d.user?.fullName,
         title: d.academicRank || d.title,
@@ -103,6 +104,26 @@ export const doctorService = {
       })
       const rows = unwrapNestResponse<any[]>(res.data)
       return Array.isArray(rows) ? rows : []
+    } catch {
+      return []
+    }
+  },
+
+  async getSpecialtyServices(specialtyId: number | string, branchId?: string): Promise<any[]> {
+    try {
+      const res = await api.get('/api/v1/specialties/services', {
+        params: {
+          specialtyId: Number(specialtyId),
+          ...(branchId ? { branchId } : {}),
+        },
+      })
+      const rows = unwrapNestResponse<any[]>(res.data)
+      if (Array.isArray(rows) && rows.length > 0) return rows
+      const fallbackRes = await api.get(`/api/v1/specialties/${specialtyId}/services`, {
+        params: branchId ? { branchId } : undefined,
+      })
+      const fallbackRows = unwrapNestResponse<any[]>(fallbackRes.data)
+      return Array.isArray(fallbackRows) ? fallbackRows : []
     } catch {
       return []
     }
@@ -189,5 +210,74 @@ export const doctorService = {
       console.warn('Could not fetch booking methods from backend', err)
     }
     return []
+  },
+
+  async getBookingSlots(params: {
+    branchId?: string
+    specialtyId?: number | string
+    doctorId?: string
+    date?: string
+    days?: number
+  } = {}): Promise<{
+    date: string | null
+    availableDates: string[]
+    totalAvailableSlots: number
+    summary: {
+      morning: number
+      afternoon: number
+      evening: number
+    }
+    slots: Array<{
+      startTime: string
+      endTime: string
+      label: string
+      period: 'MORNING' | 'AFTERNOON' | 'EVENING'
+      totalCapacity: number
+      occupiedCount: number
+      remainingSlots: number
+      isFull: boolean
+      representativeSlotId: string
+      doctors: Array<{
+        slotId: string
+        doctorId: string
+        doctorName: string
+        academicRank?: string | null
+        avatarUrl?: string | null
+        experienceYears?: number | null
+        consultationFee: number
+        roomId?: string | null
+        roomName?: string | null
+        remainingSlots: number
+      }>
+    }>
+  }> {
+    try {
+      const res = await api.get('/api/v1/booking/slots', {
+        params: {
+          ...(params.branchId ? { branchId: params.branchId } : {}),
+          ...(params.specialtyId ? { specialtyId: params.specialtyId } : {}),
+          ...(params.doctorId ? { doctorId: params.doctorId } : {}),
+          ...(params.date ? { date: params.date } : {}),
+          ...(params.days ? { days: params.days } : {}),
+        },
+      })
+      const data = unwrapNestResponse<any>(res.data)
+      return {
+        date: data?.date || null,
+        availableDates: Array.isArray(data?.availableDates) ? data.availableDates : [],
+        totalAvailableSlots: data?.totalAvailableSlots || 0,
+        summary: data?.summary || { morning: 0, afternoon: 0, evening: 0 },
+        slots: Array.isArray(data?.slots) ? data.slots : [],
+      }
+    } catch (err) {
+      console.warn('Could not fetch booking slots', err)
+      return {
+        date: null,
+        availableDates: [],
+        totalAvailableSlots: 0,
+        summary: { morning: 0, afternoon: 0, evening: 0 },
+        slots: [],
+      }
+    }
   },
 }

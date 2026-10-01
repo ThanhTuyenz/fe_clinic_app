@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { BookingDraft } from '../types/appointment'
+import { BookingDraft, BookingMethodCode } from '../types/appointment'
 import { Doctor } from '../types/doctor'
 import { PatientInfoFormValues } from '../utils/validation'
 
@@ -7,8 +7,9 @@ interface BookingState {
   draft: BookingDraft
   step: number
   setBranchId: (branchId: string) => void
-  setBookingMethod: (method: 'SPECIALTY_EXAM' | 'CONSULTATION' | 'HEALTH_PACKAGE' | 'AFTER_HOURS') => void
+  setBookingMethod: (method: BookingMethodCode) => void
   setSpecialty: (specialty: any) => void
+  setSpecialtyService: (specialtyService: any) => void
   setHealthPackage: (healthPackage: any) => void
   setIsAfterHours: (isAfterHours: boolean) => void
   setDoctor: (doctor: Doctor) => void
@@ -28,6 +29,7 @@ const initialDraft: BookingDraft = {
   branchId: undefined,
   bookingMethod: 'SPECIALTY_EXAM',
   specialty: null,
+  specialtyService: null,
   healthPackage: null,
   isAfterHours: false,
   doctor: null,
@@ -62,6 +64,11 @@ export const useBookingStore = create<BookingState>((set) => ({
   setSpecialty: (specialty) =>
     set((state) => ({
       draft: { ...state.draft, specialty },
+    })),
+
+  setSpecialtyService: (specialtyService) =>
+    set((state) => ({
+      draft: { ...state.draft, specialtyService },
     })),
 
   setHealthPackage: (healthPackage) =>

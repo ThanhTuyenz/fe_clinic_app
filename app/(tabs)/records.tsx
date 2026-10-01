@@ -194,10 +194,10 @@ export default function RecordsScreen() {
               setEditingProfile(null)
               setShowCreateModal(true)
             }}
-            className="flex-row items-center bg-emerald-50 border border-emerald-200/90 px-3 py-1.5 rounded"
+            className="flex-row items-center bg-blue-50 border border-blue-200/90 px-3 py-1.5 rounded active:bg-blue-100"
           >
-            <Ionicons name="qr-code-outline" size={15} color="#047857" style={{ marginRight: 5 }} />
-            <Text className="text-xs font-bold text-emerald-800">Thêm hồ sơ</Text>
+            <Ionicons name="qr-code-outline" size={15} color="#2563eb" style={{ marginRight: 5 }} />
+            <Text className="text-xs font-bold text-blue-700">Thêm hồ sơ</Text>
           </TouchableOpacity>
         ) : undefined
       }

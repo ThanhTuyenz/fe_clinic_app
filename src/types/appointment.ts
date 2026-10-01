@@ -110,10 +110,20 @@ export interface HealthPackage {
   image?: string
 }
 
+export type BookingMethodCode =
+  | 'SPECIALTY_EXAM'
+  | 'CONSULTATION'
+  | 'ONLINE_CONSULTATION'
+  | 'FOLLOWUP_EXAM'
+  | 'FAMILY_BOOKING'
+  | 'AFTER_HOURS'
+  | 'HEALTH_PACKAGE'
+
 export interface BookingDraft {
   branchId?: string
-  bookingMethod?: 'SPECIALTY_EXAM' | 'CONSULTATION' | 'HEALTH_PACKAGE' | 'AFTER_HOURS'
+  bookingMethod?: BookingMethodCode
   specialty?: any | null
+  specialtyService?: any | null
   healthPackage?: HealthPackage | null
   isAfterHours?: boolean
   doctor: Doctor | null

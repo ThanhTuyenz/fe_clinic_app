@@ -96,8 +96,9 @@ api.interceptors.response.use(
           throw new Error('Không có refresh token')
         }
 
-        // Gọi trực tiếp axios raw để tránh vòng lặp interceptor
-        const currentBase = resolveApiBaseUrl()
+        // Gọi raw axios (không qua interceptor) để tránh vòng lặp 401 vô tận
+        // resolveApiBaseUrl() trả về host không có /api/v1 → cần prepend đầy đủ
+        const currentBase = resolveApiBaseUrl().replace(/\/api\/v1\/?$/, '')
         const refreshRes = await axios.post(`${currentBase}/api/v1/auth/refresh`, {
           refreshToken: savedRefreshToken,
         })
