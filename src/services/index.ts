@@ -6,4 +6,4 @@ export * from './patientProfileService'
 export * from './voucherService'
 export * from './aiService'
 export * from './paymentService'
-
+export * from './recommendationService'

@@ -49,15 +49,38 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (initialData) {
+        const fullAddr =
+          initialData.address?.trim() ||
+          [
+            initialData.streetAddress,
+            initialData.wardName,
+            initialData.districtName,
+            initialData.provinceName,
+          ]
+            .filter(Boolean)
+            .join(', ') ||
+          ''
+
+        let dob = ''
+        if (initialData.dateOfBirth) {
+          const rawDob =
+            typeof initialData.dateOfBirth === 'string'
+              ? initialData.dateOfBirth
+              : String(initialData.dateOfBirth)
+          dob = rawDob.split('T')[0]
+        }
+
         setForm({
           fullName: initialData.fullName || '',
           phoneNumber: initialData.phoneNumber || defaultPhone,
-          dateOfBirth: initialData.dateOfBirth ? initialData.dateOfBirth.slice(0, 10) : '',
+          dateOfBirth: dob,
           gender: (initialData.gender as any) || 'MALE',
           nationalId: initialData.identityCardNumber || initialData.nationalId || '',
           healthInsuranceNumber: initialData.healthInsuranceNumber || '',
-          relationshipToAccount: initialData.relationshipToAccount || 'OTHER',
-          address: initialData.address || '',
+          relationshipToAccount:
+            initialData.relationshipToAccount ||
+            (initialData.id === 'self' || initialData.isMainProfile ? 'SELF' : 'OTHER'),
+          address: fullAddr,
         })
       } else {
         setForm({
@@ -102,18 +125,28 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
     try {
       setIsSubmitting(true)
       let res: PatientProfile
-      if (initialData?.id) {
+      if (initialData?.id && initialData.id !== 'self') {
         res = await patientProfileService.updatePatientProfile(String(initialData.id), form)
         Alert.alert('Thành công', `Đã cập nhật thông tin cho ${res.fullName}.`)
       } else {
-        res = await patientProfileService.createPatientProfile(form)
-        Alert.alert('Thành công', `Đã tạo hồ sơ bệnh nhân cho ${res.fullName}.`)
+        const payload: CreatePatientProfilePayload = {
+          ...form,
+          isMainProfile:
+            initialData?.id === 'self' ||
+            initialData?.isMainProfile ||
+            form.relationshipToAccount === 'SELF',
+        }
+        res = await patientProfileService.createPatientProfile(payload)
+        Alert.alert(
+          'Thành công',
+          `Đã ${initialData?.id === 'self' ? 'cập nhật' : 'tạo'} hồ sơ cho ${res.fullName}.`
+        )
       }
       onSuccess(res)
       onClose()
     } catch (err: any) {
       Alert.alert(
-        initialData?.id ? 'Cập nhật thất bại' : 'Tạo hồ sơ thất bại',
+        initialData?.id && initialData.id !== 'self' ? 'Cập nhật thất bại' : 'Lưu hồ sơ thất bại',
         err.message || 'Không thể lưu hồ sơ. Vui lòng thử lại.'
       )
     } finally {
@@ -145,7 +178,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
             {/* Header */}
             <View className="flex-row items-center justify-between px-5 py-3.5 border-b border-slate-100">
               <Text className="text-base font-bold text-slate-900">
-                {initialData?.id ? 'Cập nhật thông tin hồ sơ' : 'Thêm hồ sơ bệnh nhân mới'}
+                {initialData ? 'Xem chi tiết & Cập nhật hồ sơ' : 'Thêm hồ sơ bệnh nhân mới'}
               </Text>
               <TouchableOpacity
                 activeOpacity={0.7}

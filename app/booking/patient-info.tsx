@@ -18,7 +18,6 @@ import { useCreateAppointment } from '../../src/hooks/useBooking'
 import { useNotifications } from '../../src/hooks/useNotifications'
 import { patientProfileService, PatientProfile } from '../../src/services/patientProfileService'
 import { doctorService } from '../../src/services/doctorService'
-import { formatDateVi, formatCurrencyVi } from '../../src/utils/date'
 import { ScreenShell, Button } from '../../src/components/common'
 import { CreateProfileModal } from '../../src/components/profile'
 import { BookingTimeline } from '../../src/components/booking'
@@ -32,6 +31,7 @@ export default function PatientInfoScreen() {
 
   const [submitting, setSubmitting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null)
   const [selectedProfileId, setSelectedProfileId] = useState<string>('self')
 
   // Patient profiles query
@@ -89,20 +89,6 @@ export default function PatientInfoScreen() {
     }
   }, [profileList, selectedProfileId])
 
-  const isPackage = draft.bookingMethod === 'HEALTH_PACKAGE' || Boolean(draft.healthPackage)
-  const serviceName = isPackage
-    ? draft.healthPackage?.name || 'Gói khám sức khỏe'
-    : draft.doctor?.full_name || draft.doctor?.fullName || draft.doctor?.name || 'Bác sĩ chuyên khoa'
-
-  const doctorSpecialty =
-    typeof draft.doctor?.specialty === 'object'
-      ? draft.doctor?.specialty?.name
-      : draft.doctor?.specialty || draft.doctor?.specialty_name || draft.specialty?.name || 'Đa khoa'
-
-  const price = isPackage
-    ? Number(draft.healthPackage?.price ?? 1200000)
-    : Number(draft.doctor?.price || draft.doctor?.consultation_fee || 300000)
-
   // Relationship badge mapping
   const getRelationshipBadge = (rel?: string) => {
     switch (rel) {
@@ -131,10 +117,37 @@ export default function PatientInfoScreen() {
     return datePart
   }
 
-  // Handle callback after creating a new profile
-  const handleProfileCreated = (newProf: PatientProfile) => {
+  // Handle edit profile modal
+  const handleEditProfile = (item: PatientProfile) => {
+    const fullAddress =
+      item.address?.trim() ||
+      [item.streetAddress, item.wardName, item.districtName, item.provinceName]
+        .filter(Boolean)
+        .join(', ') ||
+      (item.relationshipToAccount === 'SELF' ? user?.address?.trim() : '')
+
+    setEditingProfile({
+      ...item,
+      phoneNumber: item.phoneNumber || user?.phone || '',
+      address: fullAddress,
+    })
+    setShowCreateModal(true)
+  }
+
+  // Handle add new profile modal
+  const handleAddNewProfile = () => {
+    setEditingProfile(null)
+    setShowCreateModal(true)
+  }
+
+  // Handle callback after creating or updating a profile
+  const handleProfileSaved = (savedProf: PatientProfile) => {
     refetch()
-    setSelectedProfileId(String(newProf.id))
+    if (savedProf?.id) {
+      setSelectedProfileId(String(savedProf.id))
+    }
+    setShowCreateModal(false)
+    setEditingProfile(null)
   }
 
   // Handle Continue to Confirm & Voucher screen
@@ -222,41 +235,6 @@ export default function PatientInfoScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 110 }}
         >
-          {/* Summary Card */}
-          <View className="mb-5 bg-white border border-slate-200/90 rounded-lg p-3.5 shadow-2xs">
-            <View className="flex-row items-center justify-between mb-1.5">
-              <Text className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
-                {isPackage ? 'Gói khám đã chọn' : 'Bác sĩ điều trị'}
-              </Text>
-              <TouchableOpacity
-                onPress={() => router.replace('/booking')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text className="text-xs font-semibold text-emerald-700">Đổi lịch</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-sm font-bold text-slate-900 leading-snug">
-              {serviceName}
-            </Text>
-            {!isPackage && (
-              <Text className="text-xs text-slate-500 mt-0.5">
-                Chuyên khoa: {doctorSpecialty}
-              </Text>
-            )}
-
-            <View className="flex-row items-center mt-2 pt-2 border-t border-slate-200/60">
-              <Ionicons name="calendar-outline" size={14} color="#64748b" style={{ marginRight: 4 }} />
-              <Text className="text-xs font-semibold text-slate-700 mr-3">
-                {draft.date ? formatDateVi(draft.date) : 'Chưa chọn ngày'}
-              </Text>
-              <Ionicons name="time-outline" size={14} color="#64748b" style={{ marginRight: 4 }} />
-              <Text className="text-xs font-semibold text-slate-700">
-                {draft.slot || 'Chưa chọn giờ'}
-              </Text>
-            </View>
-          </View>
-
           {/* Section: Hồ sơ người khám bệnh (Card List) */}
           <View className="mb-5">
             <View className="flex-row items-center justify-between mb-2.5">
@@ -288,16 +266,19 @@ export default function PatientInfoScreen() {
                     key={String(item.id)}
                     activeOpacity={0.8}
                     onPress={() => setSelectedProfileId(String(item.id))}
-                    className="p-3.5 rounded-lg border border-slate-200/90 bg-white"
+                    className={`p-3.5 rounded-lg border bg-white ${
+                      isSelected ? 'border-emerald-600' : 'border-slate-200/90'
+                    }`}
                   >
                     <View className="flex-row items-start justify-between">
                       {/* Profile details */}
-                      <View className="flex-1 pr-3">
+                      <View className="flex-1 pr-2">
                         {/* 1. Header: Họ tên + Badge */}
                         <View className="flex-row items-center gap-2 flex-wrap mb-1.5">
                           <Text
-                            className={`text-sm ${isSelected ? 'text-slate-900 font-bold' : 'text-slate-700 font-semibold'
-                              }`}
+                            className={`text-sm ${
+                              isSelected ? 'text-slate-900 font-bold' : 'text-slate-700 font-semibold'
+                            }`}
                           >
                             {item.fullName}
                           </Text>
@@ -351,12 +332,27 @@ export default function PatientInfoScreen() {
                         </View>
                       </View>
 
-                      {/* Selected Line Checkmark (no background) */}
+                      {/* Selected Line Checkmark */}
                       {isSelected ? (
                         <Ionicons name="checkmark" size={22} color="#059669" />
                       ) : (
                         <View className="w-[22px]" />
                       )}
+                    </View>
+
+                    {/* Bottom Action: Xem & Cập nhật hồ sơ */}
+                    <View className="flex-row items-center justify-end pt-2 mt-2 border-t border-slate-100">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={(e) => {
+                          e.stopPropagation?.()
+                          handleEditProfile(item)
+                        }}
+                        className="flex-row items-center gap-1 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded active:bg-slate-100"
+                      >
+                        <Ionicons name="create-outline" size={13} color="#047857" />
+                        <Text className="text-[11px] font-bold text-slate-700">Chi tiết / Sửa hồ sơ</Text>
+                      </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
                 )
@@ -365,7 +361,7 @@ export default function PatientInfoScreen() {
               {/* Add New Profile Card at end of list */}
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => setShowCreateModal(true)}
+                onPress={handleAddNewProfile}
                 className="border border-dashed border-slate-300 rounded-lg p-3.5 items-center justify-center bg-white active:bg-slate-50 flex-row gap-2 mt-1"
               >
                 <Ionicons name="add" size={18} color="#059669" />
@@ -378,24 +374,25 @@ export default function PatientInfoScreen() {
         </ScrollView>
 
         {/* Bottom Bar: Xác nhận đặt lịch */}
-        <View className="absolute bottom-0  right-0 bg-white border-t border-slate-100 px-4 py-3 flex-row items-center justify-between">
-
-          <View className="w-[170px]">
-            <Button
-              title="Xác nhận"
-              onPress={handleConfirm}
-              isLoading={submitting}
-              disabled={submitting}
-              className="py-3 rounded-lg"
-            />
-          </View>
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3">
+          <Button
+            title="Xác nhận"
+            onPress={handleConfirm}
+            isLoading={submitting}
+            disabled={submitting}
+            className="py-3 rounded-lg w-full"
+          />
         </View>
 
-        {/* Modal: Thêm hồ sơ bệnh nhân & Quét CCCD */}
+        {/* Modal: Thêm / Xem chi tiết & Cập nhật hồ sơ bệnh nhân */}
         <CreateProfileModal
           visible={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleProfileCreated}
+          initialData={editingProfile}
+          onClose={() => {
+            setShowCreateModal(false)
+            setEditingProfile(null)
+          }}
+          onSuccess={handleProfileSaved}
           defaultPhone={user?.phone}
         />
       </KeyboardAvoidingView>

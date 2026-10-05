@@ -83,6 +83,19 @@ export default function ProfileScreen() {
         {/* Menu Items */}
         <View className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden mb-5">
           <TouchableOpacity
+            onPress={() => router.push('/(tabs)/records')}
+            className="flex-row items-center p-4 border-b border-slate-100 active:bg-slate-50"
+          >
+            <View className="w-8 h-8 rounded-lg bg-blue-50 items-center justify-center mr-3">
+              <Ionicons name="people-outline" size={18} color="#2563eb" />
+            </View>
+            <Text className="text-sm font-semibold text-slate-800 flex-1">
+              Hồ sơ người khám & Gia đình
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push('/(tabs)/appointments')}
             className="flex-row items-center p-4 border-b border-slate-100 active:bg-slate-50"
           >
