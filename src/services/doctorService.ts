@@ -89,12 +89,63 @@ export const doctorService = {
       const res = await api.get('/api/v1/services/packages/health', {
         params: branchId ? { branchId } : undefined,
       })
-      const rows = unwrapNestResponse<any[]>(res.data)
-      return Array.isArray(rows) ? rows : []
+      const unwrapped = unwrapNestResponse<any>(res.data)
+      if (Array.isArray(unwrapped)) return unwrapped
+      if (Array.isArray(unwrapped?.data)) return unwrapped.data
+      return []
     } catch (err) {
       console.warn('Could not fetch health packages', err)
       return []
     }
+  },
+
+  async getAllPackages(params?: {
+    branchId?: string
+    specialtyId?: number
+    search?: string
+    limit?: number
+    type?: 'all' | 'health-package' | 'specialty'
+    needPagination?: boolean
+  }): Promise<any[]> {
+    try {
+      const res = await api.get('/api/v1/public/packages', {
+        params: {
+          limit: params?.limit || 200,
+          type: params?.type || 'all',
+          needPagination: params?.needPagination ?? false,
+          ...(params?.branchId ? { branchId: params.branchId } : {}),
+          ...(params?.specialtyId ? { specialtyId: params.specialtyId } : {}),
+          ...(params?.search ? { search: params.search } : {}),
+        },
+      })
+      const unwrapped = unwrapNestResponse<any>(res.data)
+      if (Array.isArray(unwrapped)) return unwrapped
+      if (Array.isArray(unwrapped?.data)) return unwrapped.data
+      return []
+    } catch (err) {
+      console.warn('Could not fetch all packages', err)
+      return []
+    }
+  },
+
+  async getPackageDetail(idOrSlug: string): Promise<any> {
+    try {
+      const res = await api.get(`/api/v1/services/${idOrSlug}`)
+      const data = unwrapNestResponse<any>(res.data)
+      if (data && data.id) return data
+    } catch {
+      // ignore
+    }
+
+    try {
+      const pkgs = await this.getAllPackages()
+      const found = pkgs.find((p) => String(p.id) === String(idOrSlug) || p.slug === idOrSlug)
+      if (found) return found
+    } catch {
+      // ignore
+    }
+
+    return null
   },
 
   async getSpecialtyPackages(branchId?: string): Promise<any[]> {
@@ -102,8 +153,10 @@ export const doctorService = {
       const res = await api.get('/api/v1/services/packages/specialty', {
         params: branchId ? { branchId } : undefined,
       })
-      const rows = unwrapNestResponse<any[]>(res.data)
-      return Array.isArray(rows) ? rows : []
+      const unwrapped = unwrapNestResponse<any>(res.data)
+      if (Array.isArray(unwrapped)) return unwrapped
+      if (Array.isArray(unwrapped?.data)) return unwrapped.data
+      return []
     } catch {
       return []
     }
@@ -117,13 +170,17 @@ export const doctorService = {
           ...(branchId ? { branchId } : {}),
         },
       })
-      const rows = unwrapNestResponse<any[]>(res.data)
-      if (Array.isArray(rows) && rows.length > 0) return rows
+      const unwrapped = unwrapNestResponse<any>(res.data)
+      if (Array.isArray(unwrapped) && unwrapped.length > 0) return unwrapped
+      if (Array.isArray(unwrapped?.data) && unwrapped.data.length > 0) return unwrapped.data
+
       const fallbackRes = await api.get(`/api/v1/specialties/${specialtyId}/services`, {
         params: branchId ? { branchId } : undefined,
       })
-      const fallbackRows = unwrapNestResponse<any[]>(fallbackRes.data)
-      return Array.isArray(fallbackRows) ? fallbackRows : []
+      const fallbackData = unwrapNestResponse<any>(fallbackRes.data)
+      if (Array.isArray(fallbackData)) return fallbackData
+      if (Array.isArray(fallbackData?.data)) return fallbackData.data
+      return []
     } catch {
       return []
     }

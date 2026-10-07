@@ -42,9 +42,12 @@ export const MedicalNewsSection: React.FC = () => {
   return (
     <View className="mt-8 pt-2 px-5" style={{ marginTop: 32 }}>
       <View className="flex-row items-center justify-between mb-3.5">
-        <View>
+        <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
             Kiến thức y khoa mới nhất
+          </Text>
+          <Text className="text-[11px] text-slate-400 mt-0.5">
+            Cẩm nang sống khỏe mỗi ngày
           </Text>
         </View>
         <TouchableOpacity

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { useBehaviorTracker } from '../../hooks/useBehaviorTracker'
 
 export interface SelectModalOption<T = any> {
   id: string | number
@@ -50,6 +51,17 @@ export function SelectModal<T = any>({
   loading = false,
 }: SelectModalProps<T>) {
   const [search, setSearch] = useState('')
+  const { trackSearch } = useBehaviorTracker()
+
+  // Telemetry: Tự động ghi nhận tìm kiếm khi search trong Select Modal
+  useEffect(() => {
+    if (visible && search.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        void trackSearch(search)
+      }, 800)
+      return () => clearTimeout(timer)
+    }
+  }, [search, visible, trackSearch])
 
   const filteredOptions = useMemo(() => {
     if (!search.trim()) return options

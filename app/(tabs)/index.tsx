@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { RefreshControl, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -8,9 +8,14 @@ import { doctorService } from '../../src/services/doctorService'
 import {
   recommendationService,
   RecommendedPackageItem,
+  SemanticSearchResultItem,
+  SearchDoctorItem,
+  SearchBranchItem,
+  SemanticSearchResponse,
 } from '../../src/services/recommendationService'
 import { notificationService } from '../../src/services/notificationService'
 import { usePushNotifications } from '../../src/hooks/usePushNotifications'
+import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
 import { Doctor } from '../../src/types/doctor'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { BookingMethodsModal } from '../../src/components/booking/BookingMethodsModal'
@@ -18,12 +23,10 @@ import {
   HomeHeader,
   HomeSearchBar,
   HeroBanner,
-  BookingMethodsSection,
-  BookingMethodItem,
   RecommendationSection,
+  SpecialtiesGridSection,
+  ExplorePackagesSection,
   DoctorsSection,
-  HealthPackagesSection,
-  StaticHealthPackageItem,
   FacilitiesSection,
   ClinicStatsSection,
   MedicalNewsSection,
@@ -32,12 +35,40 @@ import {
 export default function HomeScreen() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuthStore()
+  const { sessionId, trackSearch } = useBehaviorTracker()
   usePushNotifications(isAuthenticated)
 
   const setDoctor = useBookingStore((state) => state.setDoctor)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedMethod, setSelectedMethod] = useState<string>('specialty')
   const [bookingModalVisible, setBookingModalVisible] = useState(false)
+  const [searchResults, setSearchResults] = useState<SemanticSearchResponse | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+
+  // AI Semantic Search: Tự động tìm kiếm triệu chứng/gói khám/bác sĩ và ghi nhận hành vi (+3 điểm Intent)
+  useEffect(() => {
+    const trimmed = searchQuery.trim()
+    if (trimmed.length < 2) {
+      setSearchResults(null)
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await recommendationService.semanticSearch(trimmed)
+        setSearchResults(res)
+        void trackSearch(trimmed)
+      } catch {
+        setSearchResults(null)
+      } finally {
+        setIsSearching(false)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, trackSearch])
+
 
   const {
     data: doctors = [],
@@ -59,8 +90,8 @@ export default function HomeScreen() {
     isLoading: loadingRecs,
     refetch: refetchRecs,
   } = useQuery({
-    queryKey: ['homeRecommendations', user?.id],
-    queryFn: () => recommendationService.getHomeRecommendations(),
+    queryKey: ['homeRecommendations', user?.id, sessionId],
+    queryFn: () => recommendationService.getHomeRecommendations({ sessionId: sessionId || undefined }),
   })
 
   const { data: unreadData, refetch: refetchNotifs } = useQuery({
@@ -74,29 +105,29 @@ export default function HomeScreen() {
     router.push(`/booking?doctorId=${doc.id}` as any)
   }
 
-  const handleSelectBookingMethod = (method: BookingMethodItem) => {
-    setSelectedMethod(method.id)
-    const store = useBookingStore.getState()
-    store.resetBooking()
-    store.setBookingMethod(method.code as any)
-    if (method.id === 'after-hours') {
-      store.setIsAfterHours(true)
-    }
-    router.push(method.path as any)
-  }
-
-  const handleSelectHealthPackage = (pkg: StaticHealthPackageItem) => {
-    const store = useBookingStore.getState()
-    store.resetBooking()
-    store.setBookingMethod('HEALTH_PACKAGE')
-    router.push(`/booking?packageId=${pkg.id}&method=package` as any)
-  }
-
   const handleSelectRecommendedPackage = (pkg: RecommendedPackageItem) => {
     const store = useBookingStore.getState()
     store.resetBooking()
     store.setBookingMethod('HEALTH_PACKAGE')
-    router.push(`/booking?packageId=${pkg.packageId}&method=package` as any)
+    store.setHealthPackage({
+      id: pkg.packageId,
+      name: pkg.name,
+      price: pkg.price,
+      specialtyId: pkg.specialtyId,
+    })
+    router.push('/booking/package')
+  }
+
+  const handleSelectSearchPackage = (pkg: SemanticSearchResultItem) => {
+    router.push(`/package/${pkg.id}` as any)
+  }
+
+  const handleSelectSearchDoctor = (doc: SearchDoctorItem) => {
+    router.push(`/booking?doctorId=${doc.id}` as any)
+  }
+
+  const handleSelectSearchBranch = (_branch: SearchBranchItem) => {
+    router.push('/booking' as any)
   }
 
   const patientName = user?.full_name || user?.fullName || user?.name || 'Quý khách'
@@ -115,16 +146,16 @@ export default function HomeScreen() {
     <ScreenShell>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        className="flex-1"
+        className="flex-1 bg-slate-50/40"
         style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 110 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
         nestedScrollEnabled={true}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            tintColor="#059669"
-            colors={['#059669']}
+            tintColor="#047857"
+            colors={['#047857']}
             onRefresh={() => {
               refetchDoctors()
               refetchDepts()
@@ -134,7 +165,7 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Section 1: Header */}
+        {/* Header & Search */}
         <HomeHeader
           patientName={patientName}
           isAuthenticated={isAuthenticated}
@@ -144,24 +175,22 @@ export default function HomeScreen() {
           onLoginPress={() => router.push('/(auth)/login')}
         />
 
-        {/* Section 2: Search Bar */}
         <HomeSearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          isLoading={isSearching}
+          searchResults={searchResults}
+          showDropdown={Boolean(searchQuery.trim().length >= 2)}
+          onSelectPackage={handleSelectSearchPackage}
+          onSelectDoctor={handleSelectSearchDoctor}
+          onSelectBranch={handleSelectSearchBranch}
           onFilterPress={() => router.push({ pathname: '/booking', params: { method: 'doctor' } })}
         />
 
-        {/* Section 3: Hero Banner */}
+
         <HeroBanner onStartBooking={() => setBookingModalVisible(true)} />
 
-        {/* Section 4: Phương thức khám bệnh */}
-        <BookingMethodsSection
-          selectedMethod={selectedMethod}
-          onSelectMethod={handleSelectBookingMethod}
-          onViewAll={() => setBookingModalVisible(true)}
-        />
-
-        {/* Section 5: Gợi ý dành cho bạn */}
+        {/* 1. [Khối Cá nhân hóa] Gợi ý cho bạn & Nhắc lịch khám */}
         <RecommendationSection
           packages={homeRecs?.packages || []}
           isLoading={loadingRecs}
@@ -169,7 +198,13 @@ export default function HomeScreen() {
           onSelectPackage={handleSelectRecommendedPackage}
         />
 
-        {/* Section 6: Đội ngũ bác sĩ tiêu biểu */}
+        {/* 2. [Khối Điều hướng] Danh mục Chuyên khoa (Grid icon nhỏ gọn + Gói chuyên khoa) */}
+        <SpecialtiesGridSection />
+
+        {/* 3. [Khối Khám phá] Gói khám nổi bật (Tabs: "Tổng quát" | "Xem gần đây") */}
+        <ExplorePackagesSection />
+
+        {/* 4. [Khối Chuyên gia] Đội ngũ Bác sĩ tiêu biểu */}
         <DoctorsSection
           doctors={filteredDoctors}
           isLoading={loadingDoctors}
@@ -178,19 +213,9 @@ export default function HomeScreen() {
           onViewAll={() => router.push('/booking')}
         />
 
-        {/* Section 7: Gói khám sức khỏe toàn diện */}
-        <HealthPackagesSection
-          onSelectPackage={handleSelectHealthPackage}
-          onViewAll={() => router.push({ pathname: '/booking', params: { method: 'package' } })}
-        />
-
-        {/* Section 8: Cơ sở y tế nổi bật */}
+        {/* Khối cơ sở y tế & Thống kê */}
         <FacilitiesSection onStartBooking={() => setBookingModalVisible(true)} />
-
-        {/* Section 9: Thống kê năng lực */}
         <ClinicStatsSection />
-
-        {/* Section 10: Kiến thức y khoa */}
         <MedicalNewsSection />
       </ScrollView>
 

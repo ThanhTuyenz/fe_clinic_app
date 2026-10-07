@@ -25,6 +25,7 @@ import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
 import { BookingTimeline } from '../../src/components/booking/BookingTimeline'
 import { PayosDeepLinkModal } from '../../src/components/booking/PayosDeepLinkModal'
+import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
 
 type PaymentMethodType = 'PAYOS' | 'VIETQR' | 'COUNTER'
 
@@ -33,6 +34,7 @@ export default function BookingPaymentScreen() {
   const { user } = useAuthStore()
   const { draft, resetBooking } = useBookingStore()
   const { scheduleAppointmentReminder } = useNotifications()
+  const { trackDropOff } = useBehaviorTracker()
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -268,7 +270,13 @@ export default function BookingPaymentScreen() {
         {/* Modal Quét mã VietQR & Mở thẳng App Ngân hàng (Deep Linking) */}
         <PayosDeepLinkModal
           visible={isPayosModalVisible}
-          onClose={() => setIsPayosModalVisible(false)}
+          onClose={() => {
+            setIsPayosModalVisible(false)
+            void trackDropOff(
+              draft.healthPackage?.id,
+              draft.specialty?.id || draft.healthPackage?.specialtyId
+            )
+          }}
           appointmentId={createdApptId || ''}
           paymentData={payosData}
           onPaymentSuccess={handlePaymentSuccess}

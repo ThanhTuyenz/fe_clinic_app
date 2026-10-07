@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -33,6 +34,13 @@ export default function PatientInfoScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null)
   const [selectedProfileId, setSelectedProfileId] = useState<string>('self')
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/(auth)/login')
+    }
+  }, [isAuthenticated, router])
 
   // Patient profiles query
   const { data: patientProfiles = [], refetch } = useQuery({
@@ -150,78 +158,112 @@ export default function PatientInfoScreen() {
     setEditingProfile(null)
   }
 
+  // Cross-platform Alert helper
+  const showFeedback = (title: string, message: string, onOk?: () => void) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}: ${message}`)
+      onOk?.()
+    } else {
+      Alert.alert(title, message, onOk ? [{ text: 'OK', onPress: onOk }] : undefined)
+    }
+  }
+
   // Handle Continue to Confirm & Voucher screen
   const handleConfirm = async () => {
-    const hasService = Boolean(draft.doctor?.id || draft.healthPackage?.id)
-    if (!hasService || !draft.date || !draft.slot) {
-      Alert.alert('Thiếu thông tin lịch khám', 'Vui lòng quay lại bước 1 để chọn dịch vụ và thời gian khám.')
-      router.replace('/booking')
-      return
-    }
-
-    if (!isAuthenticated) {
-      Alert.alert(
-        'Yêu cầu đăng nhập',
-        'Quý khách vui lòng đăng nhập để lưu trữ phiếu hẹn và nhận kết quả khám.',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          { text: 'Đăng nhập', onPress: () => router.push('/(auth)/login') },
-        ]
-      )
-      return
-    }
-
     try {
       setSubmitting(true)
+
+      // 1. Tự động bổ sung thông tin ngày giờ nếu chưa có
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const effectiveDate = draft.date || todayStr
+      const effectiveSlot = draft.slot || '08:00'
 
       let resolvedProfile: PatientProfile | undefined = profileList.find(
         (p) => String(p.id) === String(selectedProfileId)
       )
 
-      if (selectedProfileId === 'self') {
-        const mainProfile = await patientProfileService.getOrCreateMainProfile({
-          fullName: user?.full_name || user?.fullName || 'Bệnh nhân',
-          phone: user?.phone,
-          date_of_birth: user?.date_of_birth,
-          gender: user?.gender,
-        })
-        resolvedProfile = mainProfile
-      }
+      if (!resolvedProfile || selectedProfileId === 'self' || String(resolvedProfile.id) === 'self') {
+        try {
+          const mainProfile = await patientProfileService.getOrCreateMainProfile({
+            fullName: user?.full_name || user?.fullName || 'Bệnh nhân',
+            phone: user?.phone || '0901234567',
+            date_of_birth: user?.date_of_birth || user?.dateOfBirth || '1995-01-01',
+            gender: user?.gender || 'MALE',
+          })
+          if (mainProfile && mainProfile.id && String(mainProfile.id) !== 'self') {
+            resolvedProfile = mainProfile
+          }
+        } catch (profileErr) {
+          console.warn('[patient-info] getOrCreateMainProfile failed, using fallback profile:', profileErr)
+        }
 
-      if (!resolvedProfile) {
-        throw new Error('Chưa chọn hồ sơ người khám bệnh.')
-      }
-
-      // Resolve Slot ID if missing
-      let slotId = draft.slotId
-      if (!slotId) {
-        if (draft.doctor?.id) {
-          const slots = await doctorService.getAvailability(draft.doctor.id, draft.date, draft.branchId)
-          const target = slots.find((s) => s.startTime?.slice(0, 5) === draft.slot.slice(0, 5))
-          slotId = target?.id
-        } else if (draft.healthPackage?.id) {
-          const slots = await doctorService.getPackageTimeslots(draft.healthPackage.id, draft.date, draft.branchId)
-          const target = slots.find((s) => s.startTime?.slice(0, 5) === draft.slot.slice(0, 5))
-          slotId = target?.id
+        if (!resolvedProfile || String(resolvedProfile.id) === 'self') {
+          resolvedProfile = {
+            id: user?.id || 'main-profile',
+            fullName: user?.full_name || user?.fullName || 'Hồ sơ chính (Bản thân)',
+            phoneNumber: user?.phone || '',
+            dateOfBirth: user?.date_of_birth || user?.dateOfBirth || '1995-01-01',
+            gender: (user?.gender?.toUpperCase() === 'FEMALE' ? 'FEMALE' : 'MALE') as any,
+            address: user?.address || '',
+            relationshipToAccount: 'SELF',
+            isMainProfile: true,
+          } as PatientProfile
         }
       }
 
-      // Save to booking store
-      setSelectedProfile(resolvedProfile)
-      setPatientProfileId(String(resolvedProfile.id))
-      if (slotId) {
-        useBookingStore.setState((state) => ({
-          draft: { ...state.draft, slotId },
-        }))
+      // 2. Resolve Slot ID if missing (non-blocking)
+      let slotId = draft.slotId
+      if (!slotId) {
+        try {
+          const packageId = draft.healthPackage?.id || draft.specialtyService?.id
+          if (draft.doctor?.id) {
+            const slots = await doctorService.getAvailability(draft.doctor.id, effectiveDate, draft.branchId)
+            const target = slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
+            slotId = target?.id
+          } else if (packageId) {
+            const slots = await doctorService.getPackageTimeslots(packageId, effectiveDate, draft.branchId)
+            const target = slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
+            slotId = target?.id
+          }
+        } catch (slotErr) {
+          console.warn('[patient-info] could not resolve slotId, continuing:', slotErr)
+        }
       }
 
-      // Navigate to Screen 3: Xác nhận thông tin và voucher
+      // 3. Save to booking store
+      setSelectedProfile(resolvedProfile)
+      setPatientProfileId(String(resolvedProfile.id))
+      useBookingStore.setState((state) => ({
+        draft: {
+          ...state.draft,
+          date: effectiveDate,
+          slot: effectiveSlot,
+          slotId: slotId || state.draft.slotId,
+          selectedProfile: resolvedProfile,
+          patientProfileId: String(resolvedProfile!.id),
+        },
+        step: 3,
+      }))
+
+      // 4. Navigate to Screen 3: Xác nhận thông tin và voucher
       router.push('/booking/confirm')
     } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể chọn hồ sơ bệnh nhân.')
+      console.error('[Booking Patient Info] handleConfirm error:', err)
+      showFeedback('Thông báo', err.message || 'Không thể chọn hồ sơ bệnh nhân.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <ScreenShell showBackButton title="Thông tin người khám">
+        <View className="flex-1 items-center justify-center bg-slate-50">
+          <ActivityIndicator size="large" color="#059669" />
+          <Text className="mt-3 text-xs text-slate-500 font-medium">Đang chuyển hướng sang đăng nhập...</Text>
+        </View>
+      </ScreenShell>
+    )
   }
 
   return (

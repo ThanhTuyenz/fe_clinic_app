@@ -49,7 +49,7 @@ export default function ProfileScreen() {
       <ScrollView className="flex-1 px-5 pt-3" showsVerticalScrollIndicator={false}>
         {/* User Card */}
         {isAuthenticated ? (
-          <View className="bg-white p-5 rounded-lg border border-slate-100 shadow-sm mb-5 flex-row items-center">
+          <View className="bg-white p-5 rounded-lg border border-slate-200/90 mb-4 flex-row items-center">
             <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mr-4 border border-emerald-100">
               <Ionicons name="person-outline" size={30} color="#059669" />
             </View>
@@ -64,7 +64,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : (
-          <View className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm mb-5 items-center">
+          <View className="bg-white p-6 rounded-lg border border-slate-200/90 mb-4 items-center">
             <Text className="text-base font-bold text-slate-800 mb-1">
               Chưa đăng nhập
             </Text>
@@ -81,7 +81,7 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Items */}
-        <View className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden mb-5">
+        <View className="bg-white rounded-lg border border-slate-200/90 overflow-hidden mb-4">
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/records')}
             className="flex-row items-center p-4 border-b border-slate-100 active:bg-slate-50"
@@ -136,7 +136,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Hỗ trợ & Thông tin chung */}
-        <View className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden mb-6">
+        <View className="bg-white rounded-lg border border-slate-200/90 overflow-hidden mb-5">
           <TouchableOpacity
             onPress={() =>
               Alert.alert('Tổng đài hỗ trợ', 'Hotline CSKH: 1900 1234 (24/7)')

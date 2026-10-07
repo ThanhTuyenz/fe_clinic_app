@@ -8,7 +8,7 @@ export interface HomeHeaderProps {
   isAuthenticated: boolean
   unreadCount?: number
   onNotificationsPress: () => void
-  onAiChatPress: () => void
+  onAiChatPress?: () => void
   onLoginPress: () => void
 }
 
@@ -17,7 +17,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   isAuthenticated,
   unreadCount = 0,
   onNotificationsPress,
-  onAiChatPress,
   onLoginPress,
 }) => {
   return (
@@ -58,15 +57,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
               </Text>
             </View>
           ) : null}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={onAiChatPress}
-          className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200/80 items-center justify-center relative shadow-2xs"
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color="#1e293b" />
-          <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute top-2 right-2 border-2 border-white" />
         </TouchableOpacity>
 
         {!isAuthenticated && (

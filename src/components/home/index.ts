@@ -1,6 +1,8 @@
 export * from './PackageCard'
 export * from './DoctorCard'
 export * from './RecommendationSection'
+export * from './SpecialtiesGridSection'
+export * from './ExplorePackagesSection'
 export * from './HomeHeader'
 export * from './HomeSearchBar'
 export * from './HeroBanner'
@@ -10,3 +12,4 @@ export * from './HealthPackagesSection'
 export * from './FacilitiesSection'
 export * from './ClinicStatsSection'
 export * from './MedicalNewsSection'
+

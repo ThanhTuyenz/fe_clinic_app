@@ -1,5 +1,6 @@
 import React from 'react'
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import { PackageCard } from './PackageCard'
 
 export interface StaticHealthPackageItem {
@@ -85,6 +86,8 @@ export const HealthPackagesSection: React.FC<HealthPackagesSectionProps> = ({
   onSelectPackage,
   onViewAll,
 }) => {
+  const router = useRouter()
+
   return (
     <View className="mt-8 pt-2" style={{ marginTop: 32 }}>
       <View className="px-5 flex-row items-center justify-between mb-3.5">
@@ -118,6 +121,7 @@ export const HealthPackagesSection: React.FC<HealthPackagesSectionProps> = ({
               bg: pkg.tagBg,
             }}
             onPress={() => onSelectPackage(pkg)}
+            onDetailPress={() => router.push(`/package/${pkg.id}` as any)}
           />
         ))}
       </ScrollView>

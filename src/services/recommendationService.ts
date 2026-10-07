@@ -19,7 +19,56 @@ export interface HomeRecommendationResponse {
   profileName?: string
   updatedAt: string
   source: 'HYBRID' | 'AI_PROFILE' | 'BEHAVIOR' | 'FALLBACK'
+  dataOrigin?: 'CACHE' | 'NEW'
+  src?: 'cache' | 'new'
+  isCached?: boolean
+  fromCache?: boolean
   packages: RecommendedPackageItem[]
+}
+
+export interface TrackBehaviorPayload {
+  sessionId: string
+  actionType: 'SEARCH' | 'VIEW_PACKAGE' | 'DROP_OFF'
+  targetSpecialtyId?: number
+  targetPackageId?: string
+  searchQuery?: string
+}
+
+export interface SemanticSearchResultItem {
+  id: string
+  code: string
+  name: string
+  price: number
+  durationMin?: number
+  specialtyName: string
+  similarityScore: number
+  description: string
+}
+
+export interface SearchDoctorItem {
+  id: string
+  fullName: string
+  academicRank: string
+  specialties: string[]
+  experienceYears: number
+  avatarUrl?: string | null
+  ratingAverage: number
+}
+
+export interface SearchBranchItem {
+  id: string
+  code: string
+  name: string
+  address: string
+  phoneNumber?: string
+}
+
+export interface SemanticSearchResponse {
+  query: string
+  total: number
+  packages: SemanticSearchResultItem[]
+  doctors?: SearchDoctorItem[]
+  branches?: SearchBranchItem[]
 }
 
 export const recommendationService = {
@@ -34,6 +83,17 @@ export const recommendationService = {
       return data || { updatedAt: new Date().toISOString(), source: 'FALLBACK', packages: [] }
     } catch {
       return { updatedAt: new Date().toISOString(), source: 'FALLBACK', packages: [] }
+    }
+  },
+
+  async trackBehavior(payload: TrackBehaviorPayload): Promise<{ success: boolean }> {
+    try {
+      const res = await api.post('/api/v1/recommendations/track', payload)
+      const data = unwrapNestResponse<{ success: boolean }>(res.data)
+      return data || { success: true }
+    } catch {
+      // Non-blocking telemetry
+      return { success: false }
     }
   },
 
@@ -53,4 +113,20 @@ export const recommendationService = {
       return { updatedAt: new Date().toISOString(), source: 'AI_PROFILE', packages: [] }
     }
   },
+
+  async semanticSearch(
+    query: string,
+    branchId?: string
+  ): Promise<SemanticSearchResponse> {
+    try {
+      const res = await api.get('/api/v1/recommendations/semantic-search', {
+        params: { q: query, ...(branchId ? { branchId } : {}) },
+      })
+      const data = unwrapNestResponse<SemanticSearchResponse>(res.data)
+      return data || { query, total: 0, packages: [], doctors: [], branches: [] }
+    } catch {
+      return { query, total: 0, packages: [], doctors: [], branches: [] }
+    }
+  },
 }
+

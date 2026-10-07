@@ -76,7 +76,7 @@ export default function RecordsScreen() {
         .join(', ')
 
     return (
-      <View className="bg-white rounded-lg p-4 mb-3 border border-slate-200/90 shadow-2xs">
+      <View className="bg-white rounded-lg p-4 mb-3 border border-slate-200/90">
         {/* Tiêu đề hồ sơ & Avatar Line Icon */}
         <View className="flex-row items-center justify-between pb-3 border-b border-slate-100">
           <View className="flex-row items-center flex-1 pr-2">
@@ -159,24 +159,24 @@ export default function RecordsScreen() {
           )}
         </View>
 
-        {/* Nút Thao tác: Lịch sử khám & Cập nhật thông tin (Không dùng background màu xanh) */}
-        <View className="flex-row items-center pt-2.5 border-t border-slate-100 gap-2.5">
+        {/* Nút Thao tác: Lịch sử khám & Cập nhật thông tin (2 màu sắc phân biệt) */}
+        <View className="flex-row items-center pt-3 border-t border-slate-100 gap-2.5">
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => router.push('/(tabs)/appointments')}
-            className="flex-1 bg-slate-50 border border-slate-200 py-2.5 rounded-lg flex-row items-center justify-center active:bg-slate-100"
+            className="flex-1 bg-blue-50 border border-blue-200/90 py-2.5 rounded-lg flex-row items-center justify-center active:bg-blue-100"
           >
-            <Ionicons name="time-outline" size={14} color="#64748b" style={{ marginRight: 5 }} />
-            <Text className="text-xs font-semibold text-slate-700">Lịch sử khám</Text>
+            <Ionicons name="time-outline" size={14} color="#2563eb" style={{ marginRight: 5 }} />
+            <Text className="text-xs font-normal text-blue-700">Lịch sử khám</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => handleEditProfile(item)}
-            className="flex-1 bg-white border border-slate-300 py-2.5 rounded-lg flex-row items-center justify-center active:bg-slate-50 shadow-2xs"
+            className="flex-1 bg-slate-900 active:bg-slate-800 py-2.5 rounded-lg flex-row items-center justify-center shadow-2xs"
           >
-            <Ionicons name="create-outline" size={14} color="#0f172a" style={{ marginRight: 5 }} />
-            <Text className="text-xs font-bold text-slate-800">Cập nhật thông tin</Text>
+            <Ionicons name="create-outline" size={14} color="#ffffff" style={{ marginRight: 5 }} />
+            <Text className="text-xs font-normal text-white">Cập nhật thông tin</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -204,7 +204,7 @@ export default function RecordsScreen() {
     >
       <View className="flex-1 px-5 pt-3">
         {!isAuthenticated ? (
-          <View className="bg-white p-6 rounded-lg border border-slate-200/90 shadow-2xs items-center my-auto">
+          <View className="bg-white p-6 rounded-lg border border-slate-200/90 items-center my-auto">
             <View className="w-16 h-16 rounded-full bg-emerald-50 items-center justify-center mb-3">
               <Ionicons name="document-text-outline" size={32} color="#059669" />
             </View>

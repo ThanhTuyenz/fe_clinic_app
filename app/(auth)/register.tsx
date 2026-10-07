@@ -149,12 +149,12 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Tiêu đề căn trái */}
-            <View className="mb-6">
-              <Text className="text-2xl font-bold text-slate-900 tracking-tight">
+            {/* Tiêu đề căn giữa */}
+            <View className="mb-6 items-center">
+              <Text className="text-2xl font-bold text-slate-900 tracking-tight text-center">
                 Tạo tài khoản mới
               </Text>
-              <Text className="text-sm text-slate-400 mt-1.5">
+              <Text className="text-sm text-slate-400 mt-1.5 text-center">
                 Đăng ký để quản lý hồ sơ khám và nhận ưu đãi từ phòng khám
               </Text>
             </View>
@@ -327,7 +327,11 @@ export default function RegisterScreen() {
         onClose={() => setLinkModalData((prev) => ({ ...prev, visible: false }))}
         onSuccess={() => {
           setLinkModalData((prev) => ({ ...prev, visible: false }))
-          const hasDraft = Boolean(draft.date && draft.slot && (draft.doctor || draft.healthPackage))
+          const hasDraft = Boolean(
+            (draft.doctor || draft.healthPackage || draft.specialtyService || draft.specialty) &&
+            draft.date &&
+            draft.slot
+          )
           if (hasDraft) {
             router.replace('/booking/patient-info')
           } else {
@@ -342,7 +346,11 @@ export default function RegisterScreen() {
         onClose={() => setZaloLoginModalVisible(false)}
         onSuccess={() => {
           setZaloLoginModalVisible(false)
-          const hasDraft = Boolean(draft.date && draft.slot && (draft.doctor || draft.healthPackage))
+          const hasDraft = Boolean(
+            (draft.doctor || draft.healthPackage || draft.specialtyService || draft.specialty) &&
+            draft.date &&
+            draft.slot
+          )
           if (hasDraft) {
             router.replace('/booking/patient-info')
           } else {

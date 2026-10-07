@@ -53,7 +53,11 @@ export default function LoginScreen() {
       if (res.token && res.user) {
         await setAuth(res.token, res.user, res.refreshToken)
         // Nếu bệnh nhân đang đặt dở lịch hẹn thì chuyển tiếp tới bước chọn người khám
-        const hasDraft = Boolean(draft.date && draft.slot && (draft.doctor || draft.healthPackage))
+        const hasDraft = Boolean(
+          (draft.doctor || draft.healthPackage || draft.specialtyService || draft.specialty) &&
+          draft.date &&
+          draft.slot
+        )
         if (hasDraft) {
           router.replace('/booking/patient-info')
         } else if (router.canGoBack()) {
@@ -105,12 +109,12 @@ export default function LoginScreen() {
               />
             </View>
 
-            {/* Tiêu đề căn trái */}
-            <View className="mb-6">
-              <Text className="text-2xl font-bold text-slate-900 tracking-tight">
+            {/* Tiêu đề căn giữa */}
+            <View className="mb-6 items-center">
+              <Text className="text-2xl font-bold text-slate-900 tracking-tight text-center">
                 Đăng nhập tài khoản
               </Text>
-              <Text className="text-sm text-slate-400 mt-1.5">
+              <Text className="text-sm text-slate-400 mt-1.5 text-center">
                 Nhập thông tin xác thực để truy cập hồ sơ y tế
               </Text>
             </View>
@@ -264,7 +268,11 @@ export default function LoginScreen() {
         visible={zaloModalVisible}
         onClose={() => setZaloModalVisible(false)}
         onSuccess={() => {
-          const hasDraft = Boolean(draft.date && draft.slot && (draft.doctor || draft.healthPackage))
+          const hasDraft = Boolean(
+            (draft.doctor || draft.healthPackage || draft.specialtyService || draft.specialty) &&
+            draft.date &&
+            draft.slot
+          )
           if (hasDraft) {
             router.replace('/booking/patient-info')
           } else if (router.canGoBack()) {

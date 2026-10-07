@@ -20,6 +20,7 @@ export interface PackageCardProps {
   specialtyName?: string
   badge?: PackageCardBadge | null
   onPress: () => void
+  onDetailPress?: () => void
 }
 
 export const getPackageImage = (name: string = '', specialtyName: string = ''): string => {
@@ -56,8 +57,10 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   specialtyName,
   badge,
   onPress,
+  onDetailPress,
 }) => {
   const imgSrc = image || getPackageImage(name, specialtyName)
+  const handleDetail = onDetailPress || onPress
 
   return (
     <View
@@ -65,7 +68,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
       style={{ width: 256 }}
     >
       {/* Ảnh bìa + Floating Badge nếu có */}
-      <View className="h-32 w-full bg-slate-100 relative">
+      <TouchableOpacity activeOpacity={0.9} onPress={handleDetail} className="h-32 w-full bg-slate-100 relative">
         <Image
           source={{ uri: imgSrc }}
           style={{ width: '100%', height: '100%' }}
@@ -95,11 +98,11 @@ export const PackageCard: React.FC<PackageCardProps> = ({
             <Text className={`text-[10px] font-bold ${badge.color}`}>{badge.label}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* Nội dung thông tin */}
       <View className="p-3.5 flex-1 justify-between">
-        <View>
+        <TouchableOpacity activeOpacity={0.8} onPress={handleDetail}>
           <View style={{ minHeight: 40, justifyContent: 'flex-start' }}>
             <Text numberOfLines={2} className="text-sm font-extrabold text-slate-900 leading-snug">
               {name}
@@ -111,23 +114,23 @@ export const PackageCard: React.FC<PackageCardProps> = ({
               {description || (specialtyName ? `Chuyên khoa ${specialtyName}` : 'Tầm soát sức khỏe chuyên sâu')}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        {/* Giá & Nút đặt khám */}
+        {/* Giá & Cụm nút hành động (Chi tiết & Đặt khám) */}
         <View className="mt-3 pt-2.5 border-t border-slate-100">
           <View className="flex-row items-center justify-between mb-2.5">
             <Text className="text-xs text-slate-400 font-medium">
               {specialtyName || 'Chi phí trọn gói'}
             </Text>
-            <Text className="text-sm font-bold text-slate-800">{formatCurrencyVi(price)}</Text>
+            <Text className="text-sm text-slate-800">{formatCurrencyVi(price)}</Text>
           </View>
 
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             onPress={onPress}
             className="w-full bg-emerald-700 active:bg-emerald-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
           >
-            <Text className="text-xs font-bold text-white">Đặt khám ngay</Text>
+            <Text className="text-xs text-white">Đặt khám</Text>
           </TouchableOpacity>
         </View>
       </View>

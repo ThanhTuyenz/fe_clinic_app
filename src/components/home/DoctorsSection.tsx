@@ -22,9 +22,12 @@ export const DoctorsSection: React.FC<DoctorsSectionProps> = ({
   return (
     <View className="mt-8 pt-2" style={{ marginTop: 32 }}>
       <View className="px-5 flex-row items-center justify-between mb-3.5">
-        <View>
+        <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
             Đội ngũ bác sĩ tiêu biểu
+          </Text>
+          <Text className="text-[11px] text-slate-400 mt-0.5">
+            Bác sĩ giàu kinh nghiệm
           </Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>

@@ -18,18 +18,52 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
       : doctor.specialty || doctor.specialty_name || 'Đa khoa'
 
   // Làm sạch học vị, tránh lỗi lặp
-  let displayName = docName
-  if (/^(bác sĩ|bs\.?)/i.test(displayName)) {
-    displayName = displayName
-      .replace(/^(bác sĩ|bs\.?)\s*(cki|ckii)?\s*(bác sĩ|bs\.?)\s*(cki|ckii)?/gi, 'BS. $2 $4')
+  const raw = docName
+  const cleanName = raw
+    .replace(/^(Phó\s+Giáo\s+sư|Giáo\s+sư|Tiến\s+sĩ|Thạc\s+sĩ|Bác\s+sĩ\s+CKII|Bác\s+sĩ\s+CKI|Bác\s+sĩ|PGS\.?\s*TS\.?\s*BS\.?|PGS\.?\s*TS\.?|PGS\.?|GS\.?\s*TS\.?\s*BS\.?|GS\.?\s*TS\.?|GS\.?|TS\.?\s*BS\.?|TS\.?|ThS\.?\s*BS\.?|ThS\.?|BS\.?\s*CKII|BS\.?\s*CKI|BS\.?|CKII|CKI|,\s*|\.\s*|\s+)+/gi, '')
+    .trim()
+
+  const rankStr = ((doctor as any).academicRank || (doctor as any).academic_rank || doctor.title || '').trim()
+  let displayName = `BS. ${cleanName}`
+
+  if (rankStr) {
+    let r = rankStr
+      .replace(/Phó\s+Giáo\s+sư/gi, 'PGS.')
+      .replace(/Giáo\s+sư/gi, 'GS.')
+      .replace(/Tiến\s+sĩ/gi, 'TS.')
+      .replace(/Thạc\s+sĩ/gi, 'ThS.')
+      .replace(/Bác\s+sĩ\s+CKII/gi, 'BS. CKII')
+      .replace(/Bác\s+sĩ\s+CKI/gi, 'BS. CKI')
+      .replace(/Bác\s+sĩ/gi, 'BS.')
+      .replace(/,\s*/g, ' ')
+      .replace(/\.+/g, '.')
+      .replace(/\s+/g, ' ')
       .trim()
-  } else if (doctor.title) {
-    displayName = `${doctor.title} ${displayName}`
+
+    if (!/BS\b/i.test(r)) {
+      r = `${r} BS.`
+    }
+    r = r.replace(/\s*BS\.?$/i, ' BS')
+    displayName = `${r} ${cleanName}`
   } else {
-    displayName = `BS. ${displayName}`
+    const prefixMatch = raw.match(/^(Phó\s+Giáo\s+sư|Giáo\s+sư|Tiến\s+sĩ|Thạc\s+sĩ|PGS|GS|TS|ThS|BS|Bác sĩ)/i)
+    if (prefixMatch) {
+      let prefix = raw.slice(0, raw.length - cleanName.length).trim()
+      prefix = prefix
+        .replace(/Phó\s+Giáo\s+sư/gi, 'PGS.')
+        .replace(/Giáo\s+sư/gi, 'GS.')
+        .replace(/Tiến\s+sĩ/gi, 'TS.')
+        .replace(/Thạc\s+sĩ/gi, 'ThS.')
+        .replace(/Bác\s+sĩ/gi, 'BS.')
+        .replace(/,\s*/g, ' ')
+        .replace(/\.+/g, '.')
+        .replace(/\s+/g, ' ')
+        .trim()
+      displayName = `${prefix} ${cleanName}`
+    }
   }
 
-  const fee = doctor.consultation_fee || doctor.price || 300000
+  const fee = doctor.consultation_fee || (doctor as any).consultationFee || doctor.price || 300000
 
   return (
     <View
@@ -73,7 +107,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
               </Text>
               <Text className="text-xs text-slate-400 font-medium ml-1.5">• Giá khám</Text>
             </View>
-            <Text className="text-sm font-bold text-slate-800">{formatCurrencyVi(fee)}</Text>
+            <Text className="text-sm text-slate-800">{formatCurrencyVi(fee)}</Text>
           </View>
 
           <TouchableOpacity
@@ -81,7 +115,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
             onPress={() => onSelect(doctor)}
             className="w-full bg-emerald-700 active:bg-emerald-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
           >
-            <Text className="text-xs font-bold text-white">Đặt khám ngay</Text>
+            <Text className="text-xs text-white">Đặt khám ngay</Text>
           </TouchableOpacity>
         </View>
       </View>
