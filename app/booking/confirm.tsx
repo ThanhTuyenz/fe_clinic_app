@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,12 +17,33 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 
 import { useBookingStore } from '../../src/store/useBookingStore'
 import { useAuthStore } from '../../src/store/useAuthStore'
-import { doctorService } from '../../src/services/doctorService'
-import { voucherService, Voucher } from '../../src/services/voucherService'
+import { bookingService } from '../../src/services/bookingService'
+import { voucherService } from '../../src/services/voucherService'
 import { formatCurrencyVi, formatDateVi } from '../../src/utils/date'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
 import { BookingTimeline } from '../../src/components/booking/BookingTimeline'
+
+function ConfirmationField({ label, value, detail, highlight = false }: {
+  label: string
+  value: string
+  detail?: string
+  highlight?: boolean
+}) {
+  return (
+    <View className="flex-row items-start gap-3">
+      <Text className="text-[13px] leading-6 text-slate-500 font-medium" style={{ width: '38%' }}>
+        {label}:
+      </Text>
+      <View className="flex-1 gap-1" style={{ minWidth: 0 }}>
+        <Text className={`text-sm leading-6 font-semibold text-right ${highlight ? 'text-primary-700' : 'text-slate-800'}`}>
+          {value}
+        </Text>
+        {detail ? <Text className="text-[13px] leading-6 text-slate-600 text-right">{detail}</Text> : null}
+      </View>
+    </View>
+  )
+}
 
 export default function BookingConfirmScreen() {
   const router = useRouter()
@@ -36,7 +57,8 @@ export default function BookingConfirmScreen() {
   // Query branches to show branch name / address
   const { data: branches = [] } = useQuery({
     queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
+    queryFn: () => bookingService.getBookingInit({ flow: 'facility' }).then((init) => init.branches),
+    staleTime: 5 * 60 * 1000,
   })
   const currentBranch = branches.find((b: any) => String(b.id) === String(draft.branchId))
 
@@ -58,14 +80,22 @@ export default function BookingConfirmScreen() {
     ? Number(draft.healthPackage?.price ?? 1200000)
     : isSpecialtyExam && draft.specialtyService?.price
       ? Number(draft.specialtyService.price)
-      : Number(draft.doctor?.price || draft.doctor?.consultation_fee || 300000)
+      : Number(
+          draft.bookingMethod === 'ONLINE_CONSULTATION'
+            ? draft.doctor?.onlineConsultationFee ||
+                draft.doctor?.consultation_fee ||
+                draft.doctor?.price ||
+                300000
+            : draft.doctor?.price || draft.doctor?.consultation_fee || 300000
+        )
 
+  const serviceFee = 10000
   const avatarUrl = isPackage
     ? 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=200'
     : draft.doctor?.avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200'
 
   // Query vouchers — nhất quán với cách fetch branches ở trên
-  const { data: availableVouchers = [], isLoading: isLoadingVouchers } = useQuery({
+  const { data: availableVouchers = [] } = useQuery({
     queryKey: ['vouchers-available'],
     queryFn: () => voucherService.getAvailableVouchers(),
     staleTime: 5 * 60 * 1000, // cache 5 phút
@@ -75,7 +105,7 @@ export default function BookingConfirmScreen() {
   // Calculate discount and final amount
   const appliedVoucher = draft.appliedVoucher
   const discountAmount = appliedVoucher?.discountAmount || 0
-  const totalAmount = Math.max(0, subtotal - discountAmount)
+  const totalAmount = Math.max(0, subtotal + serviceFee - discountAmount)
 
   // Handle Apply Voucher
   const handleApplyVoucherCode = async (codeToApply: string) => {
@@ -103,21 +133,7 @@ export default function BookingConfirmScreen() {
         Alert.alert('Không thể áp dụng', res?.message || 'Mã ưu đãi không hợp lệ hoặc đã hết hạn.')
       }
     } catch (err: any) {
-      if (code === 'VITACARE50' || code === 'WELCOME') {
-        const fakeDiscount = code === 'VITACARE50' ? 50000 : Math.round(subtotal * 0.1)
-        setAppliedVoucher({
-          code,
-          name: `Ưu đãi ${code}`,
-          discountAmount: fakeDiscount,
-          discountType: 'FIXED_AMOUNT',
-          discountValue: fakeDiscount,
-        })
-        setVoucherCode(code)
-        setInputCode('')
-        Alert.alert('Thành công', `Đã áp dụng mã ${code}, giảm ${formatCurrencyVi(fakeDiscount)}`)
-      } else {
-        Alert.alert('Không thể áp dụng', err.message || 'Mã ưu đãi không hợp lệ.')
-      }
+      Alert.alert('Không thể áp dụng', err.message || 'Mã ưu đãi không hợp lệ.')
     } finally {
       setIsValidating(false)
     }
@@ -164,144 +180,99 @@ export default function BookingConfirmScreen() {
           <View className="h-2 bg-slate-100 border-y border-slate-200/60" />
 
           {/* 2. ITEM & READ-ONLY DETAILS BLOCK (Chỉ kiểm tra thông tin, không cho đổi) */}
-          <View className="p-4 bg-white">
+          <View className="px-4 py-6 bg-white">
             {/* Header tóm tắt Bác sĩ / Gói khám */}
-            <View className="flex-row">
+            <View className="flex-row items-start">
               <Image
                 source={{ uri: avatarUrl }}
-                style={{ width: 80, height: 80, borderRadius: 6 }}
-                className="w-20 h-20 rounded-md bg-slate-100"
+                style={{ width: 88, height: 104, borderRadius: 8, flexShrink: 0 }}
+                className="bg-slate-100"
                 contentFit="cover"
                 transition={200}
               />
 
-              <View className="flex-1 ml-3.5 justify-between">
-                <View>
-                  <Text numberOfLines={2} className="text-sm font-bold text-slate-900 leading-snug">
-                    {serviceName}
-                  </Text>
-                  <Text numberOfLines={1} className="text-xs text-slate-500 mt-0.5">
-                    {isPackage ? 'Gói khám VitaCare' : `Chuyên khoa: ${doctorSpecialty}`}
-                  </Text>
-                </View>
-
-                <View className="mt-1">
-                  <Text className="text-sm font-black text-slate-900">
-                    {formatCurrencyVi(subtotal)}
-                  </Text>
-
-                </View>
+              <View className="flex-1 ml-3" style={{ minWidth: 0 }}>
+                <Text className="text-sm font-bold text-slate-900 leading-5">
+                  {serviceName}
+                </Text>
+                <Text className="text-xs leading-5 text-slate-500 mt-1">
+                  {isPackage ? 'Gói khám VitaCare' : `Chuyên khoa: ${doctorSpecialty}`}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.85}
+                  className="text-base leading-6 font-bold text-slate-900 mt-1.5"
+                >
+                  {formatCurrencyVi(subtotal)}
+                </Text>
               </View>
             </View>
 
             {/* Khối Thông tin Lịch hẹn & Người khám (Gộp chung 1 khối liền mạch, không tách vụn) */}
-            <View className="mt-3.5 bg-slate-50 border border-slate-200 rounded-md p-3.5">
+            <View className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
               {/* Phần 1: Thời gian khám */}
-              <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center gap-1.5">
-                  <Ionicons name="calendar-outline" size={14} color="#059669" />
-                  <Text className="text-xs font-bold text-slate-800">
+                  <Ionicons name="calendar-outline" size={14} color="#28a745" />
+                  <Text className="text-sm leading-5 font-bold text-slate-800">
                     Thời gian khám bệnh
                   </Text>
                 </View>
               </View>
 
-              <View className="space-y-1.5">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-slate-500 font-medium">Ngày khám:</Text>
-                  <Text className="text-xs font-bold text-slate-800">
-                    {formatDateVi(draft.date)} ({draft.date})
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-slate-500 font-medium">Khung giờ tiếp đón:</Text>
-                  <Text className="text-xs font-bold text-emerald-700">
-                    {draft.slot}
-                  </Text>
-                </View>
-
+              <View className="gap-3">
+                <ConfirmationField label="Ngày khám" value={formatDateVi(draft.date)} />
+                <ConfirmationField label="Khung giờ tiếp đón" value={draft.slot || 'Chưa chọn'} highlight />
                 {Boolean(currentBranch?.name || draft.branchId) && (
-                  <View className="flex-row items-start justify-between pt-0.5">
-                    <Text className="text-xs text-slate-500 font-medium mr-2">Cơ sở khám:</Text>
-                    <Text className="text-xs font-semibold text-slate-700 text-right flex-1" numberOfLines={2}>
-                      {currentBranch?.name || 'VitaCare Clinic'}
-                      {currentBranch?.address ? ` • ${currentBranch.address}` : ''}
-                    </Text>
-                  </View>
+                  <ConfirmationField
+                    label="Cơ sở khám"
+                    value={currentBranch?.name || 'VitaCare Clinic'}
+                    detail={currentBranch?.address || undefined}
+                  />
                 )}
               </View>
 
               {/* Đường kẻ mảnh phân cách nội bộ giữa 2 phần trong cùng 1 khối */}
-              <View className="my-3 border-b border-slate-200/70" />
+              <View className="my-5 border-b border-slate-200/70" />
 
               {/* Phần 2: Người khám bệnh */}
-              <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row flex-wrap items-center justify-between gap-2 mb-4">
                 <View className="flex-row items-center gap-1.5">
-                  <Ionicons name="person-outline" size={14} color="#059669" />
-                  <Text className="text-xs font-bold text-slate-800">
+                  <Ionicons name="person-outline" size={14} color="#28a745" />
+                  <Text className="text-sm leading-5 font-bold text-slate-800">
                     Thông tin người khám bệnh
                   </Text>
                 </View>
                 {Boolean(profile?.relationshipToAccount) && (
-                  <View className="px-2 py-0.5 rounded bg-emerald-100/80">
-                    <Text className="text-[10px] font-bold text-emerald-800">
+                  <View className="px-2 py-0.5 rounded bg-primary-100/80">
+                    <Text className="text-[10px] font-bold text-primary-800">
                       {profile?.relationshipToAccount === 'SELF' ? 'Bản thân' : profile?.relationshipToAccount}
                     </Text>
                   </View>
                 )}
               </View>
 
-              <View className="space-y-1.5">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-slate-500 font-medium">Họ và tên:</Text>
-                  <Text className="text-xs font-bold text-slate-900">
-                    {profile?.fullName || user?.full_name || 'Bệnh nhân'}
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-xs text-slate-500 font-medium">Số điện thoại:</Text>
-                  <Text className="text-xs font-semibold text-slate-800">
-                    {profile?.phoneNumber || user?.phone || 'Chưa cập nhật'}
-                  </Text>
-                </View>
-
+              <View className="gap-3">
+                <ConfirmationField
+                  label="Họ và tên"
+                  value={profile?.fullName || user?.full_name || user?.fullName || 'Bệnh nhân'}
+                />
+                <ConfirmationField label="Số điện thoại" value={profile?.phoneNumber || user?.phone || 'Chưa cập nhật'} />
                 {(Boolean(profile?.dateOfBirth) || Boolean(profile?.gender)) && (
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-slate-500 font-medium">Ngày sinh / Giới tính:</Text>
-                    <Text className="text-xs font-semibold text-slate-800">
-                      {formatDob(profile?.dateOfBirth)} ({profile?.gender === 'FEMALE' ? 'Nữ' : 'Nam'})
-                    </Text>
-                  </View>
+                  <ConfirmationField
+                    label="Ngày sinh / Giới tính"
+                    value={[
+                      formatDob(profile?.dateOfBirth),
+                      profile?.gender ? `(${profile.gender === 'FEMALE' ? 'Nữ' : profile.gender === 'MALE' ? 'Nam' : 'Khác'})` : '',
+                    ].filter(Boolean).join(' ')}
+                  />
                 )}
-
                 {Boolean(profile?.nationalId || profile?.identityCardNumber) && (
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-xs text-slate-500 font-medium">Số CCCD / Định danh:</Text>
-                    <Text className="text-xs font-semibold text-slate-800">
-                      {profile?.nationalId || profile?.identityCardNumber}
-                    </Text>
-                  </View>
+                  <ConfirmationField label="Số CCCD / Định danh" value={profile?.nationalId || profile?.identityCardNumber || ''} />
                 )}
-
-                {Boolean(fullAddress) && (
-                  <View className="flex-row items-start justify-between pt-0.5">
-                    <Text className="text-xs text-slate-500 font-medium mr-2">Địa chỉ:</Text>
-                    <Text className="text-xs text-slate-700 font-medium text-right flex-1 leading-4" numberOfLines={2}>
-                      {fullAddress}
-                    </Text>
-                  </View>
-                )}
-
-                {Boolean(draft.symptoms) && (
-                  <View className="flex-row items-start justify-between pt-1 border-t border-slate-200/50 mt-1">
-                    <Text className="text-xs text-slate-500 font-medium mr-2">Triệu chứng / Ghi chú:</Text>
-                    <Text className="text-xs text-slate-800 font-semibold text-right flex-1 leading-4">
-                      {draft.symptoms}
-                    </Text>
-                  </View>
-                )}
+                {Boolean(fullAddress) && <ConfirmationField label="Địa chỉ" value={fullAddress || ''} />}
+                {Boolean(draft.symptoms) && <ConfirmationField label="Triệu chứng / Ghi chú" value={draft.symptoms || ''} />}
               </View>
             </View>
           </View>
@@ -329,14 +300,14 @@ export default function BookingConfirmScreen() {
             {isCodeExpanded && (
               <View className="px-4 pb-4 pt-1">
                 {appliedVoucher ? (
-                  <View className="flex-row items-center justify-between bg-emerald-50 border border-emerald-200 rounded-md p-3">
+                  <View className="flex-row items-center justify-between bg-primary-50 border border-primary-200 rounded-md p-3">
                     <View className="flex-row items-center flex-1 pr-2">
-                      <Ionicons name="ticket-outline" size={18} color="#059669" style={{ marginRight: 8 }} />
+                      <Ionicons name="ticket-outline" size={18} color="#28a745" style={{ marginRight: 8 }} />
                       <View className="flex-1">
-                        <Text className="text-xs font-bold text-emerald-950">
+                        <Text className="text-xs font-bold text-primary-950">
                           Mã: {appliedVoucher.code}
                         </Text>
-                        <Text className="text-[11px] font-semibold text-emerald-700 mt-0.5">
+                        <Text className="text-[11px] font-semibold text-primary-700 mt-0.5">
                           Đã giảm - {formatCurrencyVi(appliedVoucher.discountAmount)}
                         </Text>
                       </View>
@@ -364,7 +335,7 @@ export default function BookingConfirmScreen() {
                         activeOpacity={0.8}
                         disabled={isValidating || !inputCode.trim()}
                         onPress={() => handleApplyVoucherCode(inputCode)}
-                        className={`px-4 py-2.5 rounded-md items-center justify-center ${inputCode.trim() ? 'bg-emerald-800 active:bg-emerald-900' : 'bg-slate-200'
+                        className={`px-4 py-2.5 rounded-md items-center justify-center ${inputCode.trim() ? 'bg-primary-600 active:bg-primary-700' : 'bg-slate-200'
                           }`}
                       >
                         {isValidating ? (
@@ -387,10 +358,10 @@ export default function BookingConfirmScreen() {
                             key={v.id || v.code}
                             activeOpacity={0.7}
                             onPress={() => handleApplyVoucherCode(v.code)}
-                            className="border border-dashed border-emerald-300 bg-emerald-50/50 px-2 py-1 rounded flex-row items-center gap-1"
+                            className="border border-dashed border-primary-300 bg-primary-50/50 px-2 py-1 rounded flex-row items-center gap-1"
                           >
-                            <Ionicons name="pricetag-outline" size={10} color="#059669" />
-                            <Text className="text-[11px] font-bold text-emerald-800">{v.code}</Text>
+                            <Ionicons name="pricetag-outline" size={10} color="#28a745" />
+                            <Text className="text-[11px] font-bold text-primary-800">{v.code}</Text>
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -429,13 +400,15 @@ export default function BookingConfirmScreen() {
 
               <View className="flex-row justify-between items-center py-0.5">
                 <Text className="text-xs font-medium text-slate-600">Phí tiện ích:</Text>
-                <Text className="text-xs font-bold text-slate-800">FREE</Text>
+                <Text className="text-xs font-bold text-slate-800">
+                  {formatCurrencyVi(serviceFee)}
+                </Text>
               </View>
 
               {discountAmount > 0 && (
                 <View className="flex-row justify-between items-center py-0.5">
-                  <Text className="text-xs font-medium text-emerald-700">Giảm giá voucher:</Text>
-                  <Text className="text-xs font-bold text-emerald-700">
+                  <Text className="text-xs font-medium text-primary-700">Giảm giá voucher:</Text>
+                  <Text className="text-xs font-bold text-primary-700">
                     - {formatCurrencyVi(discountAmount)}
                   </Text>
                 </View>

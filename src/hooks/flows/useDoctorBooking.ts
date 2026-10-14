@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
 import { Doctor } from '../../types/doctor'
 import { extractDoctorSpecialtyId } from '../../constants/bookingSlots'
 
@@ -18,16 +18,16 @@ export function useDoctorBooking() {
   const [doctorSearch, setDoctorSearch] = useState('')
 
   // 2. Data Queries
-  const { data: branches = [] } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
+  const { data: bookingInit, isLoading: loadingInit } = useQuery({
+    queryKey: ['booking', 'init', 'doctor'],
+    queryFn: () => bookingService.getBookingInit({ flow: 'doctor' }),
+    staleTime: 5 * 60 * 1000,
   })
+  const branches = bookingInit?.branches || []
 
   // Lấy tất cả bác sĩ toàn hệ thống
-  const { data: doctors = [], isLoading: loadingDoctors } = useQuery({
-    queryKey: ['doctors', 'all-doctors'],
-    queryFn: () => doctorService.getDoctors(),
-  })
+  const doctors = bookingInit?.doctors || []
+  const loadingDoctors = loadingInit
 
   // Pre-select doctor if doctorId param passed
   useEffect(() => {

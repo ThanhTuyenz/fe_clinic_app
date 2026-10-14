@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -50,8 +50,8 @@ export default function ProfileScreen() {
         {/* User Card */}
         {isAuthenticated ? (
           <View className="bg-white p-5 rounded-lg border border-slate-200/90 mb-4 flex-row items-center">
-            <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mr-4 border border-emerald-100">
-              <Ionicons name="person-outline" size={30} color="#059669" />
+            <View className="w-16 h-16 rounded-lg bg-primary-50 items-center justify-center mr-4 border border-primary-100">
+              <Ionicons name="person-outline" size={30} color="#28a745" />
             </View>
             <View className="flex-1">
               <Text className="text-base font-bold text-slate-800">
@@ -99,8 +99,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(tabs)/appointments')}
             className="flex-row items-center p-4 border-b border-slate-100 active:bg-slate-50"
           >
-            <View className="w-8 h-8 rounded-lg bg-emerald-50 items-center justify-center mr-3">
-              <Ionicons name="calendar-outline" size={18} color="#059669" />
+            <View className="w-8 h-8 rounded-lg bg-primary-50 items-center justify-center mr-3">
+              <Ionicons name="calendar-outline" size={18} color="#28a745" />
             </View>
             <Text className="text-sm font-semibold text-slate-800 flex-1">
               Lịch khám của tôi
@@ -189,7 +189,9 @@ export default function ProfileScreen() {
         visible={logoutModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => !loggingOut && setLogoutModalVisible(false)}
+        onRequestClose={() => {
+          if (!loggingOut) setLogoutModalVisible(false)
+        }}
       >
         <View
           className="flex-1 items-center justify-center p-4"

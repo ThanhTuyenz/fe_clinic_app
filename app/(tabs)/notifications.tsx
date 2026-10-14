@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -29,9 +29,9 @@ const getNotificationStyle = (type: NotificationType) => {
     case 'BOOKING_CONFIRMED':
       return {
         icon: 'checkmark-circle-outline' as const,
-        color: '#059669',
-        bg: 'bg-emerald-50',
-        border: 'border-emerald-200',
+        color: '#28a745',
+        bg: 'bg-primary-50',
+        border: 'border-primary-200',
       }
     case 'MEDICAL_RESULT':
       return {
@@ -50,7 +50,7 @@ const getNotificationStyle = (type: NotificationType) => {
     default:
       return {
         icon: 'notifications-outline' as const,
-        color: '#047857',
+        color: '#28a745',
         bg: 'bg-slate-50',
         border: 'border-slate-200',
       }
@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
         className={`p-3.5 rounded-lg mb-2.5 border ${
           item.isRead
             ? 'bg-white border-slate-200/80'
-            : 'bg-emerald-50/40 border-emerald-200/90 shadow-2xs'
+            : 'bg-primary-50/40 border-primary-200/90 shadow-2xs'
         }`}
       >
         <View className="flex-row items-start">
@@ -167,7 +167,7 @@ export default function NotificationsScreen() {
               <Text
                 numberOfLines={1}
                 className={`text-sm flex-1 mr-2 ${
-                  item.isRead ? 'font-bold text-slate-800' : 'font-extrabold text-emerald-950'
+                  item.isRead ? 'font-bold text-slate-800' : 'font-extrabold text-primary-950'
                 }`}
               >
                 {item.title}
@@ -186,7 +186,7 @@ export default function NotificationsScreen() {
             </Text>
           </View>
           {!item.isRead && (
-            <View className="w-2 h-2 rounded-full bg-emerald-600 mt-2 shrink-0" />
+            <View className="w-2 h-2 rounded-full bg-primary-600 mt-2 shrink-0" />
           )}
         </View>
       </TouchableOpacity>
@@ -203,7 +203,7 @@ export default function NotificationsScreen() {
               onPress={() => setFilter('ALL')}
               className={`px-3 py-1.5 rounded-md border ${
                 filter === 'ALL'
-                  ? 'bg-emerald-700 border-emerald-700'
+                  ? 'bg-primary-600 border-primary-700'
                   : 'bg-white border-slate-200'
               }`}
             >
@@ -220,7 +220,7 @@ export default function NotificationsScreen() {
               onPress={() => setFilter('UNREAD')}
               className={`px-3 py-1.5 rounded-md border ${
                 filter === 'UNREAD'
-                  ? 'bg-emerald-700 border-emerald-700'
+                  ? 'bg-primary-600 border-primary-700'
                   : 'bg-white border-slate-200'
               }`}
             >
@@ -239,15 +239,15 @@ export default function NotificationsScreen() {
               onPress={handleMarkAllAsRead}
               className="flex-row items-center py-1 px-2"
             >
-              <Ionicons name="checkmark-done-outline" size={14} color="#047857" />
-              <Text className="text-xs font-bold text-emerald-700 ml-1">Đọc hết</Text>
+              <Ionicons name="checkmark-done-outline" size={14} color="#28a745" />
+              <Text className="text-xs font-bold text-primary-700 ml-1">Đọc hết</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {loading ? (
           <View className="flex-1 items-center justify-center py-16">
-            <ActivityIndicator size="small" color="#059669" />
+            <ActivityIndicator size="small" color="#28a745" />
             <Text className="text-xs text-slate-400 mt-2 font-medium">Đang tải thông báo...</Text>
           </View>
         ) : !isAuthenticated ? (
@@ -261,7 +261,7 @@ export default function NotificationsScreen() {
             </Text>
             <TouchableOpacity
               onPress={() => router.push('/(auth)/login' as any)}
-              className="mt-4 bg-emerald-700 px-5 py-2.5 rounded-lg shadow-xs"
+              className="mt-4 bg-primary-600 px-5 py-2.5 rounded-lg shadow-xs"
             >
               <Text className="text-white text-xs font-bold">Đăng nhập ngay</Text>
             </TouchableOpacity>
@@ -283,7 +283,7 @@ export default function NotificationsScreen() {
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#059669']} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#28a745']} />
             }
           />
         )}

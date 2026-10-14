@@ -55,7 +55,7 @@ export const MedicalNewsSection: React.FC = () => {
             Alert.alert('Cẩm nang sức khỏe', 'Chuyên mục tin tức y khoa cập nhật mỗi ngày.')
           }
         >
-          <Text className="text-xs font-semibold text-emerald-600">Xem thêm</Text>
+          <Text className="text-xs font-semibold text-primary-600">Xem thêm</Text>
         </TouchableOpacity>
       </View>
 
@@ -71,7 +71,7 @@ export const MedicalNewsSection: React.FC = () => {
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
           />
-          <View className="absolute top-2.5 left-2.5 bg-emerald-700 px-2 py-0.5 rounded-lg shadow-xs">
+          <View className="absolute top-2.5 left-2.5 bg-primary-600 px-2 py-0.5 rounded-lg shadow-xs">
             <Text className="text-white text-[9px] font-bold uppercase tracking-wider">
               {MEDICAL_NEWS[0].category}
             </Text>
@@ -106,7 +106,7 @@ export const MedicalNewsSection: React.FC = () => {
               />
             </View>
             <View className="flex-1 pr-1">
-              <Text className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+              <Text className="text-[10px] font-bold text-primary-700 uppercase tracking-wider">
                 {news.category}
               </Text>
               <Text numberOfLines={2} className="text-xs font-bold text-slate-900 mt-0.5 leading-snug">

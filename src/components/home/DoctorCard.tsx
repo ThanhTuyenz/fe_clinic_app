@@ -113,7 +113,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => onSelect(doctor)}
-            className="w-full bg-emerald-700 active:bg-emerald-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
+            className="w-full bg-primary-600 active:bg-primary-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
           >
             <Text className="text-xs text-white">Đặt khám ngay</Text>
           </TouchableOpacity>

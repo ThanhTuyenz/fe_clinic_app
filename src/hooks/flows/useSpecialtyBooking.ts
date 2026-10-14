@@ -4,11 +4,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService, resolveDoctorAvatarUrl } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
+import { resolveDoctorAvatarUrl } from '../../services/doctorService'
 import { Doctor } from '../../types/doctor'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
-import { generateFallbackDates } from '../../constants/bookingSlots'
 import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useSpecialtyBooking() {
@@ -45,51 +45,66 @@ export function useSpecialtyBooking() {
 
   // 2. Data Queries
   // Danh sách chuyên khoa
-  const { data: specialties = [], isLoading: loadingSpecialties } = useQuery({
-    queryKey: ['specialties'],
-    queryFn: () => doctorService.getSpecialties(),
+  const { data: bookingInit, isLoading: loadingInit } = useQuery({
+    queryKey: ['booking', 'init', 'specialty', selectedBranchId, selectedSpecialtyId],
+    queryFn: () => bookingService.getBookingInit({
+      flow: 'specialty',
+      branchId: selectedBranchId || undefined,
+      specialtyId: selectedSpecialtyId,
+    }),
+    staleTime: 5 * 60 * 1000,
   })
+  const specialties = bookingInit?.specialties || []
+  const loadingSpecialties = loadingInit
 
   // Danh sách chi nhánh
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
-  })
+  const branches = bookingInit?.branches || []
+  const loadingBranches = loadingInit
 
   // Danh sách gói dịch vụ khám theo Chuyên khoa + Chi nhánh
-  const { data: specialtyServices = [], isLoading: loadingServices } = useQuery({
-    queryKey: ['specialtyServices', selectedSpecialtyId, selectedBranchId],
-    queryFn: () => doctorService.getSpecialtyServices(selectedSpecialtyId!, selectedBranchId || undefined),
-    enabled: Boolean(selectedSpecialtyId && selectedBranchId),
-  })
+  const specialtyServices = useMemo(
+    () => (bookingInit?.services || []).filter((service: any) =>
+      selectedSpecialtyId != null &&
+      String(service.specialtyId) === String(selectedSpecialtyId) &&
+      (!selectedBranchId ||
+        String(service.branchId) === String(selectedBranchId) ||
+        service.branches?.some((branch: any) => String(branch.id) === String(selectedBranchId)))
+    ),
+    [bookingInit?.services, selectedBranchId, selectedSpecialtyId]
+  )
+  const loadingServices = loadingInit
 
   // Chỉ reset dịch vụ nếu dịch vụ đang chọn không còn hợp lệ trong danh sách mới
   useEffect(() => {
-    if (selectedService && specialtyServices.length > 0) {
+    if (bookingInit && !loadingInit && selectedService) {
       const stillValid = specialtyServices.some((s: any) => String(s.id) === String(selectedService.id))
       if (!stillValid) {
         setSelectedServiceState(null)
+        setSelectedDate('')
+        setSelectedSlot('')
+        setSelectedSlotId(undefined)
+        setSelectedDoctor(null)
       }
     }
-  }, [specialtyServices, selectedService])
+  }, [bookingInit, loadingInit, specialtyServices, selectedService])
 
   // Booking Slots API (BFF /api/v1/booking/slots) - Chỉ gọi khi đã chọn đủ Chuyên khoa, Chi nhánh và Dịch vụ
   const { data: bookingSlotsData, isLoading: loadingSlots } = useQuery({
     queryKey: ['bookingSlots', selectedBranchId, selectedSpecialtyId, selectedService?.id, selectedDate],
     queryFn: () =>
-      doctorService.getBookingSlots({
+      bookingService.getBookingSlots({
         branchId: selectedBranchId,
         specialtyId: selectedSpecialtyId,
+        servicePackageId: selectedService?.id,
         date: selectedDate || undefined,
       }),
-    enabled: Boolean(selectedBranchId && selectedSpecialtyId && selectedService),
+    enabled: Boolean(selectedBranchId && selectedSpecialtyId && selectedService &&
+      specialtyServices.some((service: any) => String(service.id) === String(selectedService.id))),
+    staleTime: 30 * 1000,
   })
 
   const availableDatesList = useMemo(() => {
-    if (bookingSlotsData?.availableDates && bookingSlotsData.availableDates.length > 0) {
-      return bookingSlotsData.availableDates
-    }
-    return generateFallbackDates(14)
+    return bookingSlotsData?.availableDates || []
   }, [bookingSlotsData?.availableDates])
 
   const availableSlotsList = useMemo(() => {
@@ -418,6 +433,8 @@ export function useSpecialtyBooking() {
 
   const handleClearDoctor = () => {
     setSelectedDoctor(null)
+    setSelectedSlot('')
+    setSelectedSlotId(undefined)
   }
 
   const handleClearSlot = () => {
@@ -425,11 +442,13 @@ export function useSpecialtyBooking() {
     setSelectedSlotId(undefined)
   }
 
-  const isStage1Complete = Boolean(selectedSpecialtyId && selectedBranchId && selectedService)
+  const isServiceValid = Boolean(selectedService &&
+    specialtyServices.some((service: any) => String(service.id) === String(selectedService.id)))
+  const isStage1Complete = Boolean(selectedSpecialtyId && selectedBranchId && isServiceValid)
   const isFormComplete = Boolean(
     selectedSpecialtyId &&
       selectedBranchId &&
-      selectedService &&
+      isServiceValid &&
       selectedDate &&
       selectedSlot &&
       selectedDoctor
@@ -444,7 +463,7 @@ export function useSpecialtyBooking() {
       Alert.alert('Chưa chọn chi nhánh', 'Vui lòng chọn cơ sở phòng khám để tiếp tục.')
       return
     }
-    if (!selectedService) {
+    if (!isServiceValid) {
       Alert.alert('Chưa chọn dịch vụ khám', 'Vui lòng chọn dịch vụ khám chuyên khoa.')
       return
     }

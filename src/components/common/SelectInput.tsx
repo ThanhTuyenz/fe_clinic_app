@@ -1,6 +1,5 @@
 import React from 'react'
 import {
-  ActivityIndicator,
   Text,
   TouchableOpacity,
   View,
@@ -52,7 +51,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({
       )}
 
       <TouchableOpacity
-        activeOpacity={disabled ? 1 : 0.75}
+        activeOpacity={1}
         disabled={disabled || loading}
         onPress={onPress}
         className={`flex-row items-center border rounded-lg px-3.5 py-3 ${
@@ -72,7 +71,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({
               <Ionicons
                 name={leftIcon as any}
                 size={19}
-                color={hasValue ? '#059669' : '#64748b'}
+                color={hasValue ? '#28a745' : '#64748b'}
               />
             ) : (
               leftIcon
@@ -108,9 +107,7 @@ export const SelectInput: React.FC<SelectInputProps> = ({
 
         {/* Right Action */}
         <View className="ml-2 flex-row items-center">
-          {loading ? (
-            <ActivityIndicator size="small" color="#059669" />
-          ) : hasValue && onClear && !disabled ? (
+          {hasValue && onClear && !disabled && !loading ? (
             <TouchableOpacity
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               onPress={(e) => {

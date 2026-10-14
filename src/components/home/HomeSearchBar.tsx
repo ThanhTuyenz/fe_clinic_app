@@ -51,14 +51,14 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
   return (
     <View className="bg-white px-4 pt-2 pb-3 border-b border-slate-100 z-30">
       {/* Search Input Bar */}
-      <View className="flex-row items-center bg-slate-50 border border-slate-200/80 rounded-lg px-3.5 py-2">
-        <Ionicons name="search-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
+      <View className="flex-row items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3.5" style={{ minHeight: 52 }}>
+        <Ionicons name="search-outline" size={20} color="#64748b" style={{ marginRight: 10 }} />
         <TextInput
           placeholder="Mô tả triệu chứng, tìm gói khám, bác sĩ..."
           placeholderTextColor="#94a3b8"
           value={value}
           onChangeText={onChangeText}
-          className="flex-1 text-xs text-slate-800 p-0 outline-none"
+          className="flex-1 text-sm text-slate-800 py-3 outline-none"
           style={[{ outlineWidth: 0, outlineStyle: 'none' } as any]}
           autoCapitalize="none"
           autoCorrect={false}
@@ -76,8 +76,8 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
           </TouchableOpacity>
         ) : onFilterPress ? (
           <TouchableOpacity onPress={onFilterPress}>
-            <View className="w-6 h-6 rounded bg-slate-100 items-center justify-center">
-              <Ionicons name="filter-outline" size={13} color="#475569" />
+            <View className="w-9 h-9 rounded-lg bg-slate-100 items-center justify-center">
+              <Ionicons name="filter-outline" size={18} color="#475569" />
             </View>
           </TouchableOpacity>
         ) : null}
@@ -134,7 +134,7 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
                             {pkg.specialtyName || 'Đa khoa'}
                           </Text>
                           <Text className="text-[10px] text-slate-300">•</Text>
-                          <Text className="text-[11px] font-semibold text-emerald-700">
+                          <Text className="text-[11px] font-semibold text-primary-700">
                             {formatCurrencyVi(pkg.price)}
                           </Text>
                         </View>

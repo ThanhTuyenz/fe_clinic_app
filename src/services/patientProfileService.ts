@@ -32,13 +32,10 @@ export interface CreatePatientProfilePayload {
 
 export const patientProfileService = {
   async getPatientProfiles(): Promise<PatientProfile[]> {
-    try {
-      const res = await api.get('/api/v1/patient-profiles')
-      const data = unwrapNestResponse<PatientProfile[]>(res.data)
-      return Array.isArray(data) ? data : []
-    } catch {
-      return []
-    }
+    const res = await api.get('/api/v1/patient-profiles')
+    const data = unwrapNestResponse<PatientProfile[]>(res.data)
+    if (!Array.isArray(data)) throw new Error('Không thể tải danh sách hồ sơ bệnh nhân.')
+    return data
   },
 
   async createPatientProfile(payload: CreatePatientProfilePayload): Promise<PatientProfile> {
@@ -49,33 +46,6 @@ export const patientProfileService = {
   async updatePatientProfile(id: string, payload: Partial<CreatePatientProfilePayload>): Promise<PatientProfile> {
     const res = await api.patch(`/api/v1/patient-profiles/${id}`, payload)
     return unwrapNestResponse<PatientProfile>(res.data)
-  },
-
-  async getOrCreateMainProfile(fallbackUser: {
-    fullName?: string
-    full_name?: string
-    phone?: string
-    date_of_birth?: string
-    gender?: string
-  }): Promise<PatientProfile> {
-    const existing = await this.getPatientProfiles()
-    if (existing.length > 0) {
-      const main = existing.find((p) => p.isMainProfile || p.relationshipToAccount === 'SELF')
-      return main || existing[0]
-    }
-
-    const name = fallbackUser.fullName || fallbackUser.full_name || 'Bệnh nhân'
-    const dob = fallbackUser.date_of_birth || '2000-01-01'
-    const gender = (fallbackUser.gender || '').toUpperCase() === 'FEMALE' ? 'FEMALE' : 'MALE'
-
-    return await this.createPatientProfile({
-      fullName: name,
-      dateOfBirth: dob.includes('T') ? dob.slice(0, 10) : dob,
-      gender,
-      phoneNumber: fallbackUser.phone || '',
-      relationshipToAccount: 'SELF',
-      isMainProfile: true,
-    })
   },
 
   async getMedicalRecords(patientProfileId: string): Promise<any[]> {

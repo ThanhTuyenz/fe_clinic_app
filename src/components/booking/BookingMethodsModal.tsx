@@ -34,9 +34,9 @@ import { useBookingStore } from '../../store/useBookingStore'
 const METHOD_CONFIGS: Record<string, Omit<MethodMeta, 'id' | 'title' | 'desc'>> = {
   SPECIALTY_EXAM: {
     icon: 'medkit-outline',
-    color: '#047857',
-    bgColor: '#ecfdf5',
-    borderColor: '#d1fae5',
+    color: '#28a745',
+    bgColor: '#f0faf2',
+    borderColor: '#d9f2df',
     path: '/booking/specialty',
   },
   CONSULTATION: {
@@ -76,9 +76,9 @@ const METHOD_CONFIGS: Record<string, Omit<MethodMeta, 'id' | 'title' | 'desc'>> 
   },
   HEALTH_PACKAGE: {
     icon: 'shield-checkmark-outline',
-    color: '#059669',
-    bgColor: '#ecfdf5',
-    borderColor: '#d1fae5',
+    color: '#28a745',
+    bgColor: '#f0faf2',
+    borderColor: '#d9f2df',
     path: '/booking/package',
   },
 }
@@ -243,7 +243,7 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
           {/* Danh sách các phương thức từ API */}
           {isLoading ? (
             <View className="py-12 items-center justify-center">
-              <ActivityIndicator size="small" color="#059669" />
+              <ActivityIndicator size="small" color="#28a745" />
               <Text className="text-xs text-slate-400 mt-2 font-medium">
                 Đang tải danh mục khám bệnh...
               </Text>

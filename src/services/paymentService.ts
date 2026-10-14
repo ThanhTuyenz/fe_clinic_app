@@ -2,6 +2,7 @@ import { api, unwrapNestResponse } from './api'
 import { PayosPaymentInfo } from '../utils/vietqrDeepLink'
 
 export interface PayosCreatePaymentResponse extends PayosPaymentInfo {
+  holdExpiresAt: string
   orderCode: number
   paymentId?: string
   status?: string

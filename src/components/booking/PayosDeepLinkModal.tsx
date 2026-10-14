@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Image,
   Linking,
@@ -10,7 +11,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import QRCode from 'react-native-qrcode-svg'
 import {
@@ -40,36 +43,39 @@ export function PayosDeepLinkModal({
   paymentData,
   onPaymentSuccess,
 }: PayosDeepLinkModalProps) {
+  const insets = useSafeAreaInsets()
+  const { height } = useWindowDimensions()
+  const modalHeight = Math.min(height * 0.92, height - insets.top - 12)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [openingBankId, setOpeningBankId] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState(15 * 60) // 15 phút
+  const openingBankRef = useRef(false)
+  const [countdown, setCountdown] = useState(0)
 
-  const pollingRef = useRef<NodeJS.Timeout | null>(null)
-  const countdownRef = useRef<NodeJS.Timeout | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // 1. Đếm ngược thời gian giữ chỗ thanh toán 15:00
+  // Đếm theo hạn giữ chỗ của backend, kể cả khi quay về từ app ngân hàng.
   useEffect(() => {
-    if (!visible) {
-      setCountdown(15 * 60)
+    if (!visible || !paymentData?.holdExpiresAt) {
+      setCountdown(0)
       return
     }
-
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownRef.current as any)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current)
+    const expiresAt = Date.parse(paymentData.holdExpiresAt)
+    const updateCountdown = () => {
+      setCountdown(Number.isFinite(expiresAt)
+        ? Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
+        : 0)
     }
-  }, [visible])
+    updateCountdown()
+    const timer = setInterval(updateCountdown, 1000)
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') updateCountdown()
+    })
+    return () => {
+      clearInterval(timer)
+      subscription.remove()
+    }
+  }, [visible, paymentData?.holdExpiresAt])
 
   // 2. Tự động kiểm tra trạng thái thanh toán định kỳ mỗi 2.5s
   useEffect(() => {
@@ -119,14 +125,17 @@ export function PayosDeepLinkModal({
 
   // Xử lý mở App Ngân hàng
   const handleSelectBank = async (bank: BankAppItem) => {
-    if (!paymentData) return
-    setOpeningBankId(bank.id)
+    if (!paymentData || openingBankRef.current || countdown <= 0) return
+    openingBankRef.current = true
     try {
-      await openBankApp(bank, paymentData)
+      const opened = await openBankApp(bank, paymentData)
+      if (!opened) {
+        Alert.alert('Không thể mở ứng dụng', 'Vui lòng quét mã QR hoặc mở trang thanh toán PayOS.')
+      }
     } catch {
       Alert.alert('Không thể mở ứng dụng', 'Vui lòng quét mã QR hoặc mở trang thanh toán PayOS.')
     } finally {
-      setTimeout(() => setOpeningBankId(null), 1000)
+      openingBankRef.current = false
     }
   }
 
@@ -150,7 +159,7 @@ export function PayosDeepLinkModal({
 
   // Mở checkoutUrl trình duyệt
   const handleOpenCheckoutUrl = async () => {
-    if (paymentData?.checkoutUrl) {
+    if (paymentData?.checkoutUrl && countdown > 0) {
       try {
         await Linking.openURL(paymentData.checkoutUrl)
       } catch {
@@ -161,10 +170,10 @@ export function PayosDeepLinkModal({
 
   if (!paymentData && visible) {
     return (
-      <Modal visible={visible} transparent animationType="fade">
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
         <View className="flex-1 bg-slate-900/60 items-center justify-center p-4">
           <View className="bg-white rounded-xl p-6 items-center w-full max-w-sm">
-            <ActivityIndicator size="large" color="#059669" />
+            <ActivityIndicator size="large" color="#28a745" />
             <Text className="text-sm font-bold text-slate-700 mt-3">
               Đang khởi tạo mã thanh toán VietQR...
             </Text>
@@ -183,9 +192,12 @@ export function PayosDeepLinkModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 bg-slate-950/70 justify-end">
-        <View className="bg-white rounded-t-3xl max-h-[92%] flex-col overflow-hidden">
+        <View
+          className="bg-white rounded-t-3xl flex-col overflow-hidden"
+          style={{ height: modalHeight, paddingBottom: Math.max(insets.bottom, 12) }}
+        >
           {/* Header */}
-          <View className="px-5 py-4 border-b border-slate-100 flex-row items-center justify-between bg-slate-50/80">
+          <View className="px-5 py-4 border-b border-slate-100 flex-row items-center justify-between bg-slate-50/80" style={{ flexShrink: 0 }}>
             <View className="flex-row items-center flex-1">
               <Text className="text-base font-extrabold text-slate-900">
                 Thanh toán VietQR
@@ -203,21 +215,21 @@ export function PayosDeepLinkModal({
 
           {/* Success Overlay nếu đã thanh toán */}
           {isSuccess ? (
-            <View className="p-8 items-center justify-center py-16">
-              <View className="w-16 h-16 rounded-full bg-emerald-100 items-center justify-center mb-4">
-                <Ionicons name="checkmark-circle" size={44} color="#059669" />
+            <View className="flex-1 p-8 items-center justify-center">
+              <View className="w-16 h-16 rounded-full bg-primary-100 items-center justify-center mb-4">
+                <Ionicons name="checkmark-circle" size={44} color="#28a745" />
               </View>
               <Text className="text-lg font-black text-slate-800">Thanh toán thành công!</Text>
               <Text className="text-xs text-slate-500 text-center mt-1">
                 Lịch hẹn của bạn đã được xác nhận. Đang chuyển tới Phiếu khám...
               </Text>
-              <ActivityIndicator size="small" color="#059669" className="mt-4" />
+              <ActivityIndicator size="small" color="#28a745" className="mt-4" />
             </View>
           ) : (
             <ScrollView
-              className="flex-1 px-5 py-4"
+              style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 40 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 }}
             >
               {/* KHỐI 1: APP-TO-APP DEEP LINKING (CHỌN MỞ NHANH APP NGÂN HÀNG) */}
               <View className="mb-4">
@@ -232,40 +244,34 @@ export function PayosDeepLinkModal({
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ paddingVertical: 2 }}
                 >
-                  {POPULAR_BANKS.map((bank) => {
-                    const isOpening = openingBankId === bank.id
-                    return (
+                  {POPULAR_BANKS.map((bank) => (
                       <TouchableOpacity
                         key={bank.id}
+                        disabled={countdown <= 0}
                         activeOpacity={0.8}
                         onPress={() => handleSelectBank(bank)}
                         className="mr-2 items-center justify-center px-2.5 py-1.5 bg-slate-50 border border-slate-200/90 rounded-lg min-w-[66px] shadow-2xs"
                       >
-                        {isOpening ? (
-                          <ActivityIndicator size="small" color="#059669" className="h-6" />
-                        ) : (
-                          <Image
-                            source={{ uri: bank.iconUrl }}
-                            style={{ width: 46, height: 20 }}
-                            className="mb-0.5"
-                            resizeMode="contain"
-                          />
-                        )}
+                        <Image
+                          source={{ uri: bank.iconUrl }}
+                          style={{ width: 46, height: 20 }}
+                          className="mb-0.5"
+                          resizeMode="contain"
+                        />
                         <Text className="text-[10px] font-semibold text-slate-700 text-center">
                           {bank.shortName}
                         </Text>
                       </TouchableOpacity>
-                    )
-                  })}
+                  ))}
                 </ScrollView>
               </View>
 
               {/* KHỐI 2: MÃ QR VIETQR PAYOS */}
-              <View className="bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 mb-4 items-center shadow-xs">
+              <View className="bg-primary-50/50 border border-primary-200/80 rounded-2xl p-4 mb-4 items-center shadow-xs">
                 <View className="flex-row items-center justify-between w-full mb-2.5 px-1">
                   <VietQrLogo width={85} height={26} />
-                  <View className="bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    <Text className="text-[10px] font-bold text-emerald-800">Napas 247</Text>
+                  <View className="bg-primary-100/90 px-2.5 py-0.5 rounded-full border border-primary-200">
+                    <Text className="text-[10px] font-bold text-primary-800">Napas 247</Text>
                   </View>
                 </View>
 
@@ -281,7 +287,7 @@ export function PayosDeepLinkModal({
                 <View className="flex-row items-center mt-2.5">
                   <Ionicons name="time-outline" size={13} color="#ea580c" />
                   <Text className="text-xs text-orange-600 font-semibold ml-1">
-                    Giữ chỗ trong: {formatCountdown(countdown)}
+                    {countdown > 0 ? `Giữ chỗ trong: ${formatCountdown(countdown)}` : 'Đã hết thời gian giữ chỗ. Vui lòng đặt lịch lại.'}
                   </Text>
                 </View>
               </View>
@@ -327,7 +333,7 @@ export function PayosDeepLinkModal({
                     <Ionicons
                       name={copiedField === 'account' ? 'checkmark' : 'copy-outline'}
                       size={14}
-                      color={copiedField === 'account' ? '#059669' : '#475569'}
+                      color={copiedField === 'account' ? '#28a745' : '#475569'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -349,7 +355,7 @@ export function PayosDeepLinkModal({
                     <Ionicons
                       name={copiedField === 'amount' ? 'checkmark' : 'copy-outline'}
                       size={14}
-                      color={copiedField === 'amount' ? '#059669' : '#475569'}
+                      color={copiedField === 'amount' ? '#28a745' : '#475569'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -373,7 +379,7 @@ export function PayosDeepLinkModal({
                     <Ionicons
                       name={copiedField === 'desc' ? 'checkmark' : 'copy-outline'}
                       size={14}
-                      color={copiedField === 'desc' ? '#059669' : '#475569'}
+                      color={copiedField === 'desc' ? '#28a745' : '#475569'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -385,7 +391,7 @@ export function PayosDeepLinkModal({
                   activeOpacity={0.85}
                   onPress={handleSimulateDemoPay}
                   disabled={isChecking}
-                  className="bg-emerald-700 py-3 rounded-xl items-center justify-center flex-row shadow-sm"
+                  className="bg-primary-600 py-3 rounded-xl items-center justify-center flex-row shadow-sm"
                 >
                   {isChecking ? (
                     <ActivityIndicator size="small" color="#ffffff" className="mr-2" />
@@ -401,6 +407,7 @@ export function PayosDeepLinkModal({
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleOpenCheckoutUrl}
+                    disabled={countdown <= 0}
                     className="bg-white border border-slate-300 py-2.5 rounded-xl items-center justify-center flex-row"
                   >
                     <Ionicons name="open-outline" size={15} color="#475569" className="mr-1.5" />

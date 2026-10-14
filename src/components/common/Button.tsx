@@ -12,6 +12,7 @@ interface ButtonProps extends TouchableOpacityProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
+  singleLine?: boolean
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
 }
@@ -21,6 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   isLoading = false,
+  singleLine = false,
   leftIcon,
   rightIcon,
   disabled,
@@ -30,23 +32,23 @@ export const Button: React.FC<ButtonProps> = ({
   const getVariantStyles = () => {
     switch (variant) {
       case 'secondary':
-        return 'bg-teal-600 active:bg-teal-700 text-white'
+        return 'bg-primary-600 active:bg-primary-700 text-white'
       case 'outline':
-        return 'bg-transparent border border-emerald-600 active:bg-emerald-50'
+        return 'bg-transparent border border-primary-600 active:bg-primary-50'
       case 'danger':
         return 'bg-red-500 active:bg-red-600 text-white'
       case 'ghost':
         return 'bg-transparent active:bg-gray-100'
       case 'primary':
       default:
-        return 'bg-emerald-600 active:bg-emerald-700 text-white'
+        return 'bg-primary-600 active:bg-primary-700 text-white'
     }
   }
 
   const getTextStyles = () => {
     switch (variant) {
       case 'outline':
-        return 'text-emerald-700 font-semibold'
+        return 'text-primary-700 font-semibold'
       case 'ghost':
         return 'text-gray-700 font-medium'
       default:
@@ -80,12 +82,20 @@ export const Button: React.FC<ButtonProps> = ({
       {isLoading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'outline' || variant === 'ghost' ? '#059669' : '#ffffff'}
+          color={variant === 'outline' || variant === 'ghost' ? '#28a745' : '#ffffff'}
         />
       ) : (
-        <View className="flex-row items-center justify-center">
+        <View className="flex-row items-center justify-center" style={{ maxWidth: '100%' }}>
           {leftIcon && <View className="mr-2">{leftIcon}</View>}
-          <Text className={`text-center ${getTextStyles()}`}>{title}</Text>
+          <Text
+            numberOfLines={singleLine ? 1 : undefined}
+            adjustsFontSizeToFit={singleLine}
+            minimumFontScale={0.8}
+            style={{ flexShrink: 1 }}
+            className={`text-center ${getTextStyles()}`}
+          >
+            {title}
+          </Text>
           {rightIcon && <View className="ml-2">{rightIcon}</View>}
         </View>
       )}

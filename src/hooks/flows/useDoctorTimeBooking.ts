@@ -4,10 +4,9 @@ import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
-import { DEFAULT_BOOKING_SLOTS, generateFallbackDates } from '../../constants/bookingSlots'
 import { formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useDoctorTimeBooking() {
@@ -33,30 +32,34 @@ export function useDoctorTimeBooking() {
   const [modalType, setModalType] = useState<BookingModalType>(null)
 
   // 3. Available Dates for selected doctor
-  const { data: doctorAvailableDates = [], isLoading: loadingDates } = useQuery({
-    queryKey: ['doctorDates', doctor?.id, branchId],
-    queryFn: () => doctorService.getDoctorAvailableDates(String(doctor!.id), branchId),
-    enabled: Boolean(doctor?.id),
+  const { data: bookingSlots, isLoading: loadingDates } = useQuery({
+    queryKey: ['booking', 'slots', branchId, doctor?.id],
+    queryFn: () => bookingService.getBookingSlots({ doctorId: String(doctor!.id), branchId }),
+    enabled: Boolean(doctor?.id && branchId),
+    staleTime: 30 * 1000,
   })
 
-  const availableDatesList = useMemo(() => {
-    if (doctor && doctorAvailableDates.length > 0) {
-      return doctorAvailableDates
-    }
-    return generateFallbackDates(14)
-  }, [doctor, doctorAvailableDates])
+  const availableDatesList = useMemo(
+    () => (doctor ? bookingSlots?.availableDates || [] : []),
+    [doctor, bookingSlots?.availableDates]
+  )
 
   // 4. Available Slots for selected doctor on the chosen date
-  const { data: doctorSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['doctorSlots', doctor?.id, selectedDate, branchId],
-    queryFn: () => doctorService.getAvailability(doctor!.id, selectedDate, branchId),
+  const { data: selectedBookingSlots, isLoading: loadingSlots } = useQuery({
+    queryKey: ['booking', 'slots', branchId, doctor?.id, selectedDate],
+    queryFn: () => bookingService.getBookingSlots({
+      doctorId: String(doctor!.id),
+      branchId,
+      date: selectedDate,
+    }),
     enabled: Boolean(doctor?.id && selectedDate),
+    staleTime: 30 * 1000,
   })
 
-  const availableSlotsList = useMemo(() => {
-    if (doctorSlots.length > 0) return doctorSlots
-    return DEFAULT_BOOKING_SLOTS
-  }, [doctorSlots])
+  const availableSlotsList = useMemo(
+    () => selectedBookingSlots?.slots || [],
+    [selectedBookingSlots?.slots]
+  )
 
   // 5. Modal Options
   const dateOptions: SelectModalOption[] = useMemo(
@@ -86,7 +89,7 @@ export function useDoctorTimeBooking() {
           title: timeRange,
           subtitle: `${periodLabel} • ${isAvail ? 'Khung giờ còn trống' : 'Đã kín chỗ'}`,
           badge: periodLabel,
-          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-emerald-100',
+          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-primary-100',
           disabled: !isAvail,
           extra: { id: slotId, startTime: startStr, endTime: endStr, timeRange },
         }
@@ -140,8 +143,8 @@ export function useDoctorTimeBooking() {
         const t = typeof s === 'string' ? s : s.startTime
         return t && t.slice(0, 5) === selectedSlot.slice(0, 5)
       })
-      if (found && typeof found === 'object' && found.id) {
-        slotId = found.id
+      if (found && typeof found === 'object' && found.representativeSlotId) {
+        slotId = found.representativeSlotId
       }
     }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -146,6 +146,16 @@ export default function ServicesScreen() {
     }))
   }
 
+  // Telemetry: Ghi nhận từ khóa tìm kiếm khi người dùng dừng gõ (Debounce 600ms)
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 2) return
+    const timer = setTimeout(() => {
+      void trackSearch(q)
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [searchQuery, trackSearch])
+
   // 1. Fetch Toàn bộ Danh sách Gói khám thực tế từ DB qua API
   const {
     data: allPackages = [],
@@ -282,12 +292,7 @@ export default function ServicesScreen() {
             placeholder="Tìm theo tên gói, triệu chứng hoặc chuyên khoa..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text)
-              if (text.trim().length >= 2) {
-                void trackSearch(text.trim())
-              }
-            }}
+            onChangeText={setSearchQuery}
             className="flex-1 text-xs text-slate-800 p-0 outline-none"
             style={[{ outlineWidth: 0, outlineStyle: 'none' } as any]}
           />
@@ -359,13 +364,13 @@ export default function ServicesScreen() {
             onPress={() => setPriceFilter(priceFilter === 'under1m' ? 'all' : 'under1m')}
             className={`px-2 py-1 rounded text-[11px] border ${
               priceFilter === 'under1m'
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                ? 'bg-primary-50 border-primary-300 text-primary-800'
                 : 'bg-white border-slate-200 text-slate-500'
             }`}
           >
             <Text
               className={`text-[11px] font-medium ${
-                priceFilter === 'under1m' ? 'text-emerald-800' : 'text-slate-500'
+                priceFilter === 'under1m' ? 'text-primary-800' : 'text-slate-500'
               }`}
             >
               &lt; 1 Triệu
@@ -376,13 +381,13 @@ export default function ServicesScreen() {
             onPress={() => setPriceFilter(priceFilter === '1to3m' ? 'all' : '1to3m')}
             className={`px-2 py-1 rounded text-[11px] border ${
               priceFilter === '1to3m'
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                ? 'bg-primary-50 border-primary-300 text-primary-800'
                 : 'bg-white border-slate-200 text-slate-500'
             }`}
           >
             <Text
               className={`text-[11px] font-medium ${
-                priceFilter === '1to3m' ? 'text-emerald-800' : 'text-slate-500'
+                priceFilter === '1to3m' ? 'text-primary-800' : 'text-slate-500'
               }`}
             >
               1 - 3 Triệu
@@ -393,13 +398,13 @@ export default function ServicesScreen() {
             onPress={() => setPriceFilter(priceFilter === 'over3m' ? 'all' : 'over3m')}
             className={`px-2 py-1 rounded text-[11px] border ${
               priceFilter === 'over3m'
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                ? 'bg-primary-50 border-primary-300 text-primary-800'
                 : 'bg-white border-slate-200 text-slate-500'
             }`}
           >
             <Text
               className={`text-[11px] font-medium ${
-                priceFilter === 'over3m' ? 'text-emerald-800' : 'text-slate-500'
+                priceFilter === 'over3m' ? 'text-primary-800' : 'text-slate-500'
               }`}
             >
               &gt; 3 Triệu
@@ -426,7 +431,7 @@ export default function ServicesScreen() {
       {/* Danh sách Gói khám Lưới 2 Cột (2 Cards / Hàng) */}
       {loadingPackages ? (
         <View className="flex-1 items-center justify-center py-20">
-          <ActivityIndicator size="large" color="#059669" />
+          <ActivityIndicator size="large" color="#28a745" />
           <Text className="text-xs text-slate-400 mt-3">Đang tải danh sách dịch vụ...</Text>
         </View>
       ) : (
@@ -441,8 +446,8 @@ export default function ServicesScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              tintColor="#059669"
-              onRefresh={refetchPackages}
+              tintColor="#28a745"
+              onRefresh={() => { void refetchPackages() }}
             />
           }
           ListEmptyComponent={
@@ -537,7 +542,7 @@ export default function ServicesScreen() {
                   <TouchableOpacity
                     onPress={() => handleBookPackage(item)}
                     activeOpacity={0.8}
-                    className="flex-1 rounded-lg bg-emerald-700 items-center justify-center active:bg-emerald-800"
+                    className="flex-1 rounded-lg bg-primary-600 items-center justify-center active:bg-primary-800"
                     style={{ paddingVertical: 6 }}
                   >
                     <Text className="text-[11px] text-white">

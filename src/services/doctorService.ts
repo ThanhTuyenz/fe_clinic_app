@@ -1,6 +1,5 @@
 import { api, unwrapNestResponse } from './api'
 import { Department, Doctor, Specialty } from '../types/doctor'
-import { TimeSlot } from '../types/appointment'
 import { resolveApiBaseUrl } from '../constants/config'
 
 const DEFAULT_DOCTOR_AVATAR =
@@ -42,6 +41,13 @@ export const doctorService = {
         department: primarySpecialty?.name || d.department || 'Đa khoa',
         consultation_fee: Number(d.consultationFee ?? d.consultation_fee ?? 0),
         price: Number(d.consultationFee ?? d.price ?? 0),
+        onlineConsultationFee: Number(
+          d.onlineConsultationFee ??
+            d.online_consultation_fee ??
+            d.consultationFee ??
+            d.consultation_fee ??
+            0
+        ),
         rating: d.ratingAverage ?? d.rating ?? 5.0,
         experience_years: d.experienceYears ?? d.experience_years ?? 0,
         bio: d.biography || d.bio,
@@ -162,91 +168,6 @@ export const doctorService = {
     }
   },
 
-  async getSpecialtyServices(specialtyId: number | string, branchId?: string): Promise<any[]> {
-    try {
-      const res = await api.get('/api/v1/specialties/services', {
-        params: {
-          specialtyId: Number(specialtyId),
-          ...(branchId ? { branchId } : {}),
-        },
-      })
-      const unwrapped = unwrapNestResponse<any>(res.data)
-      if (Array.isArray(unwrapped) && unwrapped.length > 0) return unwrapped
-      if (Array.isArray(unwrapped?.data) && unwrapped.data.length > 0) return unwrapped.data
-
-      const fallbackRes = await api.get(`/api/v1/specialties/${specialtyId}/services`, {
-        params: branchId ? { branchId } : undefined,
-      })
-      const fallbackData = unwrapNestResponse<any>(fallbackRes.data)
-      if (Array.isArray(fallbackData)) return fallbackData
-      if (Array.isArray(fallbackData?.data)) return fallbackData.data
-      return []
-    } catch {
-      return []
-    }
-  },
-
-  async getDoctorAvailableDates(doctorId: string, branchId?: string): Promise<string[]> {
-    try {
-      const res = await api.get(`/api/v1/doctors/${doctorId}/available-dates`, {
-        params: branchId ? { branchId } : undefined,
-      })
-      const rows = unwrapNestResponse<string[]>(res.data)
-      return Array.isArray(rows) ? rows : []
-    } catch {
-      return []
-    }
-  },
-
-  async getDoctorTimeslots(doctorId: string, branchId: string, date: string): Promise<TimeSlot[]> {
-    try {
-      const res = await api.get(`/api/v1/doctors/${doctorId}/timeslots`, {
-        params: { branchId, date },
-      })
-      const rows = unwrapNestResponse<TimeSlot[]>(res.data)
-      return Array.isArray(rows) ? rows : []
-    } catch {
-      return []
-    }
-  },
-
-  async getAvailability(doctorId: string | number, date: string, branchId?: string): Promise<TimeSlot[]> {
-    try {
-      let bId = branchId
-      if (!bId) {
-        const branches = await this.getBranches().catch(() => [])
-        bId = branches[0]?.id
-      }
-      return await this.getDoctorTimeslots(String(doctorId), bId || '', date)
-    } catch {
-      return []
-    }
-  },
-
-  async getPackageScheduleDates(packageId: string, branchId?: string): Promise<string[]> {
-    try {
-      const res = await api.get('/api/v1/services/schedule-dates', {
-        params: { packageId, branchId },
-      })
-      const rows = unwrapNestResponse<string[]>(res.data)
-      return Array.isArray(rows) ? rows : []
-    } catch {
-      return []
-    }
-  },
-
-  async getPackageTimeslots(packageId: string, date: string, branchId?: string): Promise<TimeSlot[]> {
-    try {
-      const res = await api.get('/api/v1/services/timeslots', {
-        params: { packageId, date, branchId },
-      })
-      const rows = unwrapNestResponse<TimeSlot[]>(res.data)
-      return Array.isArray(rows) ? rows : []
-    } catch {
-      return []
-    }
-  },
-
   async getBookingMethods(branchId?: string): Promise<any[]> {
     try {
       let targetBranchId = branchId
@@ -269,72 +190,4 @@ export const doctorService = {
     return []
   },
 
-  async getBookingSlots(params: {
-    branchId?: string
-    specialtyId?: number | string
-    doctorId?: string
-    date?: string
-    days?: number
-  } = {}): Promise<{
-    date: string | null
-    availableDates: string[]
-    totalAvailableSlots: number
-    summary: {
-      morning: number
-      afternoon: number
-      evening: number
-    }
-    slots: Array<{
-      startTime: string
-      endTime: string
-      label: string
-      period: 'MORNING' | 'AFTERNOON' | 'EVENING'
-      totalCapacity: number
-      occupiedCount: number
-      remainingSlots: number
-      isFull: boolean
-      representativeSlotId: string
-      doctors: Array<{
-        slotId: string
-        doctorId: string
-        doctorName: string
-        academicRank?: string | null
-        avatarUrl?: string | null
-        experienceYears?: number | null
-        consultationFee: number
-        roomId?: string | null
-        roomName?: string | null
-        remainingSlots: number
-      }>
-    }>
-  }> {
-    try {
-      const res = await api.get('/api/v1/booking/slots', {
-        params: {
-          ...(params.branchId ? { branchId: params.branchId } : {}),
-          ...(params.specialtyId ? { specialtyId: params.specialtyId } : {}),
-          ...(params.doctorId ? { doctorId: params.doctorId } : {}),
-          ...(params.date ? { date: params.date } : {}),
-          ...(params.days ? { days: params.days } : {}),
-        },
-      })
-      const data = unwrapNestResponse<any>(res.data)
-      return {
-        date: data?.date || null,
-        availableDates: Array.isArray(data?.availableDates) ? data.availableDates : [],
-        totalAvailableSlots: data?.totalAvailableSlots || 0,
-        summary: data?.summary || { morning: 0, afternoon: 0, evening: 0 },
-        slots: Array.isArray(data?.slots) ? data.slots : [],
-      }
-    } catch (err) {
-      console.warn('Could not fetch booking slots', err)
-      return {
-        date: null,
-        availableDates: [],
-        totalAvailableSlots: 0,
-        summary: { morning: 0, afternoon: 0, evening: 0 },
-        slots: [],
-      }
-    }
-  },
 }

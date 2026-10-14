@@ -1,19 +1,6 @@
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
-import * as Notifications from 'expo-notifications'
-
-// Cấu hình thông báo khi app đang mở (Foreground) - Chỉ chạy trên Native (iOS / Android)
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  })
-}
+import { getNotifications } from '../utils/notifications'
 
 export function useNotifications() {
   useEffect(() => {
@@ -23,20 +10,22 @@ export function useNotifications() {
   }, [])
 
   async function registerForPushNotificationsAsync() {
+    const Notifications = getNotifications()
+    if (!Notifications) return false
     try {
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#059669',
+          lightColor: '#28a745',
         })
       }
 
-      const settings = (await Notifications.getPermissionsAsync()) as any
+      const settings = await Notifications.getPermissionsAsync()
       let granted = settings.granted || settings.status === 'granted'
       if (!granted) {
-        const req = (await Notifications.requestPermissionsAsync()) as any
+        const req = await Notifications.requestPermissionsAsync()
         granted = req.granted || req.status === 'granted'
       }
       return granted
@@ -52,6 +41,8 @@ export function useNotifications() {
     appointmentTime: string,
     triggerDate: Date
   ) {
+    const Notifications = getNotifications()
+    if (!Notifications) return
     try {
       if (triggerDate.getTime() > Date.now()) {
         const secondsUntil = Math.max(1, Math.floor((triggerDate.getTime() - Date.now()) / 1000))

@@ -1,4 +1,3 @@
-import React from 'react'
 import Svg, { G, Path, Rect, Text as SvgText } from 'react-native-svg'
 
 interface VietQrLogoProps {

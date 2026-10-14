@@ -67,7 +67,7 @@ export const FacilitiesSection: React.FC<FacilitiesSectionProps> = ({ onStartBoo
             )
           }
         >
-          <Text className="text-xs font-semibold text-emerald-600">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-600">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 
@@ -88,7 +88,7 @@ export const FacilitiesSection: React.FC<FacilitiesSectionProps> = ({ onStartBoo
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
               />
-              <View className="absolute top-2.5 left-2.5 bg-emerald-700 px-2 py-0.5 rounded-lg shadow-xs">
+              <View className="absolute top-2.5 left-2.5 bg-primary-600 px-2 py-0.5 rounded-lg shadow-xs">
                 <Text className="text-white text-[9px] font-bold uppercase tracking-wider">
                   {facility.tag}
                 </Text>
@@ -107,7 +107,7 @@ export const FacilitiesSection: React.FC<FacilitiesSectionProps> = ({ onStartBoo
                 <Ionicons
                   name="location-outline"
                   size={13}
-                  color="#059669"
+                  color="#28a745"
                   style={{ marginTop: 1, marginRight: 4 }}
                 />
                 <Text numberOfLines={2} className="text-xs text-slate-500 flex-1 leading-snug">
@@ -115,12 +115,12 @@ export const FacilitiesSection: React.FC<FacilitiesSectionProps> = ({ onStartBoo
                 </Text>
               </View>
               <View className="flex-row items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                <Text className="text-[11px] text-emerald-700 font-semibold">{facility.phone}</Text>
+                <Text className="text-[11px] text-primary-700 font-semibold">{facility.phone}</Text>
                 <TouchableOpacity
                   onPress={onStartBooking}
-                  className="bg-emerald-50 border border-emerald-600 px-2.5 py-1 rounded-lg"
+                  className="bg-primary-50 border border-primary-600 px-2.5 py-1 rounded-lg"
                 >
-                  <Text className="text-[10px] font-bold text-emerald-700">Đặt khám</Text>
+                  <Text className="text-[10px] font-bold text-primary-700">Đặt khám</Text>
                 </TouchableOpacity>
               </View>
             </View>

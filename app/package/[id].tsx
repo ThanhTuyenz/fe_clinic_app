@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   ActivityIndicator,
   Linking,
@@ -230,7 +230,7 @@ export default function PackageDetailScreen() {
         >
           {isLoading ? (
             <View className="py-24 items-center justify-center">
-              <ActivityIndicator size="large" color="#047857" />
+              <ActivityIndicator size="large" color="#28a745" />
               <Text className="text-xs text-slate-500 font-medium mt-3">
                 Đang tải thông tin gói khám từ hệ thống...
               </Text>
@@ -248,7 +248,7 @@ export default function PackageDetailScreen() {
               </Text>
               <TouchableOpacity
                 onPress={() => router.back()}
-                className="bg-emerald-700 px-5 py-2.5 rounded-lg"
+                className="bg-primary-600 px-5 py-2.5 rounded-lg"
               >
                 <Text className="text-xs font-bold text-white">Quay lại</Text>
               </TouchableOpacity>
@@ -263,7 +263,7 @@ export default function PackageDetailScreen() {
                   contentFit="cover"
                   transition={200}
                 />
-                <View className="absolute top-3 left-3 bg-emerald-700/90 backdrop-blur-md px-2.5 py-1 rounded-md">
+                <View className="absolute top-3 left-3 bg-primary-600/90 backdrop-blur-md px-2.5 py-1 rounded-md">
                   <Text className="text-[10px] font-bold text-white uppercase tracking-wider">
                     {specialtyName}
                   </Text>
@@ -279,15 +279,15 @@ export default function PackageDetailScreen() {
 
                 <View className="mt-2.5 flex-row items-baseline justify-between">
                   <View className="flex-row items-baseline">
-                    <Text className="text-2xl font-extrabold text-emerald-800">
+                    <Text className="text-2xl font-extrabold text-primary-800">
                       {formatCurrencyVi(price)}
                     </Text>
                     <Text className="text-[11px] text-slate-400 ml-2 font-normal">
                       (Đã gồm phí khám & tư vấn)
                     </Text>
                   </View>
-                  <View className="bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    <Text className="text-[11px] font-bold text-emerald-800">
+                  <View className="bg-primary-50 px-2 py-0.5 rounded border border-primary-200">
+                    <Text className="text-[11px] font-bold text-primary-800">
                       Trọn gói
                     </Text>
                   </View>
@@ -297,7 +297,7 @@ export default function PackageDetailScreen() {
                 <View className="mt-3.5 bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-2.5">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center">
-                      <Ionicons name="time-outline" size={15} color="#047857" style={{ marginRight: 8 }} />
+                      <Ionicons name="time-outline" size={15} color="#28a745" style={{ marginRight: 8 }} />
                       <Text className="text-xs text-slate-500">Thời lượng khám:</Text>
                     </View>
                     <Text className="text-xs font-bold text-slate-800">{duration}</Text>
@@ -307,7 +307,7 @@ export default function PackageDetailScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center">
-                      <Ionicons name="calendar-outline" size={15} color="#047857" style={{ marginRight: 8 }} />
+                      <Ionicons name="calendar-outline" size={15} color="#28a745" style={{ marginRight: 8 }} />
                       <Text className="text-xs text-slate-500">Khung giờ tiếp đón:</Text>
                     </View>
                     <Text className="text-xs font-bold text-slate-800">{sessionType}</Text>
@@ -317,7 +317,7 @@ export default function PackageDetailScreen() {
 
                   <View className="flex-row items-center justify-between">
                     <View className="flex-row items-center">
-                      <Ionicons name="medkit-outline" size={15} color="#047857" style={{ marginRight: 8 }} />
+                      <Ionicons name="medkit-outline" size={15} color="#28a745" style={{ marginRight: 8 }} />
                       <Text className="text-xs text-slate-500">Chuyên khoa:</Text>
                     </View>
                     <Text className="text-xs font-bold text-slate-800">{specialtyName}</Text>
@@ -327,7 +327,7 @@ export default function PackageDetailScreen() {
 
                   <View className="flex-row items-start justify-between">
                     <View className="flex-row items-center mr-2">
-                      <Ionicons name="business-outline" size={15} color="#047857" style={{ marginRight: 8, marginTop: 1 }} />
+                      <Ionicons name="business-outline" size={15} color="#28a745" style={{ marginRight: 8, marginTop: 1 }} />
                       <Text className="text-xs text-slate-500">Cơ sở áp dụng:</Text>
                     </View>
                     <Text className="text-xs font-bold text-slate-800 flex-1 text-right leading-snug">
@@ -342,10 +342,10 @@ export default function PackageDetailScreen() {
                 <View className="h-px bg-slate-100 my-4" />
 
                 {/* 3. Lý do chọn & Căn cứ đề xuất y khoa (Giống bản Web) */}
-                <View className="bg-emerald-50/70 rounded-lg p-3.5 border border-emerald-200/80 mb-4">
+                <View className="bg-primary-50/70 rounded-lg p-3.5 border border-primary-200/80 mb-4">
                   <View className="flex-row items-center mb-1.5">
-                    <Ionicons name="shield-checkmark" size={16} color="#047857" style={{ marginRight: 6 }} />
-                    <Text className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                    <Ionicons name="shield-checkmark" size={16} color="#28a745" style={{ marginRight: 6 }} />
+                    <Text className="text-xs font-bold text-primary-950 uppercase tracking-wider">
                       Lý do chọn &amp; Căn cứ y khoa
                     </Text>
                   </View>
@@ -356,17 +356,17 @@ export default function PackageDetailScreen() {
 
                   {/* Triệu chứng / Chỉ định phù hợp (symptoms từ DB) */}
                   {symptoms.length > 0 && (
-                    <View className="mt-2.5 pt-2 border-t border-emerald-200/60">
-                      <Text className="text-[11px] font-bold text-emerald-950 mb-1.5">
+                    <View className="mt-2.5 pt-2 border-t border-primary-200/60">
+                      <Text className="text-[11px] font-bold text-primary-950 mb-1.5">
                         Chỉ định phù hợp với các triệu chứng:
                       </Text>
                       <View className="flex-row flex-wrap gap-1.5">
                         {symptoms.map((sym: string, sIdx: number) => (
                           <View
                             key={sIdx}
-                            className="bg-white/90 border border-emerald-200 px-2 py-0.5 rounded"
+                            className="bg-white/90 border border-primary-200 px-2 py-0.5 rounded"
                           >
-                            <Text className="text-[11px] font-medium text-emerald-800">
+                            <Text className="text-[11px] font-medium text-primary-800">
                               {sym}
                             </Text>
                           </View>
@@ -375,9 +375,9 @@ export default function PackageDetailScreen() {
                     </View>
                   )}
 
-                  <View className="mt-2 pt-2 border-t border-emerald-200/50 flex-row items-start">
-                    <Ionicons name="information-circle-outline" size={13} color="#047857" style={{ marginRight: 4, marginTop: 1 }} />
-                    <Text className="text-[10px] text-emerald-900/80 italic flex-1">
+                  <View className="mt-2 pt-2 border-t border-primary-200/50 flex-row items-start">
+                    <Ionicons name="information-circle-outline" size={13} color="#28a745" style={{ marginRight: 4, marginTop: 1 }} />
+                    <Text className="text-[10px] text-primary-900/80 italic flex-1">
                       Thông tin mang tính chất tham khảo, không thay thế cho chẩn đoán y khoa trực tiếp.
                     </Text>
                   </View>
@@ -430,7 +430,7 @@ export default function PackageDetailScreen() {
                 {relatedPackages.length > 0 && (
                   <View className="mt-4 pt-4 border-t border-slate-100">
                     <View className="mb-3">
-                      <Text className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                      <Text className="text-[10px] font-bold uppercase tracking-wider text-primary-700">
                         Gợi ý dành cho bạn
                       </Text>
                       <Text className="text-sm font-bold text-slate-900 uppercase tracking-wide mt-0.5">
@@ -492,19 +492,19 @@ export default function PackageDetailScreen() {
             activeOpacity={0.7}
             className="flex-row items-center mr-3"
           >
-            <View className="w-8 h-8 rounded-full bg-emerald-50 items-center justify-center mr-2 border border-emerald-200">
-              <Ionicons name="call" size={14} color="#047857" />
+            <View className="w-8 h-8 rounded-full bg-primary-50 items-center justify-center mr-2 border border-primary-200">
+              <Ionicons name="call" size={14} color="#28a745" />
             </View>
             <View>
               <Text className="text-[10px] text-slate-400">Tư vấn 24/7</Text>
-              <Text className="text-xs font-bold text-emerald-800">1900 6868</Text>
+              <Text className="text-xs font-bold text-primary-800">1900 6868</Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={handleBookNow}
-            className="flex-1 bg-emerald-700 active:bg-emerald-800 py-3 rounded-lg flex-row items-center justify-center shadow-xs ml-2"
+            className="flex-1 bg-primary-600 active:bg-primary-800 py-3 rounded-lg flex-row items-center justify-center shadow-xs ml-2"
           >
             <Ionicons
               name="calendar-outline"

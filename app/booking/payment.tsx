@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,14 +11,13 @@ import {
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useBookingStore } from '../../src/store/useBookingStore'
-import { useAuthStore } from '../../src/store/useAuthStore'
 import { useNotifications } from '../../src/hooks/useNotifications'
 import { appointmentService } from '../../src/services/appointmentService'
+import { patientProfileService } from '../../src/services/patientProfileService'
 import {
   paymentService,
   PayosCreatePaymentResponse,
 } from '../../src/services/paymentService'
-import { formatCurrencyVi } from '../../src/utils/date'
 import { VietQrLogo } from '../../src/components/common/VietQrLogo'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
@@ -27,11 +25,10 @@ import { BookingTimeline } from '../../src/components/booking/BookingTimeline'
 import { PayosDeepLinkModal } from '../../src/components/booking/PayosDeepLinkModal'
 import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
 
-type PaymentMethodType = 'PAYOS' | 'VIETQR' | 'COUNTER'
+type PaymentMethodType = 'PAYOS'
 
 export default function BookingPaymentScreen() {
   const router = useRouter()
-  const { user } = useAuthStore()
   const { draft, resetBooking } = useBookingStore()
   const { scheduleAppointmentReminder } = useNotifications()
   const { trackDropOff } = useBehaviorTracker()
@@ -49,10 +46,18 @@ export default function BookingPaymentScreen() {
 
   const subtotal = isPackage
     ? Number(draft.healthPackage?.price ?? 1200000)
-    : Number(draft.doctor?.price || draft.doctor?.consultation_fee || 300000)
+    : Number(
+        draft.bookingMethod === 'ONLINE_CONSULTATION'
+          ? draft.doctor?.onlineConsultationFee ||
+              draft.doctor?.consultation_fee ||
+              draft.doctor?.price ||
+              300000
+          : draft.doctor?.price || draft.doctor?.consultation_fee || 300000
+      )
 
+  const serviceFee = 10000
   const discountAmount = draft.appliedVoucher?.discountAmount || 0
-  const totalAmount = Math.max(0, subtotal - discountAmount)
+  const totalAmount = Math.max(0, subtotal + serviceFee - discountAmount)
 
   // Xử lý khi thanh toán PayOS thành công
   const handlePaymentSuccess = () => {
@@ -87,6 +92,18 @@ export default function BookingPaymentScreen() {
       if (!profileId) {
         throw new Error('Chưa xác định hồ sơ người khám bệnh.')
       }
+      const profiles = await patientProfileService.getPatientProfiles()
+      if (!profiles.some((profile) => String(profile.id) === String(profileId))) {
+        useBookingStore.setState((state) => ({
+          draft: { ...state.draft, patientProfileId: undefined, selectedProfile: undefined },
+        }))
+        Alert.alert(
+          'Cần chọn lại hồ sơ',
+          'Hồ sơ người khám chưa được lưu hoặc không thuộc tài khoản hiện tại. Vui lòng chọn lại và lưu hồ sơ.',
+          [{ text: 'Chọn hồ sơ', onPress: () => router.replace('/booking/patient-info') }],
+        )
+        return
+      }
 
       // slotId phải được lưu sẵn khi chọn giờ ở bước 2
       const slotId = draft.slotId
@@ -101,10 +118,13 @@ export default function BookingPaymentScreen() {
 
       // 1. Call checkout API
       const result = await appointmentService.checkout({
-        bookingType: isPackage ? 'SERVICE_PACKAGE' : 'DOCTOR',
+        bookingMethodCode: draft.bookingMethod || (isPackage ? 'HEALTH_PACKAGE' : 'CONSULTATION'),
         patientProfileId: profileId,
         scheduleSlotId: slotId,
-        servicePackageId: isPackage ? String(draft.healthPackage?.id) : undefined,
+        servicePackageId: isPackage
+          ? draft.healthPackage?.id ? String(draft.healthPackage.id) : undefined
+          : draft.specialtyService?.id ? String(draft.specialtyService.id) : undefined,
+        symptomsDescription: draft.symptoms,
         voucherCode: draft.voucherCode,
       })
 
@@ -114,39 +134,19 @@ export default function BookingPaymentScreen() {
         (result as any)?.appointment?.id ||
         'new'
 
-      // 2. Nếu chọn PayOS / VietQR: Khởi tạo phiên thanh toán PayOS thật & mở Modal Deep Link
-      if (paymentMethod === 'PAYOS' || paymentMethod === 'VIETQR') {
-        try {
-          const payosRes = await paymentService.createPayosPayment({
-            appointmentId,
-            amount: totalAmount,
-            description: `VC${String(appointmentId).slice(-6).toUpperCase()}`,
-          })
-
-          setCreatedApptId(appointmentId)
-          setPayosData(payosRes)
-          setIsPayosModalVisible(true)
-        } catch (payErr: any) {
-          Alert.alert(
-            'Không thể tạo mã thanh toán',
-            payErr?.message || 'Có lỗi khi kết nối cổng PayOS. Vui lòng thử lại hoặc chọn thanh toán tại quầy.',
-          )
-        }
-        return
+      // Open the PayOS session; finish the booking only after payment succeeds.
+      try {
+        const payosRes = await paymentService.createPayosPayment({
+          appointmentId,
+          amount: totalAmount,
+          description: `VC${String(appointmentId).slice(-6).toUpperCase()}`,
+        })
+        setCreatedApptId(appointmentId)
+        setPayosData(payosRes)
+        setIsPayosModalVisible(true)
+      } catch (payErr: any) {
+        Alert.alert('Không thể tạo mã thanh toán', payErr?.message || 'Có lỗi khi kết nối cổng PayOS. Vui lòng thử lại.')
       }
-
-      // 3. Nếu chọn thanh toán tại quầy (COUNTER): Hoàn tất trực tiếp
-      const appointmentDateObj = new Date(draft.date)
-      const reminderDate = new Date(appointmentDateObj.getTime() - 24 * 60 * 60 * 1000)
-      scheduleAppointmentReminder(
-        appointmentId,
-        serviceName,
-        `${draft.slot} ngày ${draft.date}`,
-        reminderDate
-      )
-
-      resetBooking()
-      router.replace(`/booking/${appointmentId}`)
     } catch (err: any) {
       Alert.alert('Thanh toán thất bại', err.message || 'Không thể tạo đơn đặt lịch khám. Vui lòng thử lại.')
     } finally {
@@ -248,23 +248,15 @@ export default function BookingPaymentScreen() {
         </ScrollView>
 
         {/* Bottom Bar: Xác nhận thanh toán */}
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 flex-row items-center justify-between">
-          <View className="flex-1 mr-3">
-            <Text className="text-[11px] text-slate-400 font-medium">Tổng thanh toán:</Text>
-            <Text className="text-base font-extrabold text-slate-900 leading-tight">
-              {formatCurrencyVi(totalAmount)}
-            </Text>
-          </View>
-
-          <View className="w-[180px]">
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3">
             <Button
-              title="Xác nhận thanh toán"
+              title="Xác nhận"
+              singleLine
               onPress={handlePayment}
               isLoading={isSubmitting}
               disabled={isSubmitting || !paymentMethod}
-              className="py-3 rounded-lg"
+              className="px-3 py-3 rounded-lg"
             />
-          </View>
         </View>
 
         {/* Modal Quét mã VietQR & Mở thẳng App Ngân hàng (Deep Linking) */}

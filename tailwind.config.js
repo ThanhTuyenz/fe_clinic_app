@@ -10,14 +10,18 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#059669', // Emerald 600
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
+          DEFAULT: '#28a745',
+          50: '#f0faf2',
+          100: '#d9f2df',
+          200: '#b9eac3',
+          300: '#8edda1',
+          400: '#5dca76',
+          500: '#34b852',
+          600: '#28a745',
+          700: '#218838',
+          800: '#19692c',
+          900: '#145523',
+          950: '#0b3014',
         },
         medical: {
           teal: '#0d9488',
@@ -25,7 +29,7 @@ module.exports = {
           soft: '#f8fafc',
           muted: '#64748b',
           dark: '#0f172a',
-          success: '#10b981',
+          success: '#28a745',
           warning: '#f59e0b',
           danger: '#ef4444',
         },

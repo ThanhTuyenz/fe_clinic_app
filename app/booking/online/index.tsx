@@ -1,4 +1,3 @@
-import React from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 
 import { useOnlineBooking } from '../../../src/hooks/flows/useOnlineBooking'
@@ -7,7 +6,6 @@ import { SelectInput } from '../../../src/components/common/SelectInput'
 import { Button } from '../../../src/components/common/Button'
 import {
   BookingDateTimeSection,
-  BookingMethodBanner,
   BookingTimeline,
   DoctorListSection,
 } from '../../../src/components/booking'
@@ -99,6 +97,7 @@ export default function OnlineBookingScreen() {
           {/* 2. Thời gian tư vấn trực tuyến */}
           <BookingDateTimeSection
             isHealthPackage={false}
+            isOnlineConsultation
             hasDoctorOrPackage={Boolean(selectedDoctor)}
             hasDate={Boolean(selectedDate)}
             selectedDate={selectedDate}

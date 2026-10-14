@@ -14,7 +14,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
     <Modal transparent visible={visible} animationType="fade">
       <View className="flex-1 bg-black/40 justify-center items-center px-4">
         <View className="bg-white px-6 py-5 rounded-lg items-center shadow-lg min-w-[180px]">
-          <ActivityIndicator size="large" color="#059669" />
+          <ActivityIndicator size="large" color="#28a745" />
           <Text className="text-slate-700 text-sm font-medium mt-3 text-center">
             {message}
           </Text>

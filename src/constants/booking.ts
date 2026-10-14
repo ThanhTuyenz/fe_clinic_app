@@ -24,8 +24,8 @@ export const METHOD_INFO: Record<BookingMethod, MethodInfoItem> = {
     badge: 'Phổ biến',
     desc: 'Hơn 12 chuyên khoa mũi nhọn (Tim mạch, Mắt, Nhi, Da liễu...)',
     icon: 'medkit-outline',
-    color: '#047857',
-    bgColor: 'bg-emerald-50',
+    color: '#28a745',
+    bgColor: 'bg-primary-50',
   },
   CONSULTATION: {
     title: 'Khám Cùng Bác Sĩ',
@@ -72,7 +72,7 @@ export const METHOD_INFO: Record<BookingMethod, MethodInfoItem> = {
     badge: 'Toàn diện',
     desc: 'Tầm soát chuyên sâu và xét nghiệm tổng quát định kỳ',
     icon: 'shield-checkmark-outline',
-    color: '#059669',
-    bgColor: 'bg-emerald-50',
+    color: '#28a745',
+    bgColor: 'bg-primary-50',
   },
 }

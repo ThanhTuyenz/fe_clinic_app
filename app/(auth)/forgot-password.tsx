@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -52,8 +52,8 @@ export default function ForgotPasswordScreen() {
       >
         <ScrollView className="px-6 py-8" keyboardShouldPersistTaps="handled">
           <View className="items-center mb-8">
-            <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center mb-3">
-              <Ionicons name="key-outline" size={32} color="#059669" />
+            <View className="w-16 h-16 rounded-lg bg-primary-50 items-center justify-center mb-3">
+              <Ionicons name="key-outline" size={32} color="#28a745" />
             </View>
             <Text className="text-2xl font-bold text-slate-800">
               Đặt lại mật khẩu

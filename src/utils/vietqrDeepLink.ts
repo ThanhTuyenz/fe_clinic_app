@@ -11,7 +11,7 @@ export interface BankAppItem {
 }
 
 /**
- * Danh sách các ứng dụng Ngân hàng & Ví điện tử phổ biến tại Việt Nam hỗ trợ chuẩn VietQR Deep Link
+ * Các ngân hàng phổ biến được ưu tiên hiển thị trước trong danh sách mở nhanh.
  */
 export const POPULAR_BANKS: BankAppItem[] = [
   {
@@ -42,16 +42,16 @@ export const POPULAR_BANKS: BankAppItem[] = [
     color: '#EC1C24',
   },
   {
-    id: 'momo',
-    name: 'Ví MoMo',
-    shortName: 'MoMo',
-    bin: '',
-    scheme: 'momo://',
-    iconUrl: 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png',
-    color: '#A50064',
+    id: 'vba',
+    name: 'Agribank Plus',
+    shortName: 'Agribank',
+    bin: '970405',
+    scheme: '',
+    iconUrl: 'https://cdn.vietqr.io/img/VBA.png',
+    color: '#A11D36',
   },
   {
-    id: 'vtb',
+    id: 'icb',
     name: 'VietinBank',
     shortName: 'VietinBank iPay',
     bin: '970415',

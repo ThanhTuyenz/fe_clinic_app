@@ -4,14 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
 import { Doctor } from '../../types/doctor'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
 import {
-  DEFAULT_BOOKING_SLOTS,
   filterAfterHoursSlots,
-  generateFallbackDates,
 } from '../../constants/bookingSlots'
 import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
 
@@ -35,10 +33,17 @@ export function useAfterHoursBooking() {
   const [modalType, setModalType] = useState<BookingModalType>(null)
 
   // 2. Data Queries
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
+  const { data: bookingInit, isLoading: loadingInit } = useQuery({
+    queryKey: ['booking', 'init', 'after-hours', selectedBranchId, selectedSpecialtyId],
+    queryFn: () => bookingService.getBookingInit({
+      flow: 'after-hours',
+      branchId: selectedBranchId || undefined,
+      specialtyId: selectedSpecialtyId,
+    }),
+    staleTime: 5 * 60 * 1000,
   })
+  const branches = bookingInit?.branches || []
+  const loadingBranches = loadingInit
 
   useEffect(() => {
     if (!selectedBranchId && branches.length > 0) {
@@ -47,40 +52,42 @@ export function useAfterHoursBooking() {
     }
   }, [branches, selectedBranchId])
 
-  const { data: specialties = [], isLoading: loadingSpecialties } = useQuery({
-    queryKey: ['specialties'],
-    queryFn: () => doctorService.getSpecialties(),
-  })
+  const specialties = bookingInit?.specialties || []
+  const loadingSpecialties = loadingInit
 
-  const { data: doctors = [], isLoading: loadingDoctors } = useQuery({
-    queryKey: ['doctors', selectedBranchId, selectedSpecialtyId, 'after-hours'],
-    queryFn: () => doctorService.getDoctors(selectedBranchId, selectedSpecialtyId as any),
-    enabled: Boolean(selectedBranchId && selectedSpecialtyId),
-  })
+  const doctors = (bookingInit?.doctors || []).filter((doctor) =>
+    !selectedSpecialtyId || String(doctor.specialtyId) === String(selectedSpecialtyId)
+  )
+  const loadingDoctors = loadingInit
 
-  const { data: doctorAvailableDates = [] } = useQuery({
-    queryKey: ['doctorDates', selectedDoctor?.id, selectedBranchId],
-    queryFn: () => doctorService.getDoctorAvailableDates(String(selectedDoctor!.id), selectedBranchId),
-    enabled: Boolean(selectedDoctor?.id),
+  const { data: bookingSlots, isLoading: loadingDates } = useQuery({
+    queryKey: ['booking', 'slots', selectedBranchId, selectedDoctor?.id, 'after-hours'],
+    queryFn: () => bookingService.getBookingSlots({
+      doctorId: String(selectedDoctor!.id),
+      branchId: selectedBranchId,
+    }),
+    enabled: Boolean(selectedDoctor?.id && selectedBranchId),
+    staleTime: 30 * 1000,
   })
 
   const availableDatesList = useMemo(() => {
-    if (selectedDoctor && doctorAvailableDates.length > 0) {
-      return doctorAvailableDates
-    }
-    return generateFallbackDates(14)
-  }, [selectedDoctor, doctorAvailableDates])
+    return selectedDoctor ? bookingSlots?.availableDates || [] : []
+  }, [selectedDoctor, bookingSlots?.availableDates])
 
-  const { data: doctorSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['doctorSlots', selectedDoctor?.id, selectedDate, selectedBranchId, 'after-hours'],
-    queryFn: () => doctorService.getAvailability(selectedDoctor!.id, selectedDate, selectedBranchId),
+  const { data: selectedBookingSlots, isLoading: loadingSlots } = useQuery({
+    queryKey: ['booking', 'slots', selectedBranchId, selectedDoctor?.id, selectedDate, 'after-hours'],
+    queryFn: () => bookingService.getBookingSlots({
+      doctorId: String(selectedDoctor!.id),
+      branchId: selectedBranchId,
+      date: selectedDate,
+    }),
     enabled: Boolean(selectedDoctor?.id && selectedDate),
+    staleTime: 30 * 1000,
   })
 
   const availableSlotsList = useMemo(() => {
-    const raw = doctorSlots.length > 0 ? doctorSlots : DEFAULT_BOOKING_SLOTS
-    return filterAfterHoursSlots(raw)
-  }, [doctorSlots])
+    return filterAfterHoursSlots(selectedBookingSlots?.slots || [])
+  }, [selectedBookingSlots?.slots])
 
   const selectedBranchObj = branches.find((b: any) => String(b.id) === String(selectedBranchId))
   const selectedSpecialtyObj = specialties.find((s: any) => String(s.id) === String(selectedSpecialtyId))
@@ -93,7 +100,7 @@ export function useAfterHoursBooking() {
         title: b.name,
         subtitle: b.address,
         badge: b.code === 'VC-CENTRAL' ? 'Trụ sở chính' : undefined,
-        badgeColor: 'bg-emerald-100',
+        badgeColor: 'bg-primary-100',
         extra: b,
       })),
     [branches]
@@ -225,6 +232,9 @@ export function useAfterHoursBooking() {
     setSelectedDate('')
     setSelectedSlot('')
     setSelectedSlotId(undefined)
+    setSelectedDate('')
+    setSelectedSlot('')
+    setSelectedSlotId(undefined)
   }
 
   const handleClearSlot = () => {
@@ -262,8 +272,8 @@ export function useAfterHoursBooking() {
         const t = typeof s === 'string' ? s : s.startTime
         return t && t.slice(0, 5) === selectedSlot.slice(0, 5)
       })
-      if (found && typeof found === 'object' && found.id) {
-        slotId = found.id
+      if (found && typeof found === 'object' && found.representativeSlotId) {
+        slotId = found.representativeSlotId
       }
     }
 
@@ -295,6 +305,7 @@ export function useAfterHoursBooking() {
     // Loading
     loadingBranches,
     loadingSpecialties,
+    loadingDates,
     loadingDoctors,
     loadingSlots,
 

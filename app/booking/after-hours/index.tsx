@@ -1,4 +1,3 @@
-import React from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 
 import { useAfterHoursBooking } from '../../../src/hooks/flows/useAfterHoursBooking'
@@ -7,7 +6,6 @@ import { SelectInput } from '../../../src/components/common/SelectInput'
 import { Button } from '../../../src/components/common/Button'
 import {
   BookingDateTimeSection,
-  BookingMethodBanner,
   BookingTimeline,
   SpecialtyDoctorSection,
 } from '../../../src/components/booking'

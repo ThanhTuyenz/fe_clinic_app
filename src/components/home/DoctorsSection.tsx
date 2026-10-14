@@ -31,12 +31,12 @@ export const DoctorsSection: React.FC<DoctorsSectionProps> = ({
           </Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>
-          <Text className="text-xs font-semibold text-emerald-600">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-600">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="small" color="#059669" className="py-8" />
+        <ActivityIndicator size="small" color="#28a745" className="py-8" />
       ) : doctors.length === 0 ? (
         <View className="bg-white mx-5 p-6 rounded-lg border border-slate-100 items-center justify-center">
           <Ionicons name="medical-outline" size={32} color="#cbd5e1" />

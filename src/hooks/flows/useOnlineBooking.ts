@@ -4,16 +4,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
 import { Doctor } from '../../types/doctor'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
 import {
-  DEFAULT_BOOKING_SLOTS,
   extractDoctorSpecialtyId,
-  generateFallbackDates,
 } from '../../constants/bookingSlots'
-import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
+import { formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useOnlineBooking() {
   const router = useRouter()
@@ -33,10 +31,12 @@ export function useOnlineBooking() {
   const [doctorSearch, setDoctorSearch] = useState('')
 
   // 2. Data Queries
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
+  const { data: bookingInit, isLoading: loadingBranches } = useQuery({
+    queryKey: ['booking', 'init', 'online'],
+    queryFn: () => bookingService.getBookingInit({ flow: 'online' }),
+    staleTime: 5 * 60 * 1000,
   })
+  const branches = bookingInit?.branches || []
 
   useEffect(() => {
     if (!selectedBranchId && branches.length > 0) {
@@ -45,11 +45,8 @@ export function useOnlineBooking() {
     }
   }, [branches, selectedBranchId])
 
-  const { data: doctors = [], isLoading: loadingDoctors } = useQuery({
-    queryKey: ['doctors', selectedBranchId, 'online-consultation'],
-    queryFn: () => doctorService.getDoctors(selectedBranchId),
-    enabled: Boolean(selectedBranchId),
-  })
+  const doctors = bookingInit?.doctors || []
+  const loadingDoctors = loadingBranches
 
   useEffect(() => {
     if (params.doctorId && doctors.length > 0) {
@@ -61,29 +58,43 @@ export function useOnlineBooking() {
     }
   }, [params.doctorId, doctors])
 
-  const { data: doctorAvailableDates = [] } = useQuery({
-    queryKey: ['doctorDates', selectedDoctor?.id, selectedBranchId],
-    queryFn: () => doctorService.getDoctorAvailableDates(String(selectedDoctor!.id), selectedBranchId),
-    enabled: Boolean(selectedDoctor?.id),
+  const {
+    data: bookingSlots,
+    isLoading: loadingSlots,
+  } = useQuery({
+    queryKey: ['bookingSlots', selectedDoctor?.id, selectedBranchId, selectedDate, 'online-consultation'],
+    queryFn: () =>
+      bookingService.getBookingSlots({
+        doctorId: String(selectedDoctor!.id),
+        branchId: selectedBranchId,
+        date: selectedDate || undefined,
+      }),
+    enabled: Boolean(selectedDoctor?.id && selectedBranchId),
+    staleTime: 30 * 1000,
   })
+
+  const doctorAvailableDates = bookingSlots?.availableDates || []
 
   const availableDatesList = useMemo(() => {
-    if (selectedDoctor && doctorAvailableDates.length > 0) {
-      return doctorAvailableDates
-    }
-    return generateFallbackDates(14)
+    return selectedDoctor ? doctorAvailableDates : []
   }, [selectedDoctor, doctorAvailableDates])
 
-  const { data: doctorSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['doctorSlots', selectedDoctor?.id, selectedDate, selectedBranchId, 'online'],
-    queryFn: () => doctorService.getAvailability(selectedDoctor!.id, selectedDate, selectedBranchId),
-    enabled: Boolean(selectedDoctor?.id && selectedDate),
-  })
-
   const availableSlotsList = useMemo(() => {
-    if (doctorSlots.length > 0) return doctorSlots
-    return DEFAULT_BOOKING_SLOTS
-  }, [doctorSlots])
+    return (bookingSlots?.slots || [])
+      .filter(() => !selectedDate || !bookingSlots?.date || bookingSlots.date === selectedDate)
+      .map((slot) => ({
+        ...slot,
+        id: slot.representativeSlotId,
+        isAvailable: !slot.isFull,
+        remainingCapacity: slot.remainingSlots,
+      }))
+  }, [bookingSlots, selectedDate])
+
+  useEffect(() => {
+    if (selectedDoctor && !selectedDate && availableDatesList.length > 0) {
+      setSelectedDate(availableDatesList[0])
+    }
+  }, [availableDatesList, selectedDate, selectedDoctor])
 
   // 3. Search & Filter
   const displayedDoctors = useMemo(() => {
@@ -106,7 +117,7 @@ export function useOnlineBooking() {
         title: b.name,
         subtitle: b.address,
         badge: b.code === 'VC-CENTRAL' ? 'Trụ sở chính' : undefined,
-        badgeColor: 'bg-emerald-100',
+        badgeColor: 'bg-primary-100',
         extra: b,
       })),
     [branches]
@@ -139,7 +150,7 @@ export function useOnlineBooking() {
           title: timeRange,
           subtitle: `Tư vấn 1:1 • ${isAvail ? 'Khung giờ còn trống' : 'Đã kín chỗ'}`,
           badge: periodLabel,
-          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-emerald-100',
+          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-primary-100',
           disabled: !isAvail,
           extra: { id: slotId, startTime: startStr, endTime: endStr, timeRange },
         }
@@ -177,13 +188,6 @@ export function useOnlineBooking() {
     setSelectedSlot(opt.title)
     setSelectedSlotId(typeof opt.extra === 'object' && opt.extra?.id ? opt.extra.id : String(opt.id))
     setModalType(null)
-  }
-
-  const handleClearDoctor = () => {
-    setSelectedDoctor(null)
-    setSelectedDate('')
-    setSelectedSlot('')
-    setSelectedSlotId(undefined)
   }
 
   const handleClearSlot = () => {
@@ -274,7 +278,6 @@ export function useOnlineBooking() {
     handleSelectBranch,
     handleSelectDate,
     handleSelectSlot,
-    handleClearDoctor,
     handleClearSlot,
     handleContinue,
   }

@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "103191199587-dnp6rhei8la2fmnt3h5qh7bj1bbg5cug.apps.googleusercontent.com"
+      },
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  }
+}

@@ -2,11 +2,10 @@ import { api, unwrapNestResponse } from './api'
 import { Appointment, CheckInPass } from '../types/appointment'
 
 export interface CheckoutPayload {
-  bookingType: 'DOCTOR' | 'SERVICE_PACKAGE'
+  bookingMethodCode: string
   patientProfileId: string
-  scheduleSlotId?: string
+  scheduleSlotId: string
   servicePackageId?: string
-  servicePackageScheduleSlotId?: string
   symptomsDescription?: string
   voucherCode?: string
 }

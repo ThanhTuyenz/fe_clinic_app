@@ -1,6 +1,5 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import {
-  SafeAreaView,
   StatusBar,
   Text,
   TouchableOpacity,
@@ -8,6 +7,8 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs'
 
 interface ScreenShellProps {
   children: React.ReactNode
@@ -27,6 +28,8 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
   className = '',
 }) => {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const tabBarHeight = useContext(BottomTabBarHeightContext)
 
   const handleBack = () => {
     if (onBackPress) {
@@ -37,10 +40,19 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
   }
 
   return (
-    <SafeAreaView className={`flex-1 bg-white ${className}`} style={{ flex: 1 }}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <View
+      className={`flex-1 bg-white ${className}`}
+      style={{
+        flex: 1,
+        paddingTop: insets.top,
+        paddingBottom: tabBarHeight == null ? insets.bottom : 0,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
+    >
+      <StatusBar barStyle="dark-content" />
       {(title || showBackButton || rightElement) && (
-        <View className="flex-row items-center justify-between px-4 py-3 border-b border-slate-100 bg-white">
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-slate-100 bg-white" style={{ minHeight: 64 }}>
           <View className="flex-row items-center flex-1">
             {showBackButton && (
               <TouchableOpacity
@@ -53,8 +65,8 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
             )}
             {title && (
               <Text
-                numberOfLines={1}
-                className="text-lg font-bold text-slate-800 flex-1"
+                numberOfLines={2}
+                className="text-lg leading-6 font-bold text-slate-800 flex-1"
               >
                 {title}
               </Text>
@@ -64,6 +76,6 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
         </View>
       )}
       <View className="flex-1 bg-slate-50/50" style={{ flex: 1 }}>{children}</View>
-    </SafeAreaView>
+    </View>
   )
 }

@@ -90,7 +90,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
                     ? '#1d4ed8'
                     : badge.color.includes('purple')
                     ? '#6d28d9'
-                    : '#047857'
+                    : '#28a745'
                 }
                 style={{ marginRight: 3 }}
               />
@@ -101,7 +101,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
       </TouchableOpacity>
 
       {/* Nội dung thông tin */}
-      <View className="p-3.5 flex-1 justify-between">
+      <View className="p-4 justify-between">
         <TouchableOpacity activeOpacity={0.8} onPress={handleDetail}>
           <View style={{ minHeight: 40, justifyContent: 'flex-start' }}>
             <Text numberOfLines={2} className="text-sm font-extrabold text-slate-900 leading-snug">
@@ -128,7 +128,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={onPress}
-            className="w-full bg-emerald-700 active:bg-emerald-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
+            className="w-full bg-primary-600 active:bg-primary-800 py-2.5 rounded-lg items-center justify-center shadow-2xs"
           >
             <Text className="text-xs text-white">Đặt khám</Text>
           </TouchableOpacity>

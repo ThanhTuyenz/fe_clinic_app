@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -43,8 +43,8 @@ export default function AppointmentsScreen() {
     switch (status) {
       case 'CONFIRMED':
         return (
-          <View className="bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
-            <Text className="text-[11px] font-bold text-emerald-700">Đã xác nhận</Text>
+          <View className="bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-primary-700">Đã xác nhận</Text>
           </View>
         )
       case 'CHECKED_IN':
@@ -68,8 +68,8 @@ export default function AppointmentsScreen() {
         )
       case 'COMPLETED':
         return (
-          <View className="bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
-            <Text className="text-[11px] font-bold text-emerald-700">Đã khám xong</Text>
+          <View className="bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg">
+            <Text className="text-[11px] font-bold text-primary-700">Đã khám xong</Text>
           </View>
         )
       case 'CANCELLED':
@@ -192,7 +192,7 @@ export default function AppointmentsScreen() {
         {/* List */}
         <View className="flex-1 px-4 pt-3">
           {isLoading ? (
-            <ActivityIndicator size="small" color="#059669" className="py-8" />
+            <ActivityIndicator size="small" color="#28a745" className="py-8" />
           ) : displayedList.length === 0 ? (
             <View className="flex-1 items-center justify-center py-16">
               <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />
@@ -217,7 +217,7 @@ export default function AppointmentsScreen() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 24 }}
               refreshControl={
-                <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+                <RefreshControl refreshing={isRefetching} onRefresh={() => { void refetch() }} />
               }
             />
           )}

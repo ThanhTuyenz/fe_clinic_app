@@ -1,11 +1,9 @@
-import React from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 
 import { useDoctorBooking } from '../../../src/hooks/flows/useDoctorBooking'
 import { ScreenShell } from '../../../src/components/common/ScreenShell'
 import { Button } from '../../../src/components/common/Button'
 import {
-  BookingMethodBanner,
   BookingTimeline,
   DoctorListSection,
 } from '../../../src/components/booking'

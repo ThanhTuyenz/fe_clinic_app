@@ -11,7 +11,7 @@ export interface RecommendedPackageItem {
   priority?: 'HIGH' | 'MEDIUM' | 'LOW'
   badge?: string
   clinicalReason?: string
-  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'PROFILE_AI' | 'POPULAR'
+  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'RECENT_VIEW' | 'PROFILE_AI' | 'POPULAR'
 }
 
 export interface HomeRecommendationResponse {
@@ -19,6 +19,9 @@ export interface HomeRecommendationResponse {
   profileName?: string
   updatedAt: string
   source: 'HYBRID' | 'AI_PROFILE' | 'BEHAVIOR' | 'FALLBACK'
+  event?: string
+  triggerEvent?: string
+  triggerReason?: string
   dataOrigin?: 'CACHE' | 'NEW'
   src?: 'cache' | 'new'
   isCached?: boolean
@@ -75,7 +78,6 @@ export const recommendationService = {
   async getHomeRecommendations(params?: {
     profileId?: string
     sessionId?: string
-    branchId?: string
   }): Promise<HomeRecommendationResponse> {
     try {
       const res = await api.get('/api/v1/recommendations/home', { params })
@@ -98,14 +100,13 @@ export const recommendationService = {
   },
 
   async refreshProfileRecommendations(
-    profileId: string,
-    branchId?: string
+    profileId: string
   ): Promise<HomeRecommendationResponse> {
     try {
       const res = await api.post(
         `/api/v1/recommendations/patient-profile/${profileId}/refresh`,
         {},
-        { params: { branchId } }
+        {}
       )
       const data = unwrapNestResponse<HomeRecommendationResponse>(res.data)
       return data || { updatedAt: new Date().toISOString(), source: 'AI_PROFILE', packages: [] }
@@ -129,4 +130,3 @@ export const recommendationService = {
     }
   },
 }
-

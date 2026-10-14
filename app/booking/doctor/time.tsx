@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -30,6 +29,7 @@ export default function DoctorTimeBookingScreen() {
     selectedSlotId,
     modalType,
     setModalType,
+    loadingDates,
     loadingSlots,
     dateOptions,
     slotOptions,
@@ -45,7 +45,7 @@ export default function DoctorTimeBookingScreen() {
     return (
       <ScreenShell showBackButton title="Thời gian khám">
         <View className="flex-1 items-center justify-center p-6 bg-white">
-          <ActivityIndicator size="small" color="#059669" />
+          <ActivityIndicator size="small" color="#28a745" />
           <Text className="text-xs text-slate-500 mt-2">Đang tải thông tin bác sĩ...</Text>
         </View>
       </ScreenShell>
@@ -82,22 +82,22 @@ export default function DoctorTimeBookingScreen() {
                 onPress={handleChangeDoctor}
                 className="flex-row items-center active:opacity-70"
               >
-                <Ionicons name="swap-horizontal" size={14} color="#059669" />
-                <Text className="text-xs font-semibold text-emerald-700 ml-1">Đổi bác sĩ</Text>
+                <Ionicons name="swap-horizontal" size={14} color="#28a745" />
+                <Text className="text-xs font-semibold text-primary-700 ml-1">Đổi bác sĩ</Text>
               </TouchableOpacity>
             </View>
 
-            <View className="bg-emerald-50/40 rounded-lg p-3 border border-emerald-200 flex-row items-center">
+            <View className="bg-primary-50/40 rounded-lg p-3 border border-primary-200 flex-row items-center">
               <Image
                 source={{ uri: doctor.avatar }}
                 style={{ width: 60, height: 60, borderRadius: 8 }}
-                className="w-[60px] h-[60px] rounded-lg bg-emerald-100 mr-3"
+                className="w-[60px] h-[60px] rounded-lg bg-primary-100 mr-3"
                 contentFit="cover"
                 transition={200}
               />
               <View className="flex-1">
                 <View className="flex-row items-center">
-                  <Text className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded mr-1.5 border border-emerald-200">
+                  <Text className="text-[11px] font-semibold text-primary-700 bg-primary-100/70 px-1.5 py-0.5 rounded mr-1.5 border border-primary-200">
                     {doctorTitle}
                   </Text>
                   <Text numberOfLines={1} className="text-sm font-bold text-slate-900 flex-1">
@@ -121,7 +121,7 @@ export default function DoctorTimeBookingScreen() {
                       </Text>
                     )}
                   </View>
-                  <Text className="text-xs font-bold text-emerald-700">
+                  <Text className="text-xs font-bold text-primary-700">
                     {formatCurrencyVi(consultationFee)}
                   </Text>
                 </View>
@@ -147,7 +147,7 @@ export default function DoctorTimeBookingScreen() {
           {/* Lời nhắc hữu ích */}
           <View className="bg-slate-50 rounded-lg p-3 border border-slate-200">
             <View className="flex-row items-center mb-1">
-              <Ionicons name="information-circle-outline" size={16} color="#059669" />
+              <Ionicons name="information-circle-outline" size={16} color="#28a745" />
               <Text className="text-xs font-bold text-slate-700 ml-1.5">Lưu ý trước khi đến khám</Text>
             </View>
             <Text className="text-[11px] text-slate-500 leading-4">
@@ -196,7 +196,7 @@ export default function DoctorTimeBookingScreen() {
               ? slotOptions.find((o) => o.title === selectedSlot || o.title.startsWith(selectedSlot.slice(0, 5)))?.id
               : undefined)
           }
-          loading={loadingSlots}
+          loading={loadingDates || loadingSlots}
           emptyText="Không còn ca khám trống trong ngày này. Vui lòng chọn ngày khác."
           onSelect={handleSelectSlot}
         />

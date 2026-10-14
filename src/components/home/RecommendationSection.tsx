@@ -54,7 +54,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
             onPress={onRefresh}
             className="flex-row items-center bg-slate-50 px-2.5 py-1 rounded border border-slate-200/80 active:bg-slate-100"
           >
-            <Ionicons name="refresh" size={11} color="#047857" style={{ marginRight: 4 }} />
+            <Ionicons name="refresh" size={11} color="#28a745" style={{ marginRight: 4 }} />
             <Text className="text-[11px] font-semibold text-slate-700">Làm mới</Text>
           </TouchableOpacity>
         )}
@@ -62,14 +62,14 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
 
       {/* 2. Thẻ Nhắc lịch khám (Nếu có lịch hẹn) */}
       {upcomingAppointment && (
-        <View className="mx-5 mb-4 p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 shadow-2xs">
+        <View className="mx-5 mb-4 p-3 bg-primary-50/70 rounded-xl border border-primary-200/80 shadow-2xs">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center flex-1 mr-2">
-              <View className="w-8 h-8 rounded-full bg-emerald-100 items-center justify-center mr-2.5">
-                <Ionicons name="calendar-outline" size={17} color="#047857" />
+              <View className="w-8 h-8 rounded-full bg-primary-100 items-center justify-center mr-2.5">
+                <Ionicons name="calendar-outline" size={17} color="#28a745" />
               </View>
               <View className="flex-1">
-                <Text className="text-[11px] font-medium text-emerald-800">
+                <Text className="text-[11px] font-medium text-primary-800">
                   Lịch hẹn khám sắp tới
                 </Text>
                 <Text className="text-xs font-semibold text-slate-800 mt-0.5">
@@ -80,7 +80,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
 
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/appointments')}
-              className="bg-emerald-700 active:bg-emerald-800 px-3.5 py-1.5 rounded-lg"
+              className="bg-primary-600 active:bg-primary-800 px-3.5 py-1.5 rounded-lg"
             >
               <Text className="text-xs font-semibold text-white">Xem</Text>
             </TouchableOpacity>
@@ -90,7 +90,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
 
       {/* 3. Danh sách gói khám AI cá nhân hóa (Hồ sơ + Hành vi) */}
       {isLoading ? (
-        <ActivityIndicator size="small" color="#047857" className="py-6" />
+        <ActivityIndicator size="small" color="#28a745" className="py-6" />
       ) : packages.length === 0 ? (
         <View className="bg-white mx-5 p-5 rounded-lg border border-slate-100 items-center">
           <Ionicons name="sparkles-outline" size={24} color="#cbd5e1" />
@@ -107,8 +107,8 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
           {packages.map((pkg) => {
             let badge: PackageCardBadge | null = {
               label: pkg.badge || 'Tầm soát định kỳ',
-              color: 'text-emerald-700',
-              bg: 'bg-emerald-50 border-emerald-200',
+              color: 'text-primary-700',
+              bg: 'bg-primary-50 border-primary-200',
               icon: 'shield-checkmark-outline',
             }
 

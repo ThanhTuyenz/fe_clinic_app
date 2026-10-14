@@ -42,12 +42,12 @@ export const ExplorePackagesSection: React.FC = () => {
   return (
     <View className="mt-8 pt-1">
       {/* Header Gói khám nổi bật */}
-      <View className="px-5 flex-row items-center justify-between mb-3">
+      <View className="px-5 flex-row items-center justify-between mb-5">
         <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
             Gói khám nổi bật
           </Text>
-          <Text className="text-[11px] text-slate-400 mt-0.5">
+          <Text className="text-sm leading-5 text-slate-500 mt-2">
             Tầm soát định kỳ toàn diện
           </Text>
         </View>
@@ -56,12 +56,12 @@ export const ExplorePackagesSection: React.FC = () => {
           onPress={() => router.push('/services')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text className="text-xs font-semibold text-emerald-700">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-700">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 
       {/* Tabs chuyển đổi: "Tổng quát" | "Xem gần đây" */}
-      <View className="px-5 flex-row items-center gap-2 mb-3.5">
+      <View className="px-5 flex-row items-center gap-2 mb-6">
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setActiveTab('general')}
@@ -113,12 +113,12 @@ export const ExplorePackagesSection: React.FC = () => {
 
       {/* Danh sách thẻ gói khám */}
       {loadingGeneral && activeTab === 'general' ? (
-        <ActivityIndicator size="small" color="#047857" className="py-6" />
+        <ActivityIndicator size="small" color="#28a745" className="py-6" />
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, alignItems: 'flex-start' }}
         >
           {displayList.map((pkg: any, idx: number) => {
             const specialtyName =
@@ -144,8 +144,8 @@ export const ExplorePackagesSection: React.FC = () => {
                       }
                     : {
                         label: pkg.tag || 'TỔNG QUÁT',
-                        color: 'text-emerald-700',
-                        bg: 'bg-emerald-50 border-emerald-200',
+                        color: 'text-primary-700',
+                        bg: 'bg-primary-50 border-primary-200',
                       }
                 }
                 onPress={() => {

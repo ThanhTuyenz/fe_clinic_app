@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -29,7 +28,6 @@ export default function SpecialtyBookingScreen() {
     selectedDoctor,
     selectedDate,
     selectedSlot,
-    slotDoctors,
     isStage1Complete,
     isFormComplete,
 

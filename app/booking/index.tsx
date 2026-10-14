@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { ActivityIndicator, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
@@ -17,8 +17,10 @@ export default function BookingDispatcherScreen() {
 
   useEffect(() => {
     const isPackage = params.method === 'package' || Boolean(params.packageId)
-    const isDoctor = params.method === 'doctor' || Boolean(params.doctorId) || params.method === 'followup'
     const isOnline = params.method === 'online' || params.method === 'online-consultation'
+    const isDoctor =
+      !isOnline &&
+      (params.method === 'doctor' || Boolean(params.doctorId) || params.method === 'followup')
     const isAfterHours = params.mode === 'after-hours' || params.method === 'after-hours'
 
     const targetRoute = isPackage
@@ -47,7 +49,7 @@ export default function BookingDispatcherScreen() {
   return (
     <ScreenShell showBackButton title="Đặt lịch khám bệnh">
       <View className="flex-1 items-center justify-center bg-white p-6">
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#28a745" />
       </View>
     </ScreenShell>
   )

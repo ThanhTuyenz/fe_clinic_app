@@ -4,10 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
-import { doctorService } from '../../services/doctorService'
+import { bookingService } from '../../services/bookingService'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
-import { DEFAULT_BOOKING_SLOTS, generateFallbackDates } from '../../constants/bookingSlots'
 import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function usePackageBooking() {
@@ -27,10 +26,12 @@ export function usePackageBooking() {
   const [modalType, setModalType] = useState<BookingModalType>(null)
 
   // 2. Data Queries
-  const { data: branches = [], isLoading: loadingBranches } = useQuery({
-    queryKey: ['branches'],
-    queryFn: () => doctorService.getBranches(),
+  const { data: bookingInit, isLoading: loadingBranches } = useQuery({
+    queryKey: ['booking', 'init', 'health-package'],
+    queryFn: () => bookingService.getBookingInit({ flow: 'health-package' }),
+    staleTime: 5 * 60 * 1000,
   })
+  const branches = bookingInit?.branches || []
 
   useEffect(() => {
     if (!selectedBranchId && branches.length > 0) {
@@ -39,10 +40,15 @@ export function usePackageBooking() {
     }
   }, [branches, selectedBranchId])
 
-  const { data: packages = [], isLoading: loadingPackages } = useQuery({
-    queryKey: ['healthPackages', selectedBranchId],
-    queryFn: () => doctorService.getHealthPackages(selectedBranchId),
-  })
+  const packages = useMemo(
+    () => (bookingInit?.healthPackages || []).filter((pkg: any) =>
+      !selectedBranchId ||
+      pkg.branchId === selectedBranchId ||
+      pkg.branches?.some((branch: any) => String(branch.id) === String(selectedBranchId))
+    ),
+    [bookingInit?.healthPackages, selectedBranchId]
+  )
+  const loadingPackages = loadingBranches
 
   useEffect(() => {
     if (params.packageId && packages.length > 0) {
@@ -52,28 +58,24 @@ export function usePackageBooking() {
   }, [params.packageId, packages])
 
   // Package dates
-  const { data: packageAvailableDates = [] } = useQuery({
-    queryKey: ['packageDates', selectedPackage?.id, selectedBranchId],
-    queryFn: () => doctorService.getPackageScheduleDates(String(selectedPackage!.id), selectedBranchId),
-    enabled: Boolean(selectedPackage?.id),
+  const { data: bookingSlots, isLoading: loadingSlots } = useQuery({
+    queryKey: ['booking', 'slots', selectedBranchId, selectedPackage?.id, selectedDate],
+    queryFn: () => bookingService.getBookingSlots({
+      branchId: selectedBranchId,
+      servicePackageId: String(selectedPackage!.id),
+      date: selectedDate || undefined,
+    }),
+    enabled: Boolean(selectedPackage?.id && selectedBranchId),
+    staleTime: 30 * 1000,
   })
 
   const availableDatesList = useMemo(() => {
-    if (packageAvailableDates.length > 0) return packageAvailableDates
-    return generateFallbackDates(14)
-  }, [packageAvailableDates])
-
-  // Package slots
-  const { data: packageSlots = [], isLoading: loadingSlots } = useQuery({
-    queryKey: ['packageSlots', selectedPackage?.id, selectedDate, selectedBranchId],
-    queryFn: () => doctorService.getPackageTimeslots(String(selectedPackage?.id), selectedDate, selectedBranchId),
-    enabled: Boolean(selectedPackage?.id && selectedDate),
-  })
+    return selectedPackage ? bookingSlots?.availableDates || [] : []
+  }, [bookingSlots?.availableDates, selectedPackage])
 
   const availableSlotsList = useMemo(() => {
-    if (packageSlots.length > 0) return packageSlots
-    return DEFAULT_BOOKING_SLOTS
-  }, [packageSlots])
+    return bookingSlots?.slots || []
+  }, [bookingSlots?.slots])
 
   const selectedBranchObj = branches.find((b: any) => String(b.id) === String(selectedBranchId))
 
@@ -85,7 +87,7 @@ export function usePackageBooking() {
         title: b.name,
         subtitle: b.address,
         badge: b.code === 'VC-CENTRAL' ? 'Trụ sở chính' : undefined,
-        badgeColor: 'bg-emerald-100',
+        badgeColor: 'bg-primary-100',
         extra: b,
       })),
     [branches]
@@ -130,7 +132,7 @@ export function usePackageBooking() {
           title: timeRange,
           subtitle: `${periodLabel} • ${isAvail ? 'Khung giờ còn trống' : 'Đã kín chỗ'}`,
           badge: periodLabel,
-          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-emerald-100',
+          badgeColor: hour >= 17 ? 'bg-amber-100' : hour >= 12 ? 'bg-sky-100' : 'bg-primary-100',
           disabled: !isAvail,
           extra: { id: slotId, startTime: startStr, endTime: endStr, timeRange },
         }
@@ -209,8 +211,8 @@ export function usePackageBooking() {
         const t = typeof s === 'string' ? s : s.startTime
         return t && t.slice(0, 5) === selectedSlot.slice(0, 5)
       })
-      if (found && typeof found === 'object' && found.id) {
-        slotId = found.id
+      if (found && typeof found === 'object' && found.representativeSlotId) {
+        slotId = found.representativeSlotId
       }
     }
 

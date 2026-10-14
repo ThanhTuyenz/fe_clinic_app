@@ -16,7 +16,7 @@ export const BOOKING_METHODS: BookingMethodItem[] = [
     code: 'SPECIALTY_EXAM',
     name: 'Khám chuyên khoa',
     image: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&w=300&q=80',
-    color: '#059669',
+    color: '#28a745',
     path: '/booking/specialty',
   },
   {
@@ -81,7 +81,7 @@ export const BookingMethodsSection: React.FC<BookingMethodsSectionProps> = ({
           </Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>
-          <Text className="text-xs font-semibold text-emerald-600">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-600">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 
@@ -98,7 +98,7 @@ export const BookingMethodsSection: React.FC<BookingMethodsSectionProps> = ({
               activeOpacity={0.8}
               onPress={() => onSelectMethod(method)}
               className={`mr-2.5 px-4 py-2 rounded-lg border transition-all ${
-                isSelected ? 'border-emerald-300' : 'border-slate-200/90'
+                isSelected ? 'border-primary-300' : 'border-slate-200/90'
               }`}
               style={
                 isSelected
@@ -115,7 +115,7 @@ export const BookingMethodsSection: React.FC<BookingMethodsSectionProps> = ({
               <Text
                 numberOfLines={1}
                 className={`text-xs ${
-                  isSelected ? 'text-emerald-700 font-bold' : 'text-slate-600 font-medium'
+                  isSelected ? 'text-primary-700 font-bold' : 'text-slate-600 font-medium'
                 }`}
               >
                 {method.name}

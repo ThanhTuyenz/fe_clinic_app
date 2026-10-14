@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { RefreshControl, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -35,7 +35,7 @@ import {
 export default function HomeScreen() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuthStore()
-  const { sessionId, trackSearch } = useBehaviorTracker()
+  const { sessionId } = useBehaviorTracker()
   usePushNotifications(isAuthenticated)
 
   const setDoctor = useBookingStore((state) => state.setDoctor)
@@ -44,7 +44,7 @@ export default function HomeScreen() {
   const [searchResults, setSearchResults] = useState<SemanticSearchResponse | null>(null)
   const [isSearching, setIsSearching] = useState(false)
 
-  // AI Semantic Search: Tự động tìm kiếm triệu chứng/gói khám/bác sĩ và ghi nhận hành vi (+3 điểm Intent)
+  // AI Semantic Search: Tự động tìm kiếm triệu chứng/gói khám/bác sĩ (Backend tự động ghi nhận telemetry)
   useEffect(() => {
     const trimmed = searchQuery.trim()
     if (trimmed.length < 2) {
@@ -58,16 +58,15 @@ export default function HomeScreen() {
       try {
         const res = await recommendationService.semanticSearch(trimmed)
         setSearchResults(res)
-        void trackSearch(trimmed)
       } catch {
         setSearchResults(null)
       } finally {
         setIsSearching(false)
       }
-    }, 350)
+    }, 500)
 
     return () => clearTimeout(timer)
-  }, [searchQuery, trackSearch])
+  }, [searchQuery])
 
 
   const {
@@ -154,8 +153,8 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            tintColor="#047857"
-            colors={['#047857']}
+            tintColor="#28a745"
+            colors={['#28a745']}
             onRefresh={() => {
               refetchDoctors()
               refetchDepts()

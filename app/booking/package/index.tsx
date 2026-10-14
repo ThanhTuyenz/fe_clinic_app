@@ -1,4 +1,3 @@
-import React from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 
 import { usePackageBooking } from '../../../src/hooks/flows/usePackageBooking'
@@ -7,7 +6,6 @@ import { SelectInput } from '../../../src/components/common/SelectInput'
 import { Button } from '../../../src/components/common/Button'
 import {
   BookingDateTimeSection,
-  BookingMethodBanner,
   BookingTimeline,
 } from '../../../src/components/booking'
 import { SelectModal } from '../../../src/components/common/SelectModal'

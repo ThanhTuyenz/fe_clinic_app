@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -10,30 +10,27 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Ionicons from '@expo/vector-icons/Ionicons'
 
 import { useBookingStore } from '../../src/store/useBookingStore'
 import { useAuthStore } from '../../src/store/useAuthStore'
-import { useCreateAppointment } from '../../src/hooks/useBooking'
-import { useNotifications } from '../../src/hooks/useNotifications'
 import { patientProfileService, PatientProfile } from '../../src/services/patientProfileService'
-import { doctorService } from '../../src/services/doctorService'
+import { bookingService } from '../../src/services/bookingService'
 import { ScreenShell, Button } from '../../src/components/common'
 import { CreateProfileModal } from '../../src/components/profile'
 import { BookingTimeline } from '../../src/components/booking'
 
 export default function PatientInfoScreen() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { user, isAuthenticated } = useAuthStore()
-  const { draft, resetBooking, setSelectedProfile, setPatientProfileId } = useBookingStore()
-  const { scheduleAppointmentReminder } = useNotifications()
-  const createAppointmentMutation = useCreateAppointment()
+  const { draft } = useBookingStore()
 
   const [submitting, setSubmitting] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null)
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('self')
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('')
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -43,53 +40,19 @@ export default function PatientInfoScreen() {
   }, [isAuthenticated, router])
 
   // Patient profiles query
-  const { data: patientProfiles = [], refetch } = useQuery({
-    queryKey: ['patientProfiles'],
+  const { data: patientProfiles = [], refetch, isLoading: loadingProfiles, isError: profilesError } = useQuery({
+    queryKey: ['patientProfiles', user?.id],
     queryFn: () => patientProfileService.getPatientProfiles(),
     enabled: isAuthenticated,
   })
 
-  // Build unified profile cards list
-  const profileList = useMemo<PatientProfile[]>(() => {
-    if (patientProfiles.length > 0) {
-      const hasSelf = patientProfiles.some(
-        (p) => p.isMainProfile || p.relationshipToAccount === 'SELF'
-      )
-      if (hasSelf) {
-        return patientProfiles
-      }
-      return [
-        {
-          id: 'self',
-          fullName: user?.full_name || user?.fullName || 'Hồ sơ chính (Bản thân)',
-          phoneNumber: user?.phone || '',
-          dateOfBirth: user?.date_of_birth || user?.dateOfBirth || '',
-          gender: (user?.gender?.toUpperCase() === 'FEMALE' ? 'FEMALE' : 'MALE') as any,
-          address: user?.address || '',
-          relationshipToAccount: 'SELF',
-          isMainProfile: true,
-        } as PatientProfile,
-        ...patientProfiles,
-      ]
-    }
-
-    return [
-      {
-        id: 'self',
-        fullName: user?.full_name || user?.fullName || 'Hồ sơ chính (Bản thân)',
-        phoneNumber: user?.phone || '',
-        dateOfBirth: user?.date_of_birth || user?.dateOfBirth || '',
-        gender: (user?.gender?.toUpperCase() === 'FEMALE' ? 'FEMALE' : 'MALE') as any,
-        address: user?.address || '',
-        relationshipToAccount: 'SELF',
-        isMainProfile: true,
-      } as PatientProfile,
-    ]
-  }, [patientProfiles, user])
+  const profileList = patientProfiles
 
   // Auto-select first profile if none chosen
   useEffect(() => {
-    if (profileList.length > 0) {
+    if (profileList.length === 0) {
+      setSelectedProfileId('')
+    } else {
       const exists = profileList.some((p) => String(p.id) === String(selectedProfileId))
       if (!exists) {
         setSelectedProfileId(String(profileList[0].id))
@@ -101,7 +64,7 @@ export default function PatientInfoScreen() {
   const getRelationshipBadge = (rel?: string) => {
     switch (rel) {
       case 'SELF':
-        return { label: 'Bản thân', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        return { label: 'Bản thân', color: 'bg-primary-50 text-primary-700 border-primary-200' }
       case 'SPOUSE':
         return { label: 'Vợ/Chồng', color: 'bg-purple-50 text-purple-700 border-purple-200' }
       case 'CHILD':
@@ -131,12 +94,11 @@ export default function PatientInfoScreen() {
       item.address?.trim() ||
       [item.streetAddress, item.wardName, item.districtName, item.provinceName]
         .filter(Boolean)
-        .join(', ') ||
-      (item.relationshipToAccount === 'SELF' ? user?.address?.trim() : '')
+        .join(', ')
 
     setEditingProfile({
       ...item,
-      phoneNumber: item.phoneNumber || user?.phone || '',
+      phoneNumber: item.phoneNumber || '',
       address: fullAddress,
     })
     setShowCreateModal(true)
@@ -150,7 +112,11 @@ export default function PatientInfoScreen() {
 
   // Handle callback after creating or updating a profile
   const handleProfileSaved = (savedProf: PatientProfile) => {
-    refetch()
+    queryClient.setQueryData<PatientProfile[]>(['patientProfiles', user?.id], (previous = []) => [
+      savedProf,
+      ...previous.filter((profile) => profile.id !== savedProf.id),
+    ])
+    void refetch()
     if (savedProf?.id) {
       setSelectedProfileId(String(savedProf.id))
     }
@@ -173,66 +139,53 @@ export default function PatientInfoScreen() {
     try {
       setSubmitting(true)
 
-      // 1. Tự động bổ sung thông tin ngày giờ nếu chưa có
+      if (
+        draft.bookingMethod === 'ONLINE_CONSULTATION' &&
+        (!draft.date || !draft.slot || !draft.slotId)
+      ) {
+        throw new Error('Vui lòng chọn ngày và khung giờ tư vấn trước khi tiếp tục.')
+      }
+
       const todayStr = new Date().toISOString().slice(0, 10)
       const effectiveDate = draft.date || todayStr
       const effectiveSlot = draft.slot || '08:00'
 
-      let resolvedProfile: PatientProfile | undefined = profileList.find(
-        (p) => String(p.id) === String(selectedProfileId)
-      )
-
-      if (!resolvedProfile || selectedProfileId === 'self' || String(resolvedProfile.id) === 'self') {
-        try {
-          const mainProfile = await patientProfileService.getOrCreateMainProfile({
-            fullName: user?.full_name || user?.fullName || 'Bệnh nhân',
-            phone: user?.phone || '0901234567',
-            date_of_birth: user?.date_of_birth || user?.dateOfBirth || '1995-01-01',
-            gender: user?.gender || 'MALE',
-          })
-          if (mainProfile && mainProfile.id && String(mainProfile.id) !== 'self') {
-            resolvedProfile = mainProfile
-          }
-        } catch (profileErr) {
-          console.warn('[patient-info] getOrCreateMainProfile failed, using fallback profile:', profileErr)
-        }
-
-        if (!resolvedProfile || String(resolvedProfile.id) === 'self') {
-          resolvedProfile = {
-            id: user?.id || 'main-profile',
-            fullName: user?.full_name || user?.fullName || 'Hồ sơ chính (Bản thân)',
-            phoneNumber: user?.phone || '',
-            dateOfBirth: user?.date_of_birth || user?.dateOfBirth || '1995-01-01',
-            gender: (user?.gender?.toUpperCase() === 'FEMALE' ? 'FEMALE' : 'MALE') as any,
-            address: user?.address || '',
-            relationshipToAccount: 'SELF',
-            isMainProfile: true,
-          } as PatientProfile
-        }
+      // Revalidate against the authenticated account; a local card is not a saved profile.
+      const savedProfiles = await patientProfileService.getPatientProfiles()
+      const resolvedProfile = savedProfiles.find((profile) => String(profile.id) === selectedProfileId)
+      if (!resolvedProfile) {
+        throw new Error('Vui lòng thêm và chọn hồ sơ người khám đã lưu trước khi tiếp tục.')
       }
 
-      // 2. Resolve Slot ID if missing (non-blocking)
+      // 2. Resolve the slot for legacy flows that do not carry a slot ID yet.
       let slotId = draft.slotId
       if (!slotId) {
         try {
           const packageId = draft.healthPackage?.id || draft.specialtyService?.id
           if (draft.doctor?.id) {
-            const slots = await doctorService.getAvailability(draft.doctor.id, effectiveDate, draft.branchId)
-            const target = slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
-            slotId = target?.id
+            const slots = await bookingService.getBookingSlots({
+              doctorId: String(draft.doctor.id),
+              date: effectiveDate,
+              branchId: draft.branchId,
+            })
+            const target = slots.slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
+            const doctorSlot = target?.doctors.find((slot) => String(slot.doctorId) === String(draft.doctor?.id))
+            slotId = doctorSlot?.slotId || target?.representativeSlotId
           } else if (packageId) {
-            const slots = await doctorService.getPackageTimeslots(packageId, effectiveDate, draft.branchId)
-            const target = slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
-            slotId = target?.id
+            const slots = await bookingService.getBookingSlots({
+              servicePackageId: String(packageId),
+              date: effectiveDate,
+              branchId: draft.branchId,
+            })
+            const target = slots.slots.find((s) => s.startTime?.slice(0, 5) === effectiveSlot.slice(0, 5))
+            slotId = target?.representativeSlotId
           }
         } catch (slotErr) {
-          console.warn('[patient-info] could not resolve slotId, continuing:', slotErr)
+          console.warn('[patient-info] could not resolve slotId:', slotErr)
         }
       }
 
-      // 3. Save to booking store
-      setSelectedProfile(resolvedProfile)
-      setPatientProfileId(String(resolvedProfile.id))
+      // 2. Save to booking store
       useBookingStore.setState((state) => ({
         draft: {
           ...state.draft,
@@ -259,7 +212,7 @@ export default function PatientInfoScreen() {
     return (
       <ScreenShell showBackButton title="Thông tin người khám">
         <View className="flex-1 items-center justify-center bg-slate-50">
-          <ActivityIndicator size="large" color="#059669" />
+          <ActivityIndicator size="large" color="#28a745" />
           <Text className="mt-3 text-xs text-slate-500 font-medium">Đang chuyển hướng sang đăng nhập...</Text>
         </View>
       </ScreenShell>
@@ -288,19 +241,40 @@ export default function PatientInfoScreen() {
               </Text>
             </View>
 
-            {/* List of Profile Cards */}
+            {loadingProfiles ? (
+              <View className="py-8 items-center gap-3">
+                <ActivityIndicator color="#28a745" />
+                <Text className="text-sm text-slate-500">Đang tải hồ sơ người khám...</Text>
+              </View>
+            ) : profileList.length === 0 ? (
+              <View className="rounded-xl bg-slate-50 border border-slate-200 p-6 items-center gap-3 mb-4">
+                <Ionicons name="person-add-outline" size={32} color="#64748b" />
+                <Text className="text-base font-semibold text-slate-800">Chưa có hồ sơ khám bệnh</Text>
+                <Text className="text-sm leading-5 text-slate-500 text-center">
+                  Thêm hồ sơ và lưu thông tin người khám trước khi tiếp tục đặt lịch.
+                </Text>
+              </View>
+            ) : profilesError ? (
+              <View className="rounded-xl bg-slate-50 border border-slate-200 p-5 items-center gap-3 mb-4">
+                <Text className="text-sm text-slate-700 text-center">Không thể tải hồ sơ người khám. Vui lòng thử lại.</Text>
+                <TouchableOpacity onPress={() => { void refetch() }} className="px-4 py-2">
+                  <Text className="text-sm font-semibold text-primary-700">Thử lại</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {/* List of saved profile cards */}
             <View className="gap-2.5">
-              {profileList.map((item) => {
+              {!loadingProfiles && !profilesError && profileList.map((item) => {
                 const isSelected = String(selectedProfileId) === String(item.id)
                 const badge = getRelationshipBadge(item.relationshipToAccount)
-                const genderLabel = item.gender?.toLowerCase() === 'female' ? 'Nữ' : 'Nam'
+                const genderLabel = item.gender?.toUpperCase() === 'FEMALE' ? 'Nữ' : item.gender?.toUpperCase() === 'MALE' ? 'Nam' : item.gender?.toUpperCase() === 'OTHER' ? 'Khác' : 'Chưa cập nhật giới tính'
                 const dobFormatted = formatDob(item.dateOfBirth)
                 const fullAddress =
                   item.address?.trim() ||
                   [item.streetAddress, item.wardName, item.districtName, item.provinceName]
                     .filter(Boolean)
-                    .join(', ') ||
-                  (item.relationshipToAccount === 'SELF' ? user?.address?.trim() : '')
+                    .join(', ')
                 const cccdNumber = item.nationalId || item.identityCardNumber
 
                 return (
@@ -309,7 +283,7 @@ export default function PatientInfoScreen() {
                     activeOpacity={0.8}
                     onPress={() => setSelectedProfileId(String(item.id))}
                     className={`p-3.5 rounded-lg border bg-white ${
-                      isSelected ? 'border-emerald-600' : 'border-slate-200/90'
+                      isSelected ? 'border-primary-600' : 'border-slate-200/90'
                     }`}
                   >
                     <View className="flex-row items-start justify-between">
@@ -334,7 +308,7 @@ export default function PatientInfoScreen() {
                           <View className="flex-row items-center gap-1">
                             <Ionicons name="call-outline" size={12} color="#64748b" />
                             <Text className="text-xs text-slate-600">
-                              {item.phoneNumber || user?.phone || 'Chưa cập nhật SĐT'}
+                              {item.phoneNumber || 'Chưa cập nhật SĐT'}
                             </Text>
                           </View>
 
@@ -358,7 +332,7 @@ export default function PatientInfoScreen() {
                           {Boolean(item.healthInsuranceNumber) && (
                             <View className="flex-row items-center gap-1">
                               <Text className="text-slate-300">•</Text>
-                              <Text className="text-xs text-emerald-700 font-medium">
+                              <Text className="text-xs text-primary-700 font-medium">
                                 BHYT: {item.healthInsuranceNumber}
                               </Text>
                             </View>
@@ -376,7 +350,7 @@ export default function PatientInfoScreen() {
 
                       {/* Selected Line Checkmark */}
                       {isSelected ? (
-                        <Ionicons name="checkmark" size={22} color="#059669" />
+                        <Ionicons name="checkmark" size={22} color="#28a745" />
                       ) : (
                         <View className="w-[22px]" />
                       )}
@@ -392,7 +366,7 @@ export default function PatientInfoScreen() {
                         }}
                         className="flex-row items-center gap-1 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded active:bg-slate-100"
                       >
-                        <Ionicons name="create-outline" size={13} color="#047857" />
+                        <Ionicons name="create-outline" size={13} color="#28a745" />
                         <Text className="text-[11px] font-bold text-slate-700">Chi tiết / Sửa hồ sơ</Text>
                       </TouchableOpacity>
                     </View>
@@ -406,7 +380,7 @@ export default function PatientInfoScreen() {
                 onPress={handleAddNewProfile}
                 className="border border-dashed border-slate-300 rounded-lg p-3.5 items-center justify-center bg-white active:bg-slate-50 flex-row gap-2 mt-1"
               >
-                <Ionicons name="add" size={18} color="#059669" />
+                <Ionicons name="add" size={18} color="#28a745" />
                 <Text className="text-xs font-semibold text-slate-700">
                   Thêm hồ sơ người khám mới (Quét CCCD)
                 </Text>
@@ -421,7 +395,7 @@ export default function PatientInfoScreen() {
             title="Xác nhận"
             onPress={handleConfirm}
             isLoading={submitting}
-            disabled={submitting}
+            disabled={submitting || loadingProfiles || profilesError || !profileList.some((profile) => String(profile.id) === selectedProfileId)}
             className="py-3 rounded-lg w-full"
           />
         </View>

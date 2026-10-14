@@ -100,13 +100,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             onPress={() => setValue('patientType', 'self')}
             className={`flex-1 py-2.5 rounded-lg border mr-2 items-center justify-center ${
               currentType === 'self'
-                ? 'bg-emerald-50 border-emerald-600'
+                ? 'bg-primary-50 border-primary-600'
                 : 'bg-white border-slate-200'
             }`}
           >
             <Text
               className={`font-semibold text-sm ${
-                currentType === 'self' ? 'text-emerald-700' : 'text-slate-600'
+                currentType === 'self' ? 'text-primary-700' : 'text-slate-600'
               }`}
             >
               👤 Cho bản thân
@@ -117,13 +117,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
             onPress={() => setValue('patientType', 'relative')}
             className={`flex-1 py-2.5 rounded-lg border ml-2 items-center justify-center ${
               currentType === 'relative'
-                ? 'bg-emerald-50 border-emerald-600'
+                ? 'bg-primary-50 border-primary-600'
                 : 'bg-white border-slate-200'
             }`}
           >
             <Text
               className={`font-semibold text-sm ${
-                currentType === 'relative' ? 'text-emerald-700' : 'text-slate-600'
+                currentType === 'relative' ? 'text-primary-700' : 'text-slate-600'
               }`}
             >
               👥 Cho người thân
@@ -219,13 +219,13 @@ export const PatientForm: React.FC<PatientFormProps> = ({
                 onPress={() => setValue('patientGender', gender)}
                 className={`flex-1 py-2 rounded-lg border mr-2 items-center justify-center ${
                   isSelected
-                    ? 'bg-emerald-50 border-emerald-600'
+                    ? 'bg-primary-50 border-primary-600'
                     : 'bg-white border-slate-200'
                 }`}
               >
                 <Text
                   className={`text-xs font-semibold ${
-                    isSelected ? 'text-emerald-700' : 'text-slate-600'
+                    isSelected ? 'text-primary-700' : 'text-slate-600'
                   }`}
                 >
                   {label}
@@ -285,10 +285,10 @@ export const PatientForm: React.FC<PatientFormProps> = ({
           ))}
           <TouchableOpacity
             onPress={handlePickImage}
-            className="w-20 h-20 rounded-lg border border-dashed border-emerald-400 bg-emerald-50/50 items-center justify-center mr-2.5 mb-2.5"
+            className="w-20 h-20 rounded-lg border border-dashed border-primary-400 bg-primary-50/50 items-center justify-center mr-2.5 mb-2.5"
           >
-            <Ionicons name="camera-outline" size={24} color="#059669" />
-            <Text className="text-[10px] font-semibold text-emerald-700 mt-1">
+            <Ionicons name="camera-outline" size={24} color="#28a745" />
+            <Text className="text-[10px] font-semibold text-primary-700 mt-1">
               Thêm ảnh
             </Text>
           </TouchableOpacity>
@@ -300,7 +300,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         title="Xác nhận & Hoàn tất đặt khám"
         size="lg"
         isLoading={isLoading}
-        onPress={handleSubmit(onSubmit)}
+        onPress={() => { void handleSubmit(onSubmit)() }}
         className="mb-8"
       />
     </ScrollView>

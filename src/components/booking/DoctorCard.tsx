@@ -9,12 +9,14 @@ interface DoctorCardProps {
   doctor: Doctor
   onSelect?: (doctor: Doctor) => void
   selected?: boolean
+  online?: boolean
 }
 
 export const DoctorCard: React.FC<DoctorCardProps> = ({
   doctor,
   onSelect,
   selected = false,
+  online = false,
 }) => {
   const name =
     doctor.full_name || doctor.fullName || doctor.name || 'Bác sĩ chuyên khoa'
@@ -23,19 +25,21 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
     typeof doctor.specialty === 'object'
       ? doctor.specialty?.name
       : doctor.specialty || doctor.specialty_name || 'Đa khoa'
-  const fee = doctor.consultation_fee || doctor.price || 300000
+  const fee = online
+    ? doctor.onlineConsultationFee || doctor.consultation_fee || doctor.price || 300000
+    : doctor.consultation_fee || doctor.price || 300000
 
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onSelect && onSelect(doctor)}
       className={`bg-white rounded-lg p-3 mb-2.5 border flex-row items-center shadow-xs ${
-        selected ? 'border-emerald-600 bg-emerald-50/40' : 'border-slate-200'
+        selected ? 'border-primary-600 bg-primary-50/40' : 'border-slate-200'
       }`}
     >
       <Image
         source={{ uri: doctor.avatar }}
-        className="w-16 h-16 rounded-lg bg-emerald-50 mr-3"
+        className="w-16 h-16 rounded-lg bg-primary-50 mr-3"
         style={{ width: 64, height: 64, borderRadius: 8 }}
         contentFit="cover"
         transition={200}
@@ -43,7 +47,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
       <View className="flex-1">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1 mr-2">
-            <Text className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mr-1.5 border border-emerald-100">
+            <Text className="text-[11px] font-semibold text-primary-700 bg-primary-50 px-2 py-0.5 rounded mr-1.5 border border-primary-100">
               {title}
             </Text>
             <Text
@@ -54,7 +58,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
             </Text>
           </View>
           {selected ? (
-            <View className="w-5 h-5 rounded-full bg-emerald-600 items-center justify-center">
+            <View className="w-5 h-5 rounded-full bg-primary-600 items-center justify-center">
               <Ionicons name="checkmark" size={13} color="#ffffff" />
             </View>
           ) : (

@@ -19,8 +19,8 @@ export const BookingMethodBanner: React.FC<BookingMethodBannerProps> = ({ method
       <View className="flex-1">
         <View className="flex-row items-center gap-2">
           <Text className="text-xs font-bold text-slate-800">{info.title}</Text>
-          <View className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
-            <Text className="text-[9px] font-bold text-emerald-700">{info.badge}</Text>
+          <View className="px-1.5 py-0.5 rounded bg-primary-50 border border-primary-200">
+            <Text className="text-[9px] font-bold text-primary-700">{info.badge}</Text>
           </View>
         </View>
         <Text numberOfLines={1} className="text-[11px] text-slate-500 mt-0.5">

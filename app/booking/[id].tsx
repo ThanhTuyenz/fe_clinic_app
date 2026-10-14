@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   ActivityIndicator,
   ScrollView,
@@ -13,7 +12,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { appointmentService } from '../../src/services/appointmentService'
 import { formatDateVi } from '../../src/utils/date'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
-import { Button } from '../../src/components/common/Button'
 
 export default function BookingConfirmationScreen() {
   const router = useRouter()
@@ -68,12 +66,12 @@ export default function BookingConfirmationScreen() {
             <Text className="text-xs font-semibold text-slate-400 mb-1">
               MÃ PHIẾU KHÁM
             </Text>
-            <Text className="text-xl font-black text-emerald-700 tracking-wider mb-2">
+            <Text className="text-xl font-black text-primary-700 tracking-wider mb-2">
               {appointmentCode}
             </Text>
             {Boolean(queueNum) && (
-              <View className="bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-md mb-4">
-                <Text className="text-xs font-bold text-emerald-800">
+              <View className="bg-primary-50 border border-primary-200 px-3 py-1 rounded-md mb-4">
+                <Text className="text-xs font-bold text-primary-800">
                   Số thứ tự dự kiến: #{queueNum}
                 </Text>
               </View>
@@ -95,7 +93,7 @@ export default function BookingConfirmationScreen() {
             {/* Thông tin chi tiết */}
             <View className="w-full pt-3.5 border-t border-dashed border-slate-200">
               {isLoading ? (
-                <ActivityIndicator size="small" color="#0284c7" className="py-4" />
+                <ActivityIndicator size="small" color="#28a745" className="py-4" />
               ) : (
                 <>
                   <View className="flex-row justify-between py-1.5">
@@ -116,7 +114,7 @@ export default function BookingConfirmationScreen() {
                   )}
                   <View className="flex-row justify-between py-1.5">
                     <Text className="text-xs text-slate-400">Trạng thái</Text>
-                    <Text className="text-xs font-bold text-emerald-700">
+                    <Text className="text-xs font-bold text-primary-700">
                       {appointment?.status === 'HOLD' ? 'Đã giữ chỗ' : 'Sẵn sàng tiếp đón'}
                     </Text>
                   </View>
@@ -146,7 +144,7 @@ export default function BookingConfirmationScreen() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => router.replace('/(tabs)/appointments')}
-            className="flex-1 flex-row items-center justify-center py-3 px-3 bg-emerald-700 rounded-lg active:bg-emerald-800 shadow-2xs"
+            className="flex-1 flex-row items-center justify-center py-3 px-3 bg-primary-600 rounded-lg active:bg-primary-800 shadow-2xs"
           >
             <Ionicons name="calendar-outline" size={17} color="#ffffff" style={{ marginRight: 6 }} />
             <Text className="text-xs font-bold text-white">Xem lịch hẹn</Text>

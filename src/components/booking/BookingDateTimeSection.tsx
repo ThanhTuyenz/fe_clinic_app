@@ -13,6 +13,7 @@ interface BookingDateTimeSectionProps {
   selectedSlot: string
   tomorrow: string
   isAfterHours?: boolean
+  isOnlineConsultation?: boolean
   loadingSlots?: boolean
   onOpenDateModal: () => void
   onOpenSlotModal: () => void
@@ -29,6 +30,7 @@ export const BookingDateTimeSection: React.FC<BookingDateTimeSectionProps> = ({
   selectedSlot,
   tomorrow,
   isAfterHours = false,
+  isOnlineConsultation = false,
   loadingSlots = false,
   onOpenDateModal,
   onOpenSlotModal,
@@ -57,12 +59,12 @@ export const BookingDateTimeSection: React.FC<BookingDateTimeSectionProps> = ({
   return (
     <View className="mb-8">
       <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3.5">
-        2. Thời gian khám
+        2. {isOnlineConsultation ? 'Thời gian tư vấn trực tuyến' : 'Thời gian khám'}
       </Text>
 
       {/* Select Ngày khám */}
       <SelectInput
-        label="Ngày khám dự kiến"
+        label={isOnlineConsultation ? 'Ngày tư vấn' : 'Ngày khám dự kiến'}
         required
         disabled={!isEnabled}
         placeholder={datePlaceholder}
@@ -74,16 +76,22 @@ export const BookingDateTimeSection: React.FC<BookingDateTimeSectionProps> = ({
 
       {/* Select Khung giờ khám */}
       <SelectInput
-        label="Khung giờ tiếp đón"
+        label={isOnlineConsultation ? 'Khung giờ tư vấn' : 'Khung giờ tiếp đón'}
         required
         disabled={!hasDate || !isEnabled}
         placeholder={slotPlaceholder}
         value={
           hasDate && isEnabled && selectedSlot
-            ? `${selectedSlot} (${isAfterHours ? 'Ngoài giờ' : 'Ca khám'})`
+            ? `${selectedSlot} (${isOnlineConsultation ? 'Tư vấn video 1:1' : isAfterHours ? 'Ngoài giờ' : 'Ca khám'})`
             : undefined
         }
-        sublabel={hasDate && isEnabled && selectedSlot ? 'Thời gian có mặt trước 10 phút' : undefined}
+        sublabel={
+          hasDate && isEnabled && selectedSlot
+            ? isOnlineConsultation
+              ? 'Tham gia cuộc gọi video trong khung giờ đã chọn'
+              : 'Thời gian có mặt trước 10 phút'
+            : undefined
+        }
         leftIcon="time-outline"
         loading={loadingSlots}
         onPress={onOpenSlotModal}

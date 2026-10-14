@@ -10,8 +10,10 @@ import {
   View,
 } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Input, Button, CccdScannerModal } from '../common'
 import { ParsedCccd } from '../../utils/cccdParser'
+import { getNativeCameraModule } from '../common/NativeCccdCamera'
 import {
   patientProfileService,
   PatientProfile,
@@ -33,6 +35,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
   defaultPhone = '',
   initialData = null,
 }) => {
+  const insets = useSafeAreaInsets()
   const [showScanner, setShowScanner] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [form, setForm] = useState<CreatePatientProfilePayload>({
@@ -48,6 +51,8 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
   useEffect(() => {
     if (visible) {
+      // Load the module while the form is open; camera access starts only after tapping scan.
+      if (Platform.OS !== 'web') getNativeCameraModule()
       if (initialData) {
         const fullAddr =
           initialData.address?.trim() ||
@@ -174,7 +179,10 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           className="flex-1 bg-slate-900/60 justify-end"
         >
-          <View className="bg-white rounded-t-2xl max-h-[92%] flex-col overflow-hidden">
+          <View
+            className="bg-white rounded-t-2xl max-h-[92%] flex-col overflow-hidden"
+            style={{ paddingBottom: insets.bottom }}
+          >
             {/* Header */}
             <View className="flex-row items-center justify-between px-5 py-3.5 border-b border-slate-100">
               <Text className="text-base font-bold text-slate-900">
@@ -190,7 +198,12 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView className="p-5" showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={{ flexShrink: 1 }}
+              contentContainerStyle={{ padding: 20 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               {/* Quick Scan CCCD Banner */}
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -199,13 +212,13 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
                 style={{ outline: 'none' } as any}
               >
                 <View className="flex-row items-center flex-1 pr-2">
-                  <Ionicons name="qr-code-outline" size={22} color="#059669" style={{ marginRight: 10 }} />
+                  <Ionicons name="qr-code-outline" size={22} color="#2563eb" style={{ marginRight: 10 }} />
                   <Text className="text-xs font-bold text-slate-800">
                     Quét mã QR trên CCCD gắn chip
                   </Text>
                 </View>
-                <View className="border border-emerald-600 bg-white px-3 py-1.5 rounded">
-                  <Text className="text-xs font-bold text-emerald-700">Quét ngay</Text>
+                <View className="border border-blue-600 bg-white px-3 py-1.5 rounded">
+                  <Text className="text-xs font-bold text-blue-600">Quét ngay</Text>
                 </View>
               </TouchableOpacity>
 
@@ -242,7 +255,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
                     <TouchableOpacity
                       onPress={() => setForm((p) => ({ ...p, gender: 'MALE' }))}
                       className={`flex-1 items-center justify-center ${
-                        form.gender === 'MALE' ? 'bg-emerald-700' : 'bg-white'
+                        form.gender === 'MALE' ? 'bg-primary-600' : 'bg-white'
                       }`}
                     >
                       <Text
@@ -257,7 +270,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
                     <TouchableOpacity
                       onPress={() => setForm((p) => ({ ...p, gender: 'FEMALE' }))}
                       className={`flex-1 items-center justify-center ${
-                        form.gender === 'FEMALE' ? 'bg-emerald-700' : 'bg-white'
+                        form.gender === 'FEMALE' ? 'bg-primary-600' : 'bg-white'
                       }`}
                     >
                       <Text
@@ -309,13 +322,13 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
                         onPress={() => setForm((p) => ({ ...p, relationshipToAccount: rel.key }))}
                         className={`px-3 py-2 rounded-lg border ${
                           isSelected
-                            ? 'bg-white border-emerald-600'
+                            ? 'bg-white border-primary-600'
                             : 'bg-white border-slate-200'
                         }`}
                       >
                         <Text
                           className={`text-xs ${
-                            isSelected ? 'text-emerald-700 font-bold' : 'text-slate-600 font-medium'
+                            isSelected ? 'text-primary-700 font-bold' : 'text-slate-600 font-medium'
                           }`}
                         >
                           {rel.label}
@@ -326,8 +339,10 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
                 </View>
               </View>
 
-              {/* Action Buttons */}
-              <View className="flex-row gap-3 pb-8">
+            </ScrollView>
+
+              {/* Keep actions above the Android navigation bar while the form scrolls. */}
+              <View className="flex-row gap-3 px-5 py-3 border-t border-slate-100 bg-white">
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={onClose}
@@ -338,12 +353,13 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
                 <Button
                   title={initialData?.id ? 'Lưu thay đổi' : 'Lưu hồ sơ bệnh nhân'}
+                  singleLine
                   onPress={handleSubmit}
                   isLoading={isSubmitting}
-                  className="flex-2 py-3 rounded-lg"
+                  className="py-3 rounded-lg"
+                  style={{ flex: 2 }}
                 />
               </View>
-            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>

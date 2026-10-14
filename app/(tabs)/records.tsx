@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   Text,
@@ -14,13 +13,11 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { ScreenShell, Button } from '../../src/components/common'
 import { CreateProfileModal } from '../../src/components/profile'
 import { useAuthStore } from '../../src/store/useAuthStore'
-import { useBookingStore } from '../../src/store/useBookingStore'
 import { patientProfileService, PatientProfile } from '../../src/services/patientProfileService'
 
 export default function RecordsScreen() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuthStore()
-  const setPatientInfo = useBookingStore((state) => state.setPatientInfo)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   const [editingProfile, setEditingProfile] = useState<PatientProfile | null>(null)
@@ -31,7 +28,7 @@ export default function RecordsScreen() {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ['patientProfiles'],
+    queryKey: ['patientProfiles', user?.id],
     queryFn: () => patientProfileService.getPatientProfiles(),
     enabled: isAuthenticated,
   })
@@ -39,7 +36,7 @@ export default function RecordsScreen() {
   const getRelationshipBadge = (rel?: string) => {
     switch (rel) {
       case 'SELF':
-        return { label: 'Hồ sơ chính', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        return { label: 'Hồ sơ chính', color: 'bg-primary-50 text-primary-700 border-primary-200' }
       case 'CHILD':
         return { label: 'Con ruột', color: 'bg-blue-50 text-blue-700 border-blue-200' }
       case 'PARENT':
@@ -80,8 +77,8 @@ export default function RecordsScreen() {
         {/* Tiêu đề hồ sơ & Avatar Line Icon */}
         <View className="flex-row items-center justify-between pb-3 border-b border-slate-100">
           <View className="flex-row items-center flex-1 pr-2">
-            <View className="w-10 h-10 rounded-lg bg-emerald-50/80 items-center justify-center mr-3 border border-emerald-200/80">
-              <Ionicons name="person-outline" size={20} color="#047857" />
+            <View className="w-10 h-10 rounded-lg bg-primary-50/80 items-center justify-center mr-3 border border-primary-200/80">
+              <Ionicons name="person-outline" size={20} color="#28a745" />
             </View>
             <View className="flex-1">
               <Text numberOfLines={1} className="text-sm font-extrabold text-slate-900">
@@ -114,12 +111,12 @@ export default function RecordsScreen() {
           {/* Mã BHYT */}
           <View className="flex-row items-center justify-between text-xs my-0.5">
             <View className="flex-row items-center">
-              <Ionicons name="shield-checkmark-outline" size={13} color="#059669" style={{ marginRight: 6 }} />
+              <Ionicons name="shield-checkmark-outline" size={13} color="#28a745" style={{ marginRight: 6 }} />
               <Text className="text-xs text-slate-400">Mã BHYT:</Text>
             </View>
             <Text
               className={`text-xs font-semibold ${
-                item.healthInsuranceNumber ? 'text-emerald-700' : 'text-slate-400'
+                item.healthInsuranceNumber ? 'text-primary-700' : 'text-slate-400'
               }`}
             >
               {item.healthInsuranceNumber || 'Chưa cập nhật'}
@@ -205,8 +202,8 @@ export default function RecordsScreen() {
       <View className="flex-1 px-5 pt-3">
         {!isAuthenticated ? (
           <View className="bg-white p-6 rounded-lg border border-slate-200/90 items-center my-auto">
-            <View className="w-16 h-16 rounded-full bg-emerald-50 items-center justify-center mb-3">
-              <Ionicons name="document-text-outline" size={32} color="#059669" />
+            <View className="w-16 h-16 rounded-full bg-primary-50 items-center justify-center mb-3">
+              <Ionicons name="document-text-outline" size={32} color="#28a745" />
             </View>
             <Text className="text-base font-bold text-slate-800 mb-1">
               Quản lý hồ sơ y tế số
@@ -222,7 +219,7 @@ export default function RecordsScreen() {
           </View>
         ) : isLoading ? (
           <View className="flex-1 items-center justify-center py-20">
-            <ActivityIndicator size="small" color="#059669" />
+            <ActivityIndicator size="small" color="#28a745" />
             <Text className="text-xs text-slate-400 mt-2 font-medium">
               Đang tải danh sách hồ sơ...
             </Text>
@@ -232,7 +229,7 @@ export default function RecordsScreen() {
             <View className="w-16 h-16 rounded-full bg-slate-100 items-center justify-center mb-3">
               <Ionicons name="folder-open-outline" size={30} color="#94a3b8" />
             </View>
-            <Text className="text-sm font-bold text-slate-700">Chưa có hồ sơ bệnh nhân</Text>
+            <Text className="text-sm font-bold text-slate-700">Chưa có hồ sơ khám bệnh</Text>
             <Text className="text-xs text-slate-400 text-center mt-1 mb-4 px-6 leading-relaxed">
               Tạo hồ sơ bệnh nhân bằng cách quét mã QR CCCD hoặc nhập thông tin để đặt khám nhanh chóng.
             </Text>
@@ -243,7 +240,7 @@ export default function RecordsScreen() {
                   setEditingProfile(null)
                   setShowCreateModal(true)
                 }}
-                className="bg-emerald-700 px-5 py-2.5 rounded-lg flex-row items-center shadow-xs"
+                className="bg-primary-600 px-5 py-2.5 rounded-lg flex-row items-center shadow-xs"
               >
                 <Ionicons name="qr-code-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
                 <Text className="text-xs font-bold text-white">Quét CCCD tạo hồ sơ</Text>
@@ -260,9 +257,9 @@ export default function RecordsScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                tintColor="#059669"
-                colors={['#059669']}
-                onRefresh={refetch}
+                tintColor="#28a745"
+                colors={['#28a745']}
+                onRefresh={() => { void refetch() }}
               />
             }
           />

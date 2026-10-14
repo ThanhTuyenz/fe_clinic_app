@@ -37,7 +37,7 @@ LocaleConfig.locales['vi'] = {
 }
 LocaleConfig.defaultLocale = 'vi'
 
-import { getTodayDateString, getTomorrowDateString } from '../../utils/date'
+import { getTomorrowDateString } from '../../utils/date'
 
 interface MedicalCalendarProps {
   selectedDate: string // YYYY-MM-DD
@@ -59,7 +59,7 @@ export const MedicalCalendar: React.FC<MedicalCalendarProps> = ({
     availableDates.forEach((d) => {
       markedDates[d] = {
         marked: true,
-        dotColor: '#059669',
+        dotColor: '#28a745',
       }
     })
   }
@@ -69,7 +69,7 @@ export const MedicalCalendar: React.FC<MedicalCalendarProps> = ({
     markedDates[selectedDate] = {
       ...(markedDates[selectedDate] || {}),
       selected: true,
-      selectedColor: '#059669',
+      selectedColor: '#28a745',
       selectedTextColor: '#ffffff',
     }
   }
@@ -88,12 +88,12 @@ export const MedicalCalendar: React.FC<MedicalCalendarProps> = ({
           backgroundColor: '#ffffff',
           calendarBackground: '#ffffff',
           textSectionTitleColor: '#64748b',
-          selectedDayBackgroundColor: '#0284c7',
+          selectedDayBackgroundColor: '#28a745',
           selectedDayTextColor: '#ffffff',
-          todayTextColor: '#0284c7',
+          todayTextColor: '#28a745',
           dayTextColor: '#1e293b',
           textDisabledColor: '#cbd5e1',
-          arrowColor: '#0284c7',
+          arrowColor: '#28a745',
           monthTextColor: '#0f172a',
           textDayFontWeight: '500',
           textMonthFontWeight: 'bold',

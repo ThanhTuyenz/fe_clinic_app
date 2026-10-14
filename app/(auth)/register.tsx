@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -15,16 +15,16 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { Image } from 'expo-image'
 import { registerSchema, RegisterFormValues } from '@/utils'
 import { authService } from '@/services'
-import { useAuthStore } from '@/store/useAuthStore'
 import { useBookingStore } from '@/store/useBookingStore'
 import { Input, ScreenShell, ZaloLogo } from '@/components/common'
 import { ZaloLinkModal, ZaloLoginModal } from '@/components/auth'
+import { useGoogleLogin } from '@/hooks/useGoogleLogin'
 
 export default function RegisterScreen() {
   const router = useRouter()
-  const setAuth = useAuthStore((state) => state.setAuth)
   const draft = useBookingStore((state) => state.draft)
   const [loading, setLoading] = useState(false)
+  const { loginWithGoogle, googleLoading } = useGoogleLogin()
   const [zaloLoginModalVisible, setZaloLoginModalVisible] = useState(false)
 
 
@@ -257,9 +257,9 @@ export default function RegisterScreen() {
             {/* Nút Đăng ký chính */}
             <TouchableOpacity
               activeOpacity={0.85}
-              disabled={loading}
-              onPress={handleSubmit(onSubmit)}
-              className="w-full bg-emerald-700 active:bg-emerald-800 py-4 rounded-xl items-center justify-center shadow-xs mt-2"
+              disabled={loading || googleLoading}
+              onPress={() => { void handleSubmit(onSubmit)() }}
+              className="w-full bg-primary-600 active:bg-primary-800 py-4 rounded-xl items-center justify-center shadow-xs mt-2"
             >
               <Text className="text-white text-base font-bold tracking-wide">
                 {loading ? 'Đang xử lý...' : 'Đăng ký'}
@@ -278,10 +278,12 @@ export default function RegisterScreen() {
 
             {/* Hàng nút Social Logins: Google, Zalo */}
             <View className="flex-row justify-center items-center gap-4 mb-8">
-              {/* Google - Kích hoạt OAuth chính thức của Google qua Backend */}
+              {/* Google */}
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => authService.loginWithGoogle()}
+                accessibilityLabel="Tiếp tục bằng Google"
+                disabled={loading || googleLoading}
+                onPress={() => { void loginWithGoogle() }}
                 className="w-28 h-14 bg-white rounded-lg border border-slate-200 shadow-xs items-center justify-center active:bg-slate-50"
               >
                 <Ionicons name="logo-google" size={26} color="#ea4335" />
@@ -291,6 +293,7 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setZaloLoginModalVisible(true)}
+                disabled={loading || googleLoading}
                 className="w-28 h-14 bg-white rounded-lg border border-slate-200 shadow-xs items-center justify-center active:bg-slate-50"
               >
                 <ZaloLogo size={32} />
@@ -305,7 +308,7 @@ export default function RegisterScreen() {
                 </Text>
                 <Link href="/(auth)/login" asChild>
                   <TouchableOpacity activeOpacity={0.7}>
-                    <Text className="text-sm font-bold text-emerald-700">
+                    <Text className="text-sm font-bold text-primary-700">
                       Đăng nhập
                     </Text>
                   </TouchableOpacity>

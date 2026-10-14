@@ -1,14 +1,14 @@
 export const colors = {
-  primary: '#0284c7', // Sky 600
-  primaryDark: '#0369a1',
-  primaryLight: '#e0f2fe',
-  primaryMuted: '#f0f9ff',
+  primary: '#28a745', // VitaCare brand green
+  primaryDark: '#218838',
+  primaryLight: '#d9f2df',
+  primaryMuted: '#f0faf2',
 
   secondary: '#0d9488', // Medical Teal
   secondaryLight: '#ccfbf1',
 
-  success: '#10b981',
-  successLight: '#d1fae5',
+  success: '#34b852',
+  successLight: '#d9f2df',
 
   warning: '#f59e0b',
   warningLight: '#fef3c7',

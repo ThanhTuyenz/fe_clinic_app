@@ -1,7 +1,8 @@
-import { Linking, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { api, unwrapNestResponse } from './api'
 import { resolveApiBaseUrl } from '../constants/config'
 import { User } from '../types/user'
+import { getGoogleIdToken } from '../utils/googleSignIn'
 
 export interface LoginPayload {
   email: string // Chấp nhận email hoặc số điện thoại (VD: 0946135382 hoặc user@example.com)
@@ -113,20 +114,24 @@ export const authService = {
   },
 
   /**
-   * Đăng nhập bằng Google qua luồng OAuth chuẩn
+   * Native: chọn tài khoản Google và đổi ID Token lấy phiên đăng nhập VitaCare.
+   * Web: giữ luồng OAuth redirect.
    */
-  loginWithGoogle() {
-    const baseUrl = resolveApiBaseUrl().replace(/\/$/, '')
-    const origin =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.location.origin
-        : 'http://localhost:8081'
-
-    const authUrl = `${baseUrl}/api/v1/auth/google?state=${encodeURIComponent(origin)}`
+  async loginWithGoogle() {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const baseUrl = resolveApiBaseUrl().replace(/\/$/, '')
+      const authUrl = `${baseUrl}/api/v1/auth/google?state=${encodeURIComponent(window.location.origin)}`
       window.location.href = authUrl
-    } else {
-      Linking.openURL(authUrl).catch((e) => console.warn('Lỗi mở Google OAuth:', e))
+      return null
+    }
+    const idToken = await getGoogleIdToken()
+    if (!idToken) return null
+    const res = await api.post('/api/v1/auth/google', { idToken })
+    const result = unwrapNestResponse<any>(res.data) || res.data
+    return {
+      token: (result.token || result.accessToken) as string,
+      refreshToken: result.refreshToken as string | undefined,
+      user: result.user as User,
     }
   },
 

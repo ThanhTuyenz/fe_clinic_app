@@ -1,20 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
-import * as Notifications from 'expo-notifications'
+import type * as Notifications from 'expo-notifications'
 import Constants from 'expo-constants'
 import { useRouter } from 'expo-router'
 import { notificationService } from '../services/notificationService'
-
-// Cấu hình hiển thị thông báo nổi khi app đang mở
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-})
+import { getNotifications } from '../utils/notifications'
 
 export function usePushNotifications(isAuthenticated: boolean) {
   const router = useRouter()
@@ -23,10 +13,16 @@ export function usePushNotifications(isAuthenticated: boolean) {
   const responseListener = useRef<Notifications.Subscription | null>(null)
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated) {
+      setExpoPushToken(null)
+      return
+    }
+    const Notifications = getNotifications()
+    if (!Notifications) return
+    let active = true
 
     registerForPushNotificationsAsync().then((token) => {
-      if (token) {
+      if (active && token) {
         setExpoPushToken(token)
         notificationService.saveDeviceToken(token, Platform.OS)
       }
@@ -52,6 +48,7 @@ export function usePushNotifications(isAuthenticated: boolean) {
     })
 
     return () => {
+      active = false
       if (notificationListener.current) {
         notificationListener.current.remove()
       }
@@ -59,20 +56,28 @@ export function usePushNotifications(isAuthenticated: boolean) {
         responseListener.current.remove()
       }
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, router])
 
   return { expoPushToken }
 }
 
 async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    // Expo notifications push tokens are not supported on web out-of-the-box without VAPID
-    return null
-  }
+  const Notifications = getNotifications()
+  if (!Notifications) return null
 
   let token: string | null = null
 
   try {
+    // Android requires a notification channel before requesting notification permission.
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#28a745',
+      })
+    }
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync()
     let finalStatus = existingStatus
 
@@ -89,19 +94,14 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId
 
-    const pushTokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    )
+    if (!projectId) {
+      console.warn('Chưa cấu hình EAS projectId để đăng ký Push Notification.')
+      return null
+    }
+
+    const pushTokenData = await Notifications.getExpoPushTokenAsync({ projectId })
     token = pushTokenData.data
 
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#059669',
-      })
-    }
   } catch (error) {
     console.log('Lỗi đăng ký Push Notification:', error)
   }

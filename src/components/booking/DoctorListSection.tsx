@@ -33,7 +33,7 @@ export const DoctorListSection: React.FC<DoctorListSectionProps> = ({
           <Text className="text-rose-500">*</Text>
         </Text>
         {doctors.length > 0 && (
-          <Text className="text-[11px] font-medium text-emerald-700">
+          <Text className="text-[11px] font-medium text-primary-700">
             {doctors.length} bác sĩ khả dụng
           </Text>
         )}
@@ -60,7 +60,7 @@ export const DoctorListSection: React.FC<DoctorListSectionProps> = ({
 
       {loadingDoctors ? (
         <View className="p-6 items-center justify-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
-          <ActivityIndicator size="small" color="#059669" />
+          <ActivityIndicator size="small" color="#28a745" />
           <Text className="text-xs text-slate-500 mt-2">Đang tải danh sách bác sĩ...</Text>
         </View>
       ) : displayedDoctors.length === 0 ? (
@@ -81,6 +81,7 @@ export const DoctorListSection: React.FC<DoctorListSectionProps> = ({
                 key={doc.id}
                 doctor={doc}
                 selected={isSelected}
+                online={method === 'ONLINE_CONSULTATION'}
                 onSelect={onSelectDoctor}
               />
             )

@@ -27,11 +27,11 @@ export const HEALTH_PACKAGES: StaticHealthPackageItem[] = [
     price: 1500000,
     tag: 'PHỔ BIẾN',
     image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&auto=format&fit=crop&q=80',
-    color: '#059669',
-    bgColor: 'bg-emerald-50',
-    tagBg: 'bg-emerald-50 border-emerald-200',
-    tagColor: 'text-emerald-700',
-    categoryColor: 'text-emerald-700',
+    color: '#28a745',
+    bgColor: 'bg-primary-50',
+    tagBg: 'bg-primary-50 border-primary-200',
+    tagColor: 'text-primary-700',
+    categoryColor: 'text-primary-700',
   },
   {
     id: 'pkg-2',
@@ -69,7 +69,7 @@ export const HEALTH_PACKAGES: StaticHealthPackageItem[] = [
     price: 1200000,
     tag: 'VĂN PHÒNG',
     image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&auto=format&fit=crop&q=80',
-    color: '#0284c7',
+    color: '#28a745',
     bgColor: 'bg-sky-50',
     tagBg: 'bg-sky-50 border-sky-200',
     tagColor: 'text-sky-700',
@@ -97,7 +97,7 @@ export const HealthPackagesSection: React.FC<HealthPackagesSectionProps> = ({
           </Text>
         </View>
         <TouchableOpacity onPress={onViewAll}>
-          <Text className="text-xs font-semibold text-emerald-600">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-600">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 

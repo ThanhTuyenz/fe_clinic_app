@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Platform, View } from 'react-native'
+import { useState } from 'react'
+import { View } from 'react-native'
 import { Tabs } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -9,24 +9,15 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets()
   const [bookingModalVisible, setBookingModalVisible] = useState(false)
 
-  const tabHeight = Platform.select({
-    ios: 60 + insets.bottom,
-    android: 70,
-    default: 72, // Web / Desktop
-  })
-
-  const paddingBottom = Platform.select({
-    ios: Math.max(insets.bottom, 8),
-    android: 8,
-    default: 8,
-  })
+  const paddingBottom = Math.max(insets.bottom, 8)
+  const tabHeight = 64 + paddingBottom
 
   return (
     <>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#059669',
+          tabBarActiveTintColor: '#28a745',
           tabBarInactiveTintColor: '#94a3b8',
           tabBarStyle: {
             backgroundColor: '#ffffff',
@@ -55,7 +46,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'home' : 'home-outline'}
                 size={22}
-                color={color}
+                color={String(color)}
               />
             ),
           }}
@@ -69,7 +60,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'calendar' : 'calendar-outline'}
                 size={22}
-                color={color}
+                color={String(color)}
               />
             ),
           }}
@@ -89,7 +80,7 @@ export default function TabLayout() {
             tabBarLabelStyle: {
               fontSize: 11,
               fontWeight: '800',
-              color: '#059669',
+              color: '#28a745',
               marginBottom: 2,
             },
             tabBarIcon: () => (
@@ -98,13 +89,13 @@ export default function TabLayout() {
                   width: 46,
                   height: 46,
                   borderRadius: 23,
-                  backgroundColor: '#059669',
+                  backgroundColor: '#28a745',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginTop: -16,
                   borderWidth: 3,
                   borderColor: '#ffffff',
-                  shadowColor: '#059669',
+                  shadowColor: '#28a745',
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.35,
                   shadowRadius: 6,
@@ -133,7 +124,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'document-text' : 'document-text-outline'}
                 size={22}
-                color={color}
+                color={String(color)}
               />
             ),
           }}
@@ -155,7 +146,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'person' : 'person-outline'}
                 size={22}
-                color={color}
+                color={String(color)}
               />
             ),
           }}

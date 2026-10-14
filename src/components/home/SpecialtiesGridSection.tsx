@@ -17,12 +17,12 @@ export const SpecialtiesGridSection: React.FC = () => {
   return (
     <View className="mt-8 pt-1">
       {/* Header Gói khám chuyên khoa */}
-      <View className="px-5 flex-row items-center justify-between mb-3.5">
+      <View className="px-5 flex-row items-center justify-between mb-6">
         <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
             Gói khám chuyên khoa
           </Text>
-          <Text className="text-[11px] text-slate-400 mt-0.5">
+          <Text className="text-sm leading-5 text-slate-500 mt-2">
             Thăm khám chuyên sâu
           </Text>
         </View>
@@ -30,18 +30,18 @@ export const SpecialtiesGridSection: React.FC = () => {
           onPress={() => router.push('/services')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text className="text-xs font-semibold text-emerald-700">Xem tất cả</Text>
+          <Text className="text-xs font-semibold text-primary-700">Xem tất cả</Text>
         </TouchableOpacity>
       </View>
 
       {/* Danh sách Gói khám chuyên khoa cuộn ngang */}
       {loadingPkgs ? (
-        <ActivityIndicator size="small" color="#047857" className="py-4" />
+        <ActivityIndicator size="small" color="#28a745" className="py-4" />
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, alignItems: 'flex-start' }}
         >
           {(specialtyPackages.length > 0 ? specialtyPackages : displayFallbackPackages).map(
             (pkg: any, idx: number) => (

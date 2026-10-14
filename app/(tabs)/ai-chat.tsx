@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -75,14 +75,14 @@ export default function AiChatScreen() {
         <View
           className={`p-3.5 rounded-lg ${
             isUser
-              ? 'bg-emerald-600 rounded-tr-none'
+              ? 'bg-primary-600 rounded-tr-none'
               : 'bg-white border border-slate-100 rounded-tl-none shadow-xs'
           }`}
         >
           {!isUser && (
             <View className="flex-row items-center mb-1">
-              <Ionicons name="sparkles" size={13} color="#059669" />
-              <Text className="text-[11px] font-bold text-emerald-700 ml-1">
+              <Ionicons name="sparkles" size={13} color="#28a745" />
+              <Text className="text-[11px] font-bold text-primary-700 ml-1">
                 Trợ lý VitaCare
               </Text>
             </View>
@@ -99,10 +99,10 @@ export default function AiChatScreen() {
         {!isUser && (
           <TouchableOpacity
             onPress={() => router.push('/booking')}
-            className="self-start mt-1.5 flex-row items-center bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200"
+            className="self-start mt-1.5 flex-row items-center bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200"
           >
-            <Ionicons name="calendar-outline" size={14} color="#059669" />
-            <Text className="text-xs font-bold text-emerald-700 ml-1">
+            <Ionicons name="calendar-outline" size={14} color="#28a745" />
+            <Text className="text-xs font-bold text-primary-700 ml-1">
               Đặt lịch theo gợi ý này
             </Text>
           </TouchableOpacity>
@@ -131,7 +131,7 @@ export default function AiChatScreen() {
 
           {loading && (
             <View className="flex-row items-center p-3 mb-2 bg-white rounded-lg border border-slate-100 self-start shadow-xs">
-              <ActivityIndicator size="small" color="#059669" />
+              <ActivityIndicator size="small" color="#28a745" />
               <Text className="text-xs text-slate-500 font-medium ml-2">
                 Trợ lý AI đang phân tích triệu chứng...
               </Text>
@@ -173,7 +173,7 @@ export default function AiChatScreen() {
               onPress={() => handleSend()}
               disabled={!input.trim() || loading}
               className={`w-9 h-9 rounded-lg items-center justify-center ml-2 ${
-                input.trim() && !loading ? 'bg-emerald-600' : 'bg-slate-100'
+                input.trim() && !loading ? 'bg-primary-600' : 'bg-slate-100'
               }`}
             >
               <Ionicons

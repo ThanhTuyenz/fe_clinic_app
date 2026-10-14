@@ -38,7 +38,7 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({ currentStep })
                     height: 1.5,
                     zIndex: 0,
                   }}
-                  className={item.step < currentStep ? 'bg-emerald-300' : 'bg-slate-100'}
+                  className={item.step < currentStep ? 'bg-primary-300' : 'bg-slate-100'}
                 />
               )}
 
@@ -52,14 +52,14 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({ currentStep })
                 }}
                 className={`items-center justify-center ${
                   isCompleted
-                    ? 'border border-emerald-200 bg-emerald-50'
+                    ? 'border border-primary-200 bg-primary-50'
                     : isCurrent
-                      ? 'border border-emerald-300 bg-emerald-50/80'
+                      ? 'border border-primary-300 bg-primary-50/80'
                       : 'border border-slate-200/70 bg-white'
                 }`}
               >
                 {isCompleted ? (
-                  <Ionicons name="checkmark" size={12} color="#059669" />
+                  <Ionicons name="checkmark" size={12} color="#28a745" />
                 ) : (
                   <Text
                     style={{
@@ -70,7 +70,7 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({ currentStep })
                       textAlignVertical: 'center',
                       lineHeight: 14,
                     }}
-                    className={isCurrent ? 'text-emerald-700' : 'text-slate-400'}
+                    className={isCurrent ? 'text-primary-700' : 'text-slate-400'}
                   >
                     {item.step}
                   </Text>
@@ -82,9 +82,9 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({ currentStep })
                 numberOfLines={1}
                 className={`text-[11px] tracking-tight text-center mt-1.5 ${
                   isCurrent
-                    ? 'font-semibold text-emerald-700'
+                    ? 'font-semibold text-primary-700'
                     : isCompleted
-                      ? 'font-medium text-emerald-600'
+                      ? 'font-medium text-primary-600'
                       : 'font-normal text-slate-400'
                 }`}
               >

@@ -67,9 +67,9 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
         onPress={() => onSelectSlot(slot, slotInfo?.id)}
         className={`w-[22%] py-2.5 rounded-lg items-center justify-center m-1 border ${
           isSelected
-            ? 'bg-emerald-600 border-emerald-600'
+            ? 'bg-primary-600 border-primary-600'
             : isAvailable
-              ? 'bg-white border-slate-200 active:border-emerald-400'
+              ? 'bg-white border-slate-200 active:border-primary-400'
               : 'bg-slate-100 border-slate-100 opacity-40'
         }`}
       >
@@ -93,7 +93,7 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
       {/* Ca Sáng */}
       <View className="mb-3.5">
         <View className="flex-row items-center mb-2">
-          <Ionicons name="sunny-outline" size={18} color="#0284c7" />
+          <Ionicons name="sunny-outline" size={18} color="#28a745" />
           <Text className="text-sm font-bold text-slate-800 ml-1.5">
             Ca sáng (08:00 - 11:30)
           </Text>

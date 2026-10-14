@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +12,6 @@ import {
 } from 'react-native'
 import { Image } from 'expo-image'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { useBehaviorTracker } from '../../hooks/useBehaviorTracker'
 
 export interface SelectModalOption<T = any> {
   id: string | number
@@ -51,17 +50,6 @@ export function SelectModal<T = any>({
   loading = false,
 }: SelectModalProps<T>) {
   const [search, setSearch] = useState('')
-  const { trackSearch } = useBehaviorTracker()
-
-  // Telemetry: Tự động ghi nhận tìm kiếm khi search trong Select Modal
-  useEffect(() => {
-    if (visible && search.trim().length >= 2) {
-      const timer = setTimeout(() => {
-        void trackSearch(search)
-      }, 800)
-      return () => clearTimeout(timer)
-    }
-  }, [search, visible, trackSearch])
 
   const filteredOptions = useMemo(() => {
     if (!search.trim()) return options
@@ -150,7 +138,7 @@ export function SelectModal<T = any>({
           {/* Body Content */}
           {loading ? (
             <View className="py-12 items-center justify-center">
-              <ActivityIndicator size="large" color="#059669" />
+              <ActivityIndicator size="large" color="#28a745" />
               <Text className="text-xs text-slate-500 mt-2 font-medium">Đang tải dữ liệu...</Text>
             </View>
           ) : (
@@ -224,7 +212,7 @@ export function SelectModal<T = any>({
                     {/* Radio / Check indicator */}
                     <View className="ml-1">
                       {isSelected ? (
-                        <View className="w-5 h-5 rounded-full bg-emerald-600 items-center justify-center shadow-xs">
+                        <View className="w-5 h-5 rounded-full bg-primary-600 items-center justify-center shadow-xs">
                           <Ionicons name="checkmark" size={13} color="#ffffff" />
                         </View>
                       ) : (
