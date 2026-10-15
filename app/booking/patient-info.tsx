@@ -236,9 +236,6 @@ export default function PatientInfoScreen() {
               <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Hồ sơ người khám bệnh *
               </Text>
-              <Text className="text-2xs text-slate-400">
-                Chọn người sẽ thực hiện khám
-              </Text>
             </View>
 
             {loadingProfiles ? (

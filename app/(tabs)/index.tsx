@@ -11,11 +11,12 @@ import {
   SemanticSearchResultItem,
   SearchDoctorItem,
   SearchBranchItem,
-  SemanticSearchResponse,
 } from '../../src/services/recommendationService'
 import { notificationService } from '../../src/services/notificationService'
 import { usePushNotifications } from '../../src/hooks/usePushNotifications'
 import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
+import { useSemanticSearch } from '../../src/hooks/useSemanticSearch'
+import { searchAnalytics } from '../../src/services/searchAnalytics'
 import { Doctor } from '../../src/types/doctor'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { BookingMethodsModal } from '../../src/components/booking/BookingMethodsModal'
@@ -35,38 +36,16 @@ import {
 export default function HomeScreen() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuthStore()
-  const { sessionId } = useBehaviorTracker()
+  const { sessionId, trackSearch } = useBehaviorTracker()
   usePushNotifications(isAuthenticated)
 
   const setDoctor = useBookingStore((state) => state.setDoctor)
   const [searchQuery, setSearchQuery] = useState('')
   const [bookingModalVisible, setBookingModalVisible] = useState(false)
-  const [searchResults, setSearchResults] = useState<SemanticSearchResponse | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
-
-  // AI Semantic Search: Tự động tìm kiếm triệu chứng/gói khám/bác sĩ (Backend tự động ghi nhận telemetry)
+  const { results: searchResults, isSearching, error: searchError, retry: retrySearch } = useSemanticSearch(searchQuery)
   useEffect(() => {
-    const trimmed = searchQuery.trim()
-    if (trimmed.length < 2) {
-      setSearchResults(null)
-      setIsSearching(false)
-      return
-    }
-
-    setIsSearching(true)
-    const timer = setTimeout(async () => {
-      try {
-        const res = await recommendationService.semanticSearch(trimmed)
-        setSearchResults(res)
-      } catch {
-        setSearchResults(null)
-      } finally {
-        setIsSearching(false)
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [searchQuery])
+    if (searchResults && !searchResults.partial && !isSearching) void trackSearch(searchResults.query)
+  }, [searchResults, isSearching, trackSearch])
 
 
   const {
@@ -117,16 +96,23 @@ export default function HomeScreen() {
     router.push('/booking/package')
   }
 
-  const handleSelectSearchPackage = (pkg: SemanticSearchResultItem) => {
-    router.push(`/package/${pkg.id}` as any)
+  const handleSelectSearchPackage = async (pkg: SemanticSearchResultItem) => {
+    await searchAnalytics.click(searchResults?.searchId, 'PACKAGE', pkg.id, (searchResults?.packages.findIndex(item => item.id === pkg.id) ?? 0) + 1, pkg.branchId).catch(() => {})
+    router.push({ pathname: '/package/[id]', params: {
+      id: pkg.id, branchId: pkg.branchId || '', bookingMethodCode: pkg.bookingMethodCode || '',
+    } })
   }
 
-  const handleSelectSearchDoctor = (doc: SearchDoctorItem) => {
+  const handleSelectSearchDoctor = async (doc: SearchDoctorItem) => {
+    await searchAnalytics.click(searchResults?.searchId, 'DOCTOR', doc.id, (searchResults?.doctors?.findIndex(item => item.id === doc.id) ?? 0) + 1).catch(() => {})
+    useBookingStore.getState().resetBooking()
     router.push(`/booking?doctorId=${doc.id}` as any)
   }
 
-  const handleSelectSearchBranch = (_branch: SearchBranchItem) => {
-    router.push('/booking' as any)
+  const handleSelectSearchBranch = async (branch: SearchBranchItem) => {
+    await searchAnalytics.click(searchResults?.searchId, 'BRANCH', branch.id, (searchResults?.branches?.findIndex(item => item.id === branch.id) ?? 0) + 1, branch.id).catch(() => {})
+    useBookingStore.getState().resetBooking()
+    router.push({ pathname: '/booking', params: { branchId: branch.id } })
   }
 
   const patientName = user?.full_name || user?.fullName || user?.name || 'Quý khách'
@@ -179,6 +165,8 @@ export default function HomeScreen() {
           onChangeText={setSearchQuery}
           isLoading={isSearching}
           searchResults={searchResults}
+          error={searchError}
+          onRetry={() => void retrySearch()}
           showDropdown={Boolean(searchQuery.trim().length >= 2)}
           onSelectPackage={handleSelectSearchPackage}
           onSelectDoctor={handleSelectSearchDoctor}

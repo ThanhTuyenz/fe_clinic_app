@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -23,6 +23,7 @@ import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
 import { BookingTimeline } from '../../src/components/booking/BookingTimeline'
 import { PayosDeepLinkModal } from '../../src/components/booking/PayosDeepLinkModal'
+import { searchAnalytics } from '../../src/services/searchAnalytics'
 import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
 
 type PaymentMethodType = 'PAYOS'
@@ -38,6 +39,7 @@ export default function BookingPaymentScreen() {
   const [payosData, setPayosData] = useState<PayosCreatePaymentResponse | null>(null)
   const [createdApptId, setCreatedApptId] = useState<string | null>(null)
   const [isPayosModalVisible, setIsPayosModalVisible] = useState(false)
+  const redirectedRef = useRef(false)
 
   const isPackage = draft.bookingMethod === 'HEALTH_PACKAGE' || Boolean(draft.healthPackage)
   const serviceName = isPackage
@@ -61,18 +63,20 @@ export default function BookingPaymentScreen() {
 
   // Xử lý khi thanh toán PayOS thành công
   const handlePaymentSuccess = () => {
+    if (!createdApptId || redirectedRef.current) return
+    redirectedRef.current = true
     setIsPayosModalVisible(false)
-    const targetId = createdApptId || 'new'
+    const targetId = createdApptId
 
     // Đặt lịch nhắc thông báo
     const appointmentDateObj = new Date(draft.date)
     const reminderDate = new Date(appointmentDateObj.getTime() - 24 * 60 * 60 * 1000)
-    scheduleAppointmentReminder(
+    void scheduleAppointmentReminder(
       targetId,
       serviceName,
       `${draft.slot} ngày ${draft.date}`,
       reminderDate
-    )
+    ).catch(() => { /* Reminder failure must not block opening the ticket. */ })
 
     resetBooking()
     router.replace(`/booking/${targetId}`)
@@ -80,6 +84,10 @@ export default function BookingPaymentScreen() {
 
   // Handle final checkout and payment
   const handlePayment = async () => {
+    if (createdApptId && payosData) {
+      setIsPayosModalVisible(true)
+      return
+    }
     try {
       if (!paymentMethod) {
         Alert.alert('Chưa chọn phương thức thanh toán', 'Vui lòng chọn một phương thức thanh toán để tiếp tục.')
@@ -118,6 +126,10 @@ export default function BookingPaymentScreen() {
 
       // 1. Call checkout API
       const result = await appointmentService.checkout({
+        ...await searchAnalytics.checkoutSource({
+          packageId: String((isPackage ? draft.healthPackage?.id : draft.specialtyService?.id) || '') || undefined,
+          doctorId: draft.doctor?.id ? String(draft.doctor.id) : undefined, branchId: draft.branchId,
+        }).catch(() => ({})),
         bookingMethodCode: draft.bookingMethod || (isPackage ? 'HEALTH_PACKAGE' : 'CONSULTATION'),
         patientProfileId: profileId,
         scheduleSlotId: slotId,
@@ -131,8 +143,8 @@ export default function BookingPaymentScreen() {
       const appointmentId =
         result?.appointmentId ||
         (result as any)?.id ||
-        (result as any)?.appointment?.id ||
-        'new'
+        (result as any)?.appointment?.id
+      if (!appointmentId) throw new Error('Máy chủ chưa trả về mã lịch hẹn. Vui lòng kiểm tra lịch đã đặt.')
 
       // Open the PayOS session; finish the booking only after payment succeeds.
       try {
@@ -141,6 +153,7 @@ export default function BookingPaymentScreen() {
           amount: totalAmount,
           description: `VC${String(appointmentId).slice(-6).toUpperCase()}`,
         })
+        redirectedRef.current = false
         setCreatedApptId(appointmentId)
         setPayosData(payosRes)
         setIsPayosModalVisible(true)
@@ -250,7 +263,7 @@ export default function BookingPaymentScreen() {
         {/* Bottom Bar: Xác nhận thanh toán */}
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3">
             <Button
-              title="Xác nhận"
+              title={createdApptId && payosData ? 'Tiếp tục thanh toán' : 'Xác nhận'}
               singleLine
               onPress={handlePayment}
               isLoading={isSubmitting}

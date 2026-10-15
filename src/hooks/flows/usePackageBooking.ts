@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
 import { bookingService } from '../../services/bookingService'
+import { searchAnalytics } from '../../services/searchAnalytics'
 import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
 import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
@@ -49,6 +50,9 @@ export function usePackageBooking() {
     [bookingInit?.healthPackages, selectedBranchId]
   )
   const loadingPackages = loadingBranches
+  useEffect(() => {
+    if (selectedPackage?.id) void searchAnalytics.ensureView(String(selectedPackage.id), selectedBranchId || undefined).catch(() => {})
+  }, [selectedPackage?.id, selectedBranchId])
 
   useEffect(() => {
     if (params.packageId && packages.length > 0) {

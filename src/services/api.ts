@@ -141,18 +141,18 @@ api.interceptors.response.use(
         else if (typeof val === 'string') messages.push(val)
       }
       if (messages.length > 0) {
-        return Promise.reject(new Error(messages.join('. ')))
+        return Promise.reject(Object.assign(new Error(messages.join('. ')), { status }))
       }
     }
 
     // 4. Xử lý message dạng mảng (class-validator)
     if (Array.isArray(data?.message)) {
-      return Promise.reject(new Error(data.message.join('. ')))
+      return Promise.reject(Object.assign(new Error(data.message.join('. ')), { status }))
     }
 
     // 5. Xử lý message thông thường
     const serverMessage = data?.message || 'Có lỗi xảy ra từ máy chủ.'
-    return Promise.reject(new Error(serverMessage))
+    return Promise.reject(Object.assign(new Error(serverMessage), { status }))
   }
 )
 

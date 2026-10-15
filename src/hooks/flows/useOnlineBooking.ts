@@ -11,7 +11,7 @@ import { BookingModalType } from '../../components/booking/BookingModals'
 import {
   extractDoctorSpecialtyId,
 } from '../../constants/bookingSlots'
-import { formatDateVi, getTomorrowDateString } from '../../utils/date'
+import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useOnlineBooking() {
   const router = useRouter()
@@ -28,7 +28,6 @@ export function useOnlineBooking() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(draft.slotId)
 
   const [modalType, setModalType] = useState<BookingModalType>(null)
-  const [doctorSearch, setDoctorSearch] = useState('')
 
   // 2. Data Queries
   const { data: bookingInit, isLoading: loadingBranches } = useQuery({
@@ -96,20 +95,28 @@ export function useOnlineBooking() {
     }
   }, [availableDatesList, selectedDate, selectedDoctor])
 
-  // 3. Search & Filter
-  const displayedDoctors = useMemo(() => {
-    if (!doctorSearch.trim()) return doctors
-    const q = doctorSearch.trim().toLowerCase()
-    return doctors.filter((d) => {
-      const name = (d.fullName || d.name || '').toLowerCase()
-      const spec = (d.specialty_name || (typeof d.specialty === 'string' ? d.specialty : '') || '').toLowerCase()
-      return name.includes(q) || spec.includes(q)
-    })
-  }, [doctors, doctorSearch])
-
   const selectedBranchObj = branches.find((b: any) => String(b.id) === String(selectedBranchId))
 
   // 4. UI Options
+  const doctorOptions: SelectModalOption<Doctor>[] = useMemo(
+    () => doctors.map((doctor) => {
+      const specialty = typeof doctor.specialty === 'object'
+        ? doctor.specialty?.name
+        : doctor.specialty || doctor.specialty_name
+      const fee = doctor.onlineConsultationFee ?? doctor.consultation_fee ?? doctor.price
+      return {
+        id: doctor.id,
+        title: doctor.full_name || doctor.fullName || doctor.name || 'Bác sĩ tư vấn',
+        subtitle: [specialty, doctor.experience_years ? `${doctor.experience_years} năm kinh nghiệm` : null,
+          fee != null ? formatCurrencyVi(fee) : null].filter(Boolean).join(' • '),
+        avatar: doctor.avatar,
+        badge: doctor.title,
+        extra: doctor,
+      }
+    }),
+    [doctors]
+  )
+
   const branchOptions: SelectModalOption[] = useMemo(
     () =>
       branches.map((b: any) => ({
@@ -160,10 +167,13 @@ export function useOnlineBooking() {
 
   // 5. Handlers
   const handleSelectDoctor = (doc: Doctor) => {
-    setSelectedDoctor(doc)
-    setSelectedDate('')
-    setSelectedSlot('')
-    setSelectedSlotId(undefined)
+    if (String(doc.id) !== String(selectedDoctor?.id)) {
+      setSelectedDoctor(doc)
+      setSelectedDate('')
+      setSelectedSlot('')
+      setSelectedSlotId(undefined)
+    }
+    setModalType(null)
   }
 
   const handleSelectBranch = (opt: SelectModalOption) => {
@@ -253,11 +263,7 @@ export function useOnlineBooking() {
     selectedSlotId,
     isFormComplete,
 
-    // Search & Filter
-    doctorSearch,
-    setDoctorSearch,
     doctors,
-    displayedDoctors,
 
     // Loading
     loadingBranches,
@@ -269,6 +275,7 @@ export function useOnlineBooking() {
     setModalType,
 
     // Options
+    doctorOptions,
     branchOptions,
     dateOptions,
     slotOptions,

@@ -2,40 +2,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { recommendationService } from '../services/recommendationService'
 
-const GUEST_SESSION_KEY = 'vitacare_mobile_guest_session_id'
+import { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
+export { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
 const RECENTLY_VIEWED_KEY = 'vitacare_mobile_recently_viewed_packages'
-
-let cachedSessionId: string | null = null
-
-/**
- * Lấy hoặc sinh mới Guest Session ID duy nhất cho thiết bị mobile
- */
-export async function getOrGenerateGuestSessionId(): Promise<string> {
-  if (cachedSessionId && cachedSessionId.length >= 16) {
-    return cachedSessionId
-  }
-
-  try {
-    const localId = await AsyncStorage.getItem(GUEST_SESSION_KEY)
-    if (localId && localId.length >= 16) {
-      cachedSessionId = localId
-      return localId
-    }
-  } catch (err) {
-    console.warn('[Telemetry] Failed to read guest session from storage:', err)
-  }
-
-  // Khởi tạo Session ID mới cho Mobile
-  const newId = 'm_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now().toString(36)
-  cachedSessionId = newId
-  try {
-    await AsyncStorage.setItem(GUEST_SESSION_KEY, newId)
-  } catch (err) {
-    console.warn('[Telemetry] Failed to save guest session to storage:', err)
-  }
-
-  return newId
-}
 
 export interface RecentlyViewedPackage {
   id: string
@@ -54,7 +23,7 @@ export interface RecentlyViewedPackage {
  * Hook quản lý Telemetry Tracking hành vi người dùng trên Mobile
  */
 export function useBehaviorTracker() {
-  const [sessionId, setSessionId] = useState<string>(cachedSessionId || '')
+  const [sessionId, setSessionId] = useState<string>('')
   const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedPackage[]>([])
   const lastTrackedQueryRef = useRef<string>('')
 

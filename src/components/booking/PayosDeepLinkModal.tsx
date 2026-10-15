@@ -53,6 +53,10 @@ export function PayosDeepLinkModal({
   const [countdown, setCountdown] = useState(0)
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const successHandledRef = useRef(false)
+  const successCallbackRef = useRef(onPaymentSuccess)
+  successCallbackRef.current = onPaymentSuccess
+  const sessionRef = useRef(0)
 
   // Đếm theo hạn giữ chỗ của backend, kể cả khi quay về từ app ngân hàng.
   useEffect(() => {
@@ -77,34 +81,61 @@ export function PayosDeepLinkModal({
     }
   }, [visible, paymentData?.holdExpiresAt])
 
-  // 2. Tự động kiểm tra trạng thái thanh toán định kỳ mỗi 2.5s
+  // Check immediately and reconcile when returning from a bank/browser.
   useEffect(() => {
-    if (!visible || !appointmentId || isSuccess) {
-      if (pollingRef.current) clearInterval(pollingRef.current)
-      return
-    }
-
-    const checkStatus = async () => {
+    const session = ++sessionRef.current
+    successHandledRef.current = false
+    setIsSuccess(false)
+    setIsChecking(false)
+    if (!visible || !appointmentId) return
+    let disposed = false
+    let inFlight = false
+    let reconcilePending = false
+    let checks = 0
+    const checkStatus = async (reconcile = false) => {
+      if (disposed || successHandledRef.current) return
+      if (inFlight) {
+        reconcilePending ||= reconcile
+        return
+      }
+      inFlight = true
       try {
-        const res = await paymentService.checkPaymentStatus(appointmentId)
-        if (res.isPaid) {
+        const res = reconcile
+          ? await paymentService.refreshPaymentStatus(appointmentId)
+          : await paymentService.checkPaymentStatus(appointmentId)
+        if (!disposed && session === sessionRef.current && res.isPaid && !successHandledRef.current) {
+          successHandledRef.current = true
           setIsSuccess(true)
           if (pollingRef.current) clearInterval(pollingRef.current)
-          setTimeout(() => {
-            onPaymentSuccess()
-          }, 1200)
+          successCallbackRef.current()
         }
       } catch {
-        // Tiếp tục kiểm tra ở chu kỳ sau
+        // Keep waiting for the backend worker or retry on the next interval.
+      } finally {
+        inFlight = false
+        if (reconcilePending && !disposed && !successHandledRef.current) {
+          reconcilePending = false
+          void checkStatus(true)
+        }
       }
     }
 
-    pollingRef.current = setInterval(checkStatus, 2500)
-
+    void checkStatus(true)
+    pollingRef.current = setInterval(() => {
+      if (AppState.currentState === 'background' || AppState.currentState === 'inactive') return
+      // A missing/delayed webhook must not leave an active payment screen waiting forever.
+      void checkStatus(++checks % 4 === 0)
+    }, 2500)
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void checkStatus(true)
+    })
     return () => {
+      disposed = true
+      if (sessionRef.current === session) sessionRef.current++
       if (pollingRef.current) clearInterval(pollingRef.current)
+      subscription.remove()
     }
-  }, [visible, appointmentId, isSuccess, onPaymentSuccess])
+  }, [visible, appointmentId, paymentData?.orderCode])
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -139,21 +170,25 @@ export function PayosDeepLinkModal({
     }
   }
 
-  // Xử lý xác nhận thanh toán Demo (mô phỏng để test nhanh không cần chuyển khoản thật)
+  // Explicit demo action: no real bank transfer is required.
   const handleSimulateDemoPay = async () => {
-    if (isChecking || !appointmentId) return
+    if (isChecking || !appointmentId || successHandledRef.current) return
+    const session = sessionRef.current
     setIsChecking(true)
     try {
-      const targetId = paymentData?.paymentId || appointmentId
-      await paymentService.simulateSuccess(targetId)
+      await paymentService.simulateSuccess(paymentData?.paymentId || appointmentId)
+      if (session !== sessionRef.current || successHandledRef.current) return
+      const result = await paymentService.checkPaymentStatus(appointmentId)
+      if (!result.isPaid) throw new Error('Payment not confirmed')
+      if (session !== sessionRef.current || successHandledRef.current) return
+      successHandledRef.current = true
       setIsSuccess(true)
-      setTimeout(() => {
-        onPaymentSuccess()
-      }, 1000)
+      if (pollingRef.current) clearInterval(pollingRef.current)
+      successCallbackRef.current()
     } catch {
       Alert.alert('Lỗi mô phỏng', 'Không thể mô phỏng thanh toán, vui lòng thử lại.')
     } finally {
-      setIsChecking(false)
+      if (session === sessionRef.current) setIsChecking(false)
     }
   }
 
@@ -287,7 +322,7 @@ export function PayosDeepLinkModal({
                 <View className="flex-row items-center mt-2.5">
                   <Ionicons name="time-outline" size={13} color="#ea580c" />
                   <Text className="text-xs text-orange-600 font-semibold ml-1">
-                    {countdown > 0 ? `Giữ chỗ trong: ${formatCountdown(countdown)}` : 'Đã hết thời gian giữ chỗ. Vui lòng đặt lịch lại.'}
+                    {countdown > 0 ? `Giữ chỗ trong: ${formatCountdown(countdown)}` : 'Hết thời gian giữ chỗ. Hệ thống đang đối soát kết quả thanh toán.'}
                   </Text>
                 </View>
               </View>
@@ -385,10 +420,12 @@ export function PayosDeepLinkModal({
                 </View>
               </View>
 
-              {/* NÚT THAO TÁC / MÔ PHỎNG TEST DEMO */}
+              {/* Explicit test action, separate from automatic real payment reconciliation. */}
               <View className="space-y-2">
                 <TouchableOpacity
                   activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Test thanh toán mô phỏng"
                   onPress={handleSimulateDemoPay}
                   disabled={isChecking}
                   className="bg-primary-600 py-3 rounded-xl items-center justify-center flex-row shadow-sm"
@@ -399,9 +436,10 @@ export function PayosDeepLinkModal({
                     <Ionicons name="flash-outline" size={16} color="#ffffff" className="mr-1.5" />
                   )}
                   <Text className="text-white  text-sm">
-                    {isChecking ? 'Đang xác nhận...' : 'test'}
+                    {isChecking ? 'Đang mô phỏng...' : 'Test thanh toán (mô phỏng)'}
                   </Text>
                 </TouchableOpacity>
+
 
                 {Boolean(paymentData?.checkoutUrl) && (
                   <TouchableOpacity

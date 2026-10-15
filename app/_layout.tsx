@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { useAuthStore } from '../src/store/useAuthStore'
+import { searchAnalytics } from '../src/services/searchAnalytics'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initializeAuth()
+    searchAnalytics.resume()
   }, [])
 
   return (

@@ -2,6 +2,9 @@ import { api, unwrapNestResponse } from './api'
 import { Appointment, CheckInPass } from '../types/appointment'
 
 export interface CheckoutPayload {
+  searchId?: string
+  sourceViewId?: string
+  analyticsSessionId?: string
   bookingMethodCode: string
   patientProfileId: string
   scheduleSlotId: string
@@ -68,6 +71,8 @@ export const appointmentService = {
         code: pass.bookingCode,
         bookingCode: pass.bookingCode,
         status: pass.status,
+        isTelehealth: pass.isTelehealth,
+        bookingMethod: pass.bookingMethod,
         queueNumber: pass.queueNumber || pass.estimatedQueueNumber,
         appointment_date: pass.appointmentDate,
         appointmentDate: pass.appointmentDate,
@@ -79,7 +84,7 @@ export const appointmentService = {
         branch: pass.branch,
         room: pass.room,
         totalAmount: pass.totalAmount,
-        qrPayload: pass.qrPayload,
+        qrPayload: pass.qrPayload ?? undefined,
       } as Appointment
     }
 
@@ -96,6 +101,8 @@ export const appointmentService = {
         code: payStatus.bookingCode,
         bookingCode: payStatus.bookingCode,
         status: payStatus.status,
+        isTelehealth: payStatus.isTelehealth,
+        bookingMethod: payStatus.bookingMethod,
         queueNumber: payStatus.queueNumber || payStatus.estimatedQueueNumber,
         branch: payStatus.branch,
         room: payStatus.room,

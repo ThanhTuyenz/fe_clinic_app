@@ -15,6 +15,7 @@ import { Appointment } from '../../src/types/appointment'
 import { formatDateVi } from '../../src/utils/date'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
+import { canJoinTelehealth } from '../../src/services/telehealthService'
 
 export default function AppointmentsScreen() {
   const router = useRouter()
@@ -90,6 +91,7 @@ export default function AppointmentsScreen() {
     const dateFormatted = formatDateVi(item.appointmentDate || item.appointment_date || item.createdAt || new Date().toISOString())
     const slotTime = item.startTime || item.slot || '08:00'
     const branchName = item.branch?.name || 'VitaCare Clinic'
+    const isOnline = Boolean(item.isTelehealth || item.bookingMethod?.code === 'ONLINE_CONSULTATION')
 
     return (
       <TouchableOpacity
@@ -114,14 +116,24 @@ export default function AppointmentsScreen() {
           <View className="flex-1 pr-2">
             <Text className="text-sm font-bold text-slate-800">{serviceName}</Text>
             <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
-              {branchName} {item.queueNumber ? `• STT #${item.queueNumber}` : ''}
+              {isOnline ? 'Tư vấn trực tuyến' : branchName} {!isOnline && item.queueNumber ? `• STT #${item.queueNumber}` : ''}
             </Text>
           </View>
           <View className="flex-row items-center">
-            <Ionicons name="qr-code-outline" size={18} color="#475569" />
+            <Ionicons name={isOnline ? 'videocam-outline' : 'qr-code-outline'} size={18} color="#475569" />
             <Ionicons name="chevron-forward" size={16} color="#94a3b8" className="ml-1" />
           </View>
         </View>
+        {canJoinTelehealth(item) && (
+          <TouchableOpacity
+            onPress={(event) => { event.stopPropagation(); router.push(`/consultation/${item.id}`) }}
+            className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 px-4 py-3"
+            accessibilityRole="button"
+          >
+            <Ionicons name="videocam-outline" size={18} color="white" />
+            <Text className="ml-2 text-sm font-bold text-white">Vào phòng tư vấn</Text>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     )
   }

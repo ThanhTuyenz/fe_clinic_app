@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
 import { bookingService } from '../../services/bookingService'
+import { searchAnalytics } from '../../services/searchAnalytics'
 import { resolveDoctorAvatarUrl } from '../../services/doctorService'
 import { Doctor } from '../../types/doctor'
 import { SelectModalOption } from '../../components/common/SelectModal'
@@ -73,6 +74,14 @@ export function useSpecialtyBooking() {
     [bookingInit?.services, selectedBranchId, selectedSpecialtyId]
   )
   const loadingServices = loadingInit
+  useEffect(() => {
+    if (selectedService?.id) void searchAnalytics.ensureView(String(selectedService.id), selectedBranchId || undefined).catch(() => {})
+  }, [selectedService?.id, selectedBranchId])
+  useEffect(() => {
+    if (!params.serviceId || loadingInit) return
+    const service = specialtyServices.find((item: any) => String(item.id) === String(params.serviceId))
+    if (service) setSelectedServiceState(service)
+  }, [params.serviceId, specialtyServices, loadingInit])
 
   // Chỉ reset dịch vụ nếu dịch vụ đang chọn không còn hợp lệ trong danh sách mới
   useEffect(() => {

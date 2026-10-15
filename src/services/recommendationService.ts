@@ -1,4 +1,5 @@
 import { api, unwrapNestResponse } from './api'
+import { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
 
 export interface RecommendedPackageItem {
   packageId: string
@@ -38,6 +39,9 @@ export interface TrackBehaviorPayload {
 }
 
 export interface SemanticSearchResultItem {
+  branchId?: string
+  bookingMethodCode?: string
+  specialtyId?: number | null
   id: string
   code: string
   name: string
@@ -67,6 +71,8 @@ export interface SearchBranchItem {
 }
 
 export interface SemanticSearchResponse {
+  searchId?: string
+  partial?: boolean
   query: string
   total: number
   packages: SemanticSearchResultItem[]
@@ -117,16 +123,17 @@ export const recommendationService = {
 
   async semanticSearch(
     query: string,
-    branchId?: string
+    branchId?: string,
+    signal?: AbortSignal
   ): Promise<SemanticSearchResponse> {
-    try {
-      const res = await api.get('/api/v1/recommendations/semantic-search', {
-        params: { q: query, ...(branchId ? { branchId } : {}) },
-      })
-      const data = unwrapNestResponse<SemanticSearchResponse>(res.data)
-      return data || { query, total: 0, packages: [], doctors: [], branches: [] }
-    } catch {
-      return { query, total: 0, packages: [], doctors: [], branches: [] }
+    const res = await api.get('/api/v1/recommendations/semantic-search', {
+      params: { q: query, sessionId: await getOrGenerateGuestSessionId(), ...(branchId ? { branchId } : {}) },
+      signal,
+    })
+    const data = unwrapNestResponse<SemanticSearchResponse>(res.data)
+    if (!data || !Array.isArray(data.packages) || !Array.isArray(data.doctors) || !Array.isArray(data.branches)) {
+      throw new Error('Kết quả tìm kiếm không hợp lệ. Vui lòng thử lại.')
     }
+    return data
   },
 }

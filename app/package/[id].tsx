@@ -18,6 +18,7 @@ import { useBookingStore } from '../../src/store/useBookingStore'
 import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
 import { formatCurrencyVi } from '../../src/utils/date'
 import { PackageCard } from '../../src/components/home/PackageCard'
+import { analyticsEventId, searchAnalytics } from '../../src/services/searchAnalytics'
 
 const SPECIALTY_COVER_IMAGES: Record<string, string> = {
   tim_mach:
@@ -100,9 +101,10 @@ const getSessionTypeLabel = (session?: string | null) => {
 
 export default function PackageDetailScreen() {
   const router = useRouter()
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, branchId, bookingMethodCode } = useLocalSearchParams<{ id: string; branchId?: string; bookingMethodCode?: string }>()
   const [isSaved, setIsSaved] = useState(false)
   const { trackViewPackage } = useBehaviorTracker()
+  const analyticsViewId = useMemo(() => analyticsEventId(), [id, branchId])
 
   const { data: pkg, isLoading, isError } = useQuery({
     queryKey: ['packageDetail', id],
@@ -113,6 +115,7 @@ export default function PackageDetailScreen() {
   // Telemetry: Ghi nhận sự kiện xem chi tiết gói khám (+2 điểm Intent)
   useEffect(() => {
     if (pkg && pkg.id) {
+      void searchAnalytics.view(String(pkg.id), branchId || pkg.branchId || pkg.branchBookingMethod?.branchId, analyticsViewId).catch(() => {})
       void trackViewPackage(pkg.id, pkg.specialtyId || pkg.specialty?.id, {
         name: pkg.name,
         code: pkg.code,
@@ -183,6 +186,16 @@ export default function PackageDetailScreen() {
   const handleBookNow = () => {
     const store = useBookingStore.getState()
     store.resetBooking()
+    const method = bookingMethodCode || pkg?.bookingMethod?.code || pkg?.branchBookingMethod?.bookingMethod?.code
+    const targetBranch = branchId || pkg?.branchId || pkg?.branchBookingMethod?.branchId
+    if (targetBranch) store.setBranchId(targetBranch)
+    if (method === 'SPECIALTY_EXAM') {
+      router.push({ pathname: '/booking/specialty', params: {
+        specialtyId: String(pkg?.specialtyId || pkg?.specialty?.id || ''),
+        serviceId: String(pkg?.id || id), branchId: targetBranch || '',
+      } })
+      return
+    }
     store.setBookingMethod('HEALTH_PACKAGE')
     if (pkg) {
       store.setHealthPackage({

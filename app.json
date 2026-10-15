@@ -12,9 +12,16 @@
       "expo-font",
       "expo-notifications",
       [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Cho phép VitaCare sử dụng camera để tư vấn video với bác sĩ.",
+          "microphonePermission": "Cho phép VitaCare sử dụng micro để tư vấn với bác sĩ."
+        }
+      ],
+      [
         "expo-camera",
         {
-          "cameraPermission": "Cho phép VitaCare sử dụng máy ảnh để quét mã QR trên CCCD.",
+          "cameraPermission": "Cho phép VitaCare sử dụng camera để quét CCCD và tư vấn video.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
@@ -33,6 +40,7 @@
     },
     "android": {
       "package": "com.vitacare.clinic",
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

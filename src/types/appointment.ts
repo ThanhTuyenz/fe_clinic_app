@@ -28,6 +28,8 @@ export interface TimeSlot {
 
 export interface Appointment {
   id: string
+  isTelehealth?: boolean
+  bookingMethod?: { code: string; name?: string } | null
   _id?: string
   code?: string
   bookingCode?: string | null
@@ -68,9 +70,11 @@ export interface Appointment {
 }
 
 export interface CheckInPass {
+  isTelehealth?: boolean
+  bookingMethod?: { code: string; name?: string } | null
   appointmentId: string
   bookingCode: string
-  qrPayload: string
+  qrPayload: string | null
   expiresAt: string
   status: string
   queueNumber: number | null

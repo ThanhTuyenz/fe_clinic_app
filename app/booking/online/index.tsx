@@ -7,7 +7,6 @@ import { Button } from '../../../src/components/common/Button'
 import {
   BookingDateTimeSection,
   BookingTimeline,
-  DoctorListSection,
 } from '../../../src/components/booking'
 import { SelectModal } from '../../../src/components/common/SelectModal'
 import { formatDateVi } from '../../../src/utils/date'
@@ -23,11 +22,7 @@ export default function OnlineBookingScreen() {
     selectedSlotId,
     isFormComplete,
 
-    // Search & Filter
-    doctorSearch,
-    setDoctorSearch,
     doctors,
-    displayedDoctors,
 
     // Loading
     loadingBranches,
@@ -39,6 +34,7 @@ export default function OnlineBookingScreen() {
     setModalType,
 
     // Options
+    doctorOptions,
     branchOptions,
     dateOptions,
     slotOptions,
@@ -81,16 +77,16 @@ export default function OnlineBookingScreen() {
               onPress={() => setModalType('branch')}
             />
 
-            {/* Danh sách thẻ bác sĩ tư vấn online hiển thị trực tiếp */}
-            <DoctorListSection
-              method="ONLINE_CONSULTATION"
-              doctors={doctors}
-              displayedDoctors={displayedDoctors}
-              selectedDoctor={selectedDoctor}
-              loadingDoctors={loadingDoctors}
-              doctorSearch={doctorSearch}
-              setDoctorSearch={setDoctorSearch}
-              onSelectDoctor={handleSelectDoctor}
+            <SelectInput
+              label="Bác sĩ tư vấn online"
+              required
+              placeholder="Chọn bác sĩ tư vấn online..."
+              value={selectedDoctor?.full_name || selectedDoctor?.fullName || selectedDoctor?.name}
+              sublabel={doctorOptions.find(option => String(option.id) === String(selectedDoctor?.id))?.subtitle}
+              leftIcon="person-outline"
+              loading={loadingDoctors}
+              disabled={!selectedBranchId}
+              onPress={() => setModalType('doctor')}
             />
           </View>
 
@@ -131,6 +127,19 @@ export default function OnlineBookingScreen() {
           options={branchOptions}
           selectedId={selectedBranchId}
           onSelect={handleSelectBranch}
+        />
+
+        <SelectModal
+          visible={modalType === 'doctor'}
+          onClose={() => setModalType(null)}
+          title="Chọn bác sĩ tư vấn online"
+          subtitle={`${doctors.length} bác sĩ • Tư vấn trực tuyến 1:1`}
+          searchPlaceholder="Tìm theo tên bác sĩ, chuyên khoa..."
+          options={doctorOptions}
+          selectedId={selectedDoctor?.id}
+          loading={loadingDoctors}
+          emptyText="Chưa có bác sĩ tư vấn online. Vui lòng thử lại sau."
+          onSelect={option => { if (option.extra) handleSelectDoctor(option.extra) }}
         />
 
         <SelectModal

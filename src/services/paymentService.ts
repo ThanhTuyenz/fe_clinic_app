@@ -34,10 +34,12 @@ export const paymentService = {
     const res = await api.get(`/api/v1/appointments/${appointmentId}/payment-status`)
     const data = unwrapNestResponse<any>(res.data)
     const isPaid =
+      data?.status === 'PAID' ||
       data?.status === 'CONFIRMED' ||
       data?.status === 'CHECKED_IN' ||
       data?.status === 'COMPLETED' ||
       data?.invoiceStatus === 'PAID' ||
+      data?.paymentStatus === 'SUCCESS' ||
       data?.isPaid === true
 
     return {
@@ -47,6 +49,21 @@ export const paymentService = {
       isPaid,
       paidAt: data?.paidAt,
     }
+  },
+
+  /** Reconcile a delayed webhook, then confirm the result from our backend. */
+  async refreshPaymentStatus(appointmentId: string) {
+    const current = await paymentService.checkPaymentStatus(appointmentId)
+    if (current.isPaid) return current
+    let syncError: unknown
+    try {
+      await paymentService.syncPayment(appointmentId)
+    } catch (error) {
+      syncError = error
+    }
+    const confirmed = await paymentService.checkPaymentStatus(appointmentId)
+    if (!confirmed.isPaid && syncError) throw syncError
+    return confirmed
   },
 
   /**

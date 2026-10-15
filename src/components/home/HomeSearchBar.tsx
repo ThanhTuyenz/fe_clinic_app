@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   ActivityIndicator,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -26,6 +27,8 @@ export interface HomeSearchBarProps {
   onSelectDoctor?: (doc: SearchDoctorItem) => void
   onSelectBranch?: (branch: SearchBranchItem) => void
   onCloseDropdown?: () => void
+  error?: string | null
+  onRetry?: () => void
 }
 
 const POPULAR_SUGGESTIONS = ['Đau đầu', 'Đau dạ dày', 'Tim mạch', 'Khám tổng quát', 'Nhi khoa']
@@ -40,6 +43,8 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
   onSelectPackage,
   onSelectDoctor,
   onSelectBranch,
+  error,
+  onRetry,
 }) => {
   const hasResults =
     Boolean(
@@ -62,6 +67,7 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
           style={[{ outlineWidth: 0, outlineStyle: 'none' } as any]}
           autoCapitalize="none"
           autoCorrect={false}
+          maxLength={200}
         />
         {isLoading ? (
           <ActivityIndicator size="small" color="#64748b" style={{ marginRight: 4 }} />
@@ -110,8 +116,21 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
           ) : null}
 
           {/* Results List */}
+          {error ? (
+            <View className="p-4 items-center">
+              <Text className="text-xs text-slate-600 text-center">{error}</Text>
+              <TouchableOpacity onPress={onRetry} className="mt-2 px-3 py-2">
+                <Text className="text-xs font-semibold text-primary-700">Thử lại</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          {searchResults?.partial ? (
+            <TouchableOpacity onPress={onRetry} className="px-4 py-2">
+              <Text className="text-xs text-slate-500">Một số kết quả chưa tải được. Nhấn để thử lại.</Text>
+            </TouchableOpacity>
+          ) : null}
           {hasResults ? (
-            <View className="max-h-96">
+            <ScrollView style={{ maxHeight: 384 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
               {/* 1. Gói khám phù hợp */}
               {searchResults?.packages && searchResults.packages.length > 0 && (
                 <View className="p-1.5 border-b border-slate-100">
@@ -198,11 +217,11 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
                   ))}
                 </View>
               )}
-            </View>
+            </ScrollView>
           ) : null}
 
           {/* Empty State */}
-          {!isLoading && !hasResults ? (
+          {!isLoading && !hasResults && !error ? (
             <View className="py-5 px-4 items-center">
               <Ionicons name="search-outline" size={22} color="#cbd5e1" />
               <Text className="text-xs font-medium text-slate-700 mt-2 text-center">

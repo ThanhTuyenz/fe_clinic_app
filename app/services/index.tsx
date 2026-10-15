@@ -17,6 +17,8 @@ import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { doctorService } from '../../src/services/doctorService'
 import { useBookingStore } from '../../src/store/useBookingStore'
 import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
+import { useSemanticSearch } from '../../src/hooks/useSemanticSearch'
+import { searchAnalytics } from '../../src/services/searchAnalytics'
 import { formatCurrencyVi } from '../../src/utils/date'
 
 const CURATED_IMAGES = {
@@ -134,6 +136,7 @@ export default function ServicesScreen() {
   const router = useRouter()
   const { trackSearch } = useBehaviorTracker()
   const [searchQuery, setSearchQuery] = useState('')
+  const { results: semanticResults, isSearching, error: searchError, retry: retrySearch } = useSemanticSearch(searchQuery)
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<number | 'all'>('all')
   const [priceFilter, setPriceFilter] = useState<'all' | 'under1m' | '1to3m' | 'over3m'>('all')
   const [sortBy, setSortBy] = useState<'default' | 'priceAsc' | 'priceDesc'>('default')
@@ -146,15 +149,10 @@ export default function ServicesScreen() {
     }))
   }
 
-  // Telemetry: Ghi nhận từ khóa tìm kiếm khi người dùng dừng gõ (Debounce 600ms)
+  // Record personal interests only after a current, successful search.
   useEffect(() => {
-    const q = searchQuery.trim()
-    if (q.length < 2) return
-    const timer = setTimeout(() => {
-      void trackSearch(q)
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [searchQuery, trackSearch])
+    if (semanticResults && !semanticResults.partial && !isSearching) void trackSearch(semanticResults.query)
+  }, [semanticResults, isSearching, trackSearch])
 
   // 1. Fetch Toàn bộ Danh sách Gói khám thực tế từ DB qua API
   const {
@@ -192,27 +190,18 @@ export default function ServicesScreen() {
 
   // 4. Lọc & Sắp xếp dữ liệu theo Chuyên khoa, Tìm kiếm, Mức giá
   const filteredPackages = useMemo(() => {
-    let list = [...uniquePackages]
+    let list = searchQuery.trim().length >= 2
+      ? (semanticResults?.packages || []).map(hit => ({ ...allPackages.find(pkg => String(pkg.id) === hit.id), ...hit }))
+      : [...uniquePackages]
 
     // Lọc theo Chuyên khoa
     if (selectedSpecialtyId !== 'all') {
       list = list.filter((p) => {
         const specId = p.specialtyId || p.specialty?.id
-        return specId === selectedSpecialtyId
+        return String(specId) === String(selectedSpecialtyId)
       })
     }
 
-    // Lọc theo Từ khóa tìm kiếm
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      list = list.filter((p) => {
-        const name = (p.displayName || p.name || '').toLowerCase()
-        const desc = (p.description || p.notes || '').toLowerCase()
-        const spec = (p.specialty?.name || p.specialtyName || '').toLowerCase()
-        const symptoms = Array.isArray(p.symptoms) ? p.symptoms.join(' ').toLowerCase() : ''
-        return name.includes(q) || desc.includes(q) || spec.includes(q) || symptoms.includes(q)
-      })
-    }
 
     // Lọc theo Mức giá
     if (priceFilter === 'under1m') {
@@ -234,12 +223,21 @@ export default function ServicesScreen() {
     }
 
     return list
-  }, [uniquePackages, selectedSpecialtyId, searchQuery, priceFilter, sortBy])
+  }, [uniquePackages, allPackages, semanticResults, selectedSpecialtyId, searchQuery, priceFilter, sortBy])
 
   // Xử lý khi bấm đặt khám gói
-  const handleBookPackage = (pkg: any) => {
+  const handleBookPackage = async (pkg: any) => {
+    if (semanticResults?.searchId) await searchAnalytics.click(semanticResults.searchId, 'PACKAGE', String(pkg.id), semanticResults.packages.findIndex(item => item.id === String(pkg.id)) + 1, pkg.branchId).catch(() => {})
     const store = useBookingStore.getState()
     store.resetBooking()
+    const branchId = pkg.branchId || pkg.branchBookingMethod?.branchId || ''
+    if (branchId) store.setBranchId(branchId)
+    if ((pkg.bookingMethodCode || pkg.bookingMethod?.code || pkg.branchBookingMethod?.bookingMethod?.code) === 'SPECIALTY_EXAM') {
+      router.push({ pathname: '/booking/specialty', params: {
+        branchId, specialtyId: String(pkg.specialtyId || pkg.specialty?.id || ''), serviceId: String(pkg.id),
+      } })
+      return
+    }
     store.setBookingMethod('HEALTH_PACKAGE')
     store.setHealthPackage({
       id: String(pkg.id),
@@ -292,6 +290,7 @@ export default function ServicesScreen() {
             placeholder="Tìm theo tên gói, triệu chứng hoặc chuyên khoa..."
             placeholderTextColor="#94a3b8"
             value={searchQuery}
+            maxLength={200}
             onChangeText={setSearchQuery}
             className="flex-1 text-xs text-slate-800 p-0 outline-none"
             style={[{ outlineWidth: 0, outlineStyle: 'none' } as any]}
@@ -429,7 +428,14 @@ export default function ServicesScreen() {
       </View>
 
       {/* Danh sách Gói khám Lưới 2 Cột (2 Cards / Hàng) */}
-      {loadingPackages ? (
+      {searchError ? (
+        <View className="p-6 items-center">
+          <Text className="text-sm text-slate-600 text-center">{searchError}</Text>
+          <TouchableOpacity onPress={() => void retrySearch()} className="p-3">
+            <Text className="text-sm text-primary-700">Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loadingPackages || isSearching ? (
         <View className="flex-1 items-center justify-center py-20">
           <ActivityIndicator size="large" color="#28a745" />
           <Text className="text-xs text-slate-400 mt-3">Đang tải danh sách dịch vụ...</Text>
@@ -484,7 +490,10 @@ export default function ServicesScreen() {
               >
                 <TouchableOpacity
                   activeOpacity={0.88}
-                  onPress={() => router.push(`/package/${item.id || item.slug}`)}
+                  onPress={async () => {
+                    if (semanticResults?.searchId) await searchAnalytics.click(semanticResults.searchId, 'PACKAGE', String(item.id), semanticResults.packages.findIndex(pkg => pkg.id === String(item.id)) + 1, item.branchId).catch(() => {})
+                    router.push({ pathname: '/package/[id]', params: { id: String(item.id || item.slug), branchId: item.branchId || '', bookingMethodCode: item.bookingMethodCode || '' } })
+                  }}
                 >
                   {/* Image Cover */}
                   <View className="w-full bg-slate-100 relative overflow-hidden" style={{ height: 110 }}>
