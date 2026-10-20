@@ -12,9 +12,10 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useMyAppointments } from '../../src/hooks/useBooking'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { Appointment } from '../../src/types/appointment'
-import { formatDateVi } from '../../src/utils/date'
+import { formatDateVi, formatCurrencyVi } from '../../src/utils/date'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { Button } from '../../src/components/common/Button'
+import { Image } from 'expo-image'
 import { canJoinTelehealth } from '../../src/services/telehealthService'
 
 export default function AppointmentsScreen() {
@@ -43,11 +44,7 @@ export default function AppointmentsScreen() {
     const status = (rawStatus || '').toUpperCase()
     switch (status) {
       case 'CONFIRMED':
-        return (
-          <View className="bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg">
-            <Text className="text-[11px] font-bold text-primary-700">Đã xác nhận</Text>
-          </View>
-        )
+        return null
       case 'CHECKED_IN':
         return (
           <View className="bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-lg">
@@ -84,50 +81,157 @@ export default function AppointmentsScreen() {
   }
 
   const renderAppointmentItem = ({ item }: { item: Appointment }) => {
+    const doc = item.doctor as any
     const docName =
-      item.doctor?.full_name || item.doctor?.fullName || item.doctor?.name || 'Bác sĩ chuyên khoa'
-    const serviceName =
-      item.healthPackage?.name || item.service?.name || docName
-    const dateFormatted = formatDateVi(item.appointmentDate || item.appointment_date || item.createdAt || new Date().toISOString())
-    const slotTime = item.startTime || item.slot || '08:00'
+      doc?.fullName || doc?.full_name || doc?.name || item.healthPackage?.name || item.service?.name || 'Bác sĩ chuyên khoa'
+    const docAvatar = doc?.avatar
+    const docSpecialty =
+      typeof doc?.specialty === 'object'
+        ? doc?.specialty?.name
+        : doc?.specialty || (item as any).specialty || ''
+
+    const dateFormatted = formatDateVi(
+      item.appointmentDate || item.appointment_date || item.createdAt || new Date().toISOString()
+    )
+    const slotTime = item.startTime && item.endTime
+      ? `${String(item.startTime).slice(0, 5)} - ${String(item.endTime).slice(0, 5)}`
+      : item.startTime || item.slot || '08:00'
     const branchName = item.branch?.name || 'VitaCare Clinic'
     const isOnline = Boolean(item.isTelehealth || item.bookingMethod?.code === 'ONLINE_CONSULTATION')
+    const bookingCode = item.bookingCode || item.code || ''
+    const patientName = (item as any).patient?.fullName || (item as any).patientProfile?.fullName || ''
+    const roomName = (item as any).room?.name ? `Phòng ${(item as any).room.name}` : ''
+    const queueNumber = item.queueNumber
+    const totalAmount = item.totalAmount || (item as any).consultation_fee
+    const canJoin = canJoinTelehealth(item)
 
     return (
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => router.push(`/booking/${item.id || item._id}`)}
-        className="bg-white rounded-lg p-4 mb-2.5 border border-slate-200/90"
+        className="bg-[#28a745]/[0.06] rounded-lg p-4 mb-2.5 border border-slate-200/90"
+        style={{ backgroundColor: 'rgba(40, 167, 69, 0.06)' }}
       >
-        <View className="flex-row items-center justify-between pb-3 border-b border-slate-100">
+        {/* Header: Ngày giờ & Mã phiếu khám */}
+        <View className="flex-row items-center justify-between pb-3 border-b border-slate-200/60">
           <View className="flex-row items-center flex-1 pr-2">
-            <View className="w-8 h-8 rounded-lg bg-slate-100 items-center justify-center mr-2.5">
+            <View className="w-8 h-8 rounded-lg bg-white items-center justify-center mr-2.5 border border-slate-200/60">
               <Ionicons name="calendar-outline" size={15} color="#475569" />
             </View>
-            <Text className="text-sm font-bold text-slate-800">
-              {dateFormatted}
-            </Text>
-            <Text className="text-xs text-slate-500 ml-1.5">({slotTime})</Text>
+            <View>
+              <Text className="text-sm font-bold text-slate-800">
+                {dateFormatted}
+              </Text>
+              <Text className="text-xs font-semibold text-primary-700 mt-0.5">
+                {slotTime}
+              </Text>
+            </View>
           </View>
-          {renderStatusBadge(item.status)}
+          {bookingCode ? (
+            <View className="bg-white px-2 py-1 rounded border border-slate-200/80">
+              <Text className="text-xs font-mono font-bold text-slate-700">
+                #{bookingCode}
+              </Text>
+            </View>
+          ) : renderStatusBadge(item.status)}
         </View>
 
+        {/* Thân thẻ: Avatar bác sĩ & Chuyên khoa */}
         <View className="pt-3 flex-row items-center justify-between">
-          <View className="flex-1 pr-2">
-            <Text className="text-sm font-bold text-slate-800">{serviceName}</Text>
-            <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
-              {isOnline ? 'Tư vấn trực tuyến' : branchName} {!isOnline && item.queueNumber ? `• STT #${item.queueNumber}` : ''}
+          <View className="flex-row items-center flex-1 pr-2">
+            {docAvatar ? (
+              <Image
+                source={{ uri: docAvatar }}
+                style={{ width: 44, height: 44, borderRadius: 22, marginRight: 12 }}
+                contentFit="cover"
+              />
+            ) : (
+              <View className="w-11 h-11 rounded-full bg-white items-center justify-center mr-3 border border-slate-200/60">
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color="#475569"
+                />
+              </View>
+            )}
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-slate-800" numberOfLines={1}>
+                {docName}
+              </Text>
+              <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
+                {docSpecialty ? `Chuyên khoa: ${docSpecialty}` : (isOnline ? 'Tư vấn trực tuyến' : 'Khám chuyên khoa')}
+              </Text>
+            </View>
+          </View>
+
+          <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+        </View>
+
+        {/* Thông tin chi tiết bổ sung (Bệnh nhân, Cơ sở / Hình thức, Phòng/STT, Chi phí) */}
+        <View className="mt-3 pt-2.5 border-t border-slate-200/60">
+          {/* Bệnh nhân */}
+          {patientName ? (
+            <View className="flex-row items-center justify-between mb-1.5">
+              <View className="flex-row items-center">
+                <Ionicons name="person-circle-outline" size={14} color="#64748b" />
+                <Text className="text-xs text-slate-500 ml-1.5">Bệnh nhân:</Text>
+              </View>
+              <Text className="text-xs font-bold text-slate-800">{patientName}</Text>
+            </View>
+          ) : null}
+
+          {/* Hình thức / Địa điểm */}
+          <View className="flex-row items-center justify-between mb-1.5">
+            <View className="flex-row items-center">
+              <Ionicons
+                name={isOnline ? 'videocam-outline' : 'business-outline'}
+                size={14}
+                color="#64748b"
+              />
+              <Text className="text-xs text-slate-500 ml-1.5">
+                {isOnline ? 'Hình thức:' : 'Cơ sở:'}
+              </Text>
+            </View>
+            <Text className="text-xs font-semibold text-slate-800 text-right max-w-[210px]" numberOfLines={1}>
+              {isOnline ? 'Tư vấn trực tuyến 1:1' : branchName}
             </Text>
           </View>
-          <View className="flex-row items-center">
-            <Ionicons name={isOnline ? 'videocam-outline' : 'qr-code-outline'} size={18} color="#475569" />
-            <Ionicons name="chevron-forward" size={16} color="#94a3b8" className="ml-1" />
-          </View>
+
+          {/* Phòng khám / STT (nếu khám tại quầy) */}
+          {!isOnline && (roomName || queueNumber) ? (
+            <View className="flex-row items-center justify-between mb-1.5">
+              <View className="flex-row items-center">
+                <Ionicons name="medical-outline" size={14} color="#64748b" />
+                <Text className="text-xs text-slate-500 ml-1.5">Tiếp đón:</Text>
+              </View>
+              <Text className="text-xs font-bold text-primary-700">
+                {roomName ? `${roomName}` : ''}{roomName && queueNumber ? ' • ' : ''}{queueNumber ? `STT #${queueNumber}` : ''}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Chi phí khám */}
+          {totalAmount ? (
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <Ionicons name="wallet-outline" size={14} color="#64748b" />
+                <Text className="text-xs text-slate-500 ml-1.5">Chi phí khám:</Text>
+              </View>
+              <Text className="text-xs font-bold text-slate-800">
+                {formatCurrencyVi(Number(totalAmount))}
+              </Text>
+            </View>
+          ) : null}
         </View>
-        {canJoinTelehealth(item) && (
+
+        {/* Nút vào phòng tư vấn chuẩn màu primary của dự án */}
+        {canJoin && (
           <TouchableOpacity
-            onPress={(event) => { event.stopPropagation(); router.push(`/consultation/${item.id}`) }}
-            className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 px-4 py-3"
+            onPress={(event) => {
+              event.stopPropagation()
+              router.push(`/consultation/${item.id}`)
+            }}
+            className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 active:bg-primary-700 py-2.5 px-4"
             accessibilityRole="button"
           >
             <Ionicons name="videocam-outline" size={18} color="white" />

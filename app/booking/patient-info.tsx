@@ -279,9 +279,10 @@ export default function PatientInfoScreen() {
                     key={String(item.id)}
                     activeOpacity={0.8}
                     onPress={() => setSelectedProfileId(String(item.id))}
-                    className={`p-3.5 rounded-lg border bg-white ${
-                      isSelected ? 'border-primary-600' : 'border-slate-200/90'
+                    className={`p-3.5 rounded-lg border border-slate-200/90 ${
+                      isSelected ? 'bg-[#28a745]/[0.06]' : 'bg-white'
                     }`}
+                    style={isSelected ? { backgroundColor: 'rgba(40, 167, 69, 0.06)' } : { backgroundColor: '#ffffff' }}
                   >
                     <View className="flex-row items-start justify-between">
                       {/* Profile details */}
@@ -354,14 +355,14 @@ export default function PatientInfoScreen() {
                     </View>
 
                     {/* Bottom Action: Xem & Cập nhật hồ sơ */}
-                    <View className="flex-row items-center justify-end pt-2 mt-2 border-t border-slate-100">
+                    <View className="flex-row items-center justify-end pt-2 mt-2 border-t border-[#28a745]/15">
                       <TouchableOpacity
                         activeOpacity={0.7}
                         onPress={(e) => {
                           e.stopPropagation?.()
                           handleEditProfile(item)
                         }}
-                        className="flex-row items-center gap-1 bg-slate-50 border border-slate-200/90 px-2.5 py-1 rounded active:bg-slate-100"
+                        className="flex-row items-center gap-1 bg-white border border-slate-200/90 px-2.5 py-1 rounded active:bg-slate-50"
                       >
                         <Ionicons name="create-outline" size={13} color="#28a745" />
                         <Text className="text-[11px] font-bold text-slate-700">Chi tiết / Sửa hồ sơ</Text>

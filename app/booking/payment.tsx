@@ -201,10 +201,10 @@ export default function BookingPaymentScreen() {
                     key={m.id}
                     activeOpacity={0.8}
                     onPress={() => setPaymentMethod(m.id)}
-                    className={`p-3.5 rounded-lg border transition-all ${isSelected
-                        ? 'border-slate-900 bg-slate-50/60'
-                        : 'border-slate-200 bg-white'
-                      }`}
+                    className={`p-3.5 rounded-lg border border-slate-200/90 transition-all ${
+                      isSelected ? 'bg-[#28a745]/[0.06]' : 'bg-white'
+                    }`}
+                    style={isSelected ? { backgroundColor: 'rgba(40, 167, 69, 0.06)' } : { backgroundColor: '#ffffff' }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center flex-1 pr-2">
@@ -231,7 +231,10 @@ export default function BookingPaymentScreen() {
 
                       {/* Radio Selection */}
                       {isSelected ? (
-                        <View className="w-5 h-5 rounded-full bg-slate-900 items-center justify-center">
+                        <View
+                          className="w-5 h-5 rounded-full items-center justify-center bg-[#28a745]"
+                          style={{ backgroundColor: '#28a745' }}
+                        >
                           <Ionicons name="checkmark" size={13} color="#ffffff" />
                         </View>
                       ) : (

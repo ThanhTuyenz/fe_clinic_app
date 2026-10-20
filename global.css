@@ -12,6 +12,7 @@ body,
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Tắt viền và hiệu ứng hover/focus/active của trình duyệt web */

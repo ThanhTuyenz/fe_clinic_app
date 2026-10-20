@@ -31,7 +31,7 @@ export const paymentService = {
     isPaid: boolean
     paidAt?: string
   }> {
-    const res = await api.get(`/api/v1/appointments/${appointmentId}/payment-status`)
+    const res = await api.get(`/api/v1/payments/appointments/${appointmentId}/status`)
     const data = unwrapNestResponse<any>(res.data)
     const isPaid =
       data?.status === 'PAID' ||

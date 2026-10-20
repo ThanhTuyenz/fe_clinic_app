@@ -33,9 +33,12 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onSelect && onSelect(doctor)}
-      className={`bg-white rounded-lg p-3 mb-2.5 border flex-row items-center shadow-xs ${
-        selected ? 'border-primary-600 bg-primary-50/40' : 'border-slate-200'
-      }`}
+      className="rounded-lg p-3 mb-2.5 border border-slate-200/90 flex-row items-center shadow-xs"
+      style={
+        selected
+          ? { backgroundColor: 'rgba(40, 167, 69, 0.06)' }
+          : { backgroundColor: '#ffffff' }
+      }
     >
       <Image
         source={{ uri: doctor.avatar }}
@@ -58,11 +61,14 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
             </Text>
           </View>
           {selected ? (
-            <View className="w-5 h-5 rounded-full bg-primary-600 items-center justify-center">
+            <View
+              className="w-5 h-5 rounded-full items-center justify-center bg-[#28a745]"
+              style={{ backgroundColor: '#28a745' }}
+            >
               <Ionicons name="checkmark" size={13} color="#ffffff" />
             </View>
           ) : (
-            <View className="w-5 h-5 rounded-full border border-slate-300" />
+            <View className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
           )}
         </View>
 

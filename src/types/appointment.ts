@@ -108,8 +108,7 @@ export interface HealthPackage {
   price: number
   durationMin?: number
   specialtyId?: number
-  sessionType?: string
-  activeDaysOfWeek?: number[]
+  receptionSchedules?: { branchId: string; dayOfWeek: number; sessions: ("MORNING" | "AFTERNOON" | "EVENING")[] }[];
   services?: any[]
   image?: string
 }

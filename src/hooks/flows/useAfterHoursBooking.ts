@@ -164,7 +164,7 @@ export function useAfterHoursBooking() {
         return {
           id: slotId,
           title: timeRange,
-          subtitle: `Ngoài giờ (17:30 - 20:30) • ${isAvail ? 'Còn trống' : 'Đã kín chỗ'}`,
+          subtitle: `Ngoài giờ (17:00 - 20:30) • ${isAvail ? 'Còn trống' : 'Đã kín chỗ'}`,
           badge: 'Ngoài giờ',
           badgeColor: 'bg-amber-100',
           disabled: !isAvail,

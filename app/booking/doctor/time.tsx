@@ -162,7 +162,7 @@ export default function DoctorTimeBookingScreen() {
         {/* Nút Tiếp tục sang Thông tin người khám */}
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3">
           <Button
-            title={isFormComplete ? 'Tiếp tục: Thông tin người khám' : 'Vui lòng chọn ngày & giờ khám'}
+            title={isFormComplete ? 'Chọn hồ sơ' : 'Vui lòng chọn ngày & giờ khám'}
             onPress={handleContinue}
             disabled={!isFormComplete}
             className="py-3 rounded-lg w-full"

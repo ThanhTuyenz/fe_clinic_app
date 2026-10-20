@@ -85,19 +85,19 @@ const getPackageCoverImage = (
   return DEFAULT_COVER_IMAGES[hash % DEFAULT_COVER_IMAGES.length]
 }
 
-const getSessionTypeLabel = (session?: string | null) => {
-  switch (session) {
-    case 'MORNING':
-      return '07:30 - 11:30'
-    case 'AFTERNOON':
-      return '13:30 - 17:00'
-    case 'OFFICE_HOURS':
-      return '07:30 - 17:00'
-    case 'ALL_DAY':
-    default:
-      return '07:00 - 20:00'
+const getReceptionLabel = (days: { branchId: string; dayOfWeek: number; sessions: string[] }[] = [], branchId?: string) => {
+  const selected = branchId ? days.filter((day) => day.branchId === branchId) : days;
+  if (!selected.length) return 'Chưa mở lịch tiếp nhận';
+  if (!branchId && new Set(selected.map((day) => day.branchId)).size > 1) return 'Theo lịch tiếp nhận từng cơ sở';
+  const labels: Record<string, string> = { MORNING: 'Sáng 07:30–11:30', AFTERNOON: 'Chiều 13:30–17:00', EVENING: 'Tối 17:00–20:30' };
+  const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  const groups = new Map<string, string[]>();
+  for (const day of selected) {
+    const label = [...day.sessions].sort().map((session) => labels[session]).join(', ');
+    groups.set(label, [...(groups.get(label) || []), dayNames[day.dayOfWeek]]);
   }
-}
+  return [...groups].map(([label, days]) => `${days.length === 7 ? 'Cả tuần' : days.join(', ')}: ${label}`).join(' · ');
+};
 
 export default function PackageDetailScreen() {
   const router = useRouter()
@@ -141,7 +141,7 @@ export default function PackageDetailScreen() {
   const name = pkg?.name || 'Gói khám sức khỏe'
   const price = pkg?.price ? Number(pkg.price) : 0
   const duration = pkg?.durationMin ? `${pkg.durationMin} phút` : '20 - 45 phút'
-  const sessionType = getSessionTypeLabel(pkg?.sessionType)
+  const receptionLabel = getReceptionLabel(pkg?.receptionSchedules, branchId)
   const coverImage = getPackageCoverImage(name, specialtyName, pkg?.imageUrl || pkg?.image)
 
   const symptoms: string[] = Array.isArray(pkg?.symptoms) ? pkg.symptoms : []
@@ -323,7 +323,7 @@ export default function PackageDetailScreen() {
                       <Ionicons name="calendar-outline" size={15} color="#28a745" style={{ marginRight: 8 }} />
                       <Text className="text-xs text-slate-500">Khung giờ tiếp đón:</Text>
                     </View>
-                    <Text className="text-xs font-bold text-slate-800">{sessionType}</Text>
+                    <Text className="text-xs font-bold text-slate-800">{receptionLabel}</Text>
                   </View>
 
                   <View className="h-px bg-slate-200/50" />

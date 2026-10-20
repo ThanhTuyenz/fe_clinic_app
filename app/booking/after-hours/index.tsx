@@ -98,7 +98,7 @@ export default function AfterHoursBookingScreen() {
             />
           </View>
 
-          {/* 2. Thời gian khám ngoài giờ (17:30 - 20:30) */}
+          {/* 2. Thời gian khám ngoài giờ (17:00 - 20:30) */}
           <BookingDateTimeSection
             isHealthPackage={false}
             hasDoctorOrPackage={Boolean(selectedDoctor)}
@@ -154,7 +154,7 @@ export default function AfterHoursBookingScreen() {
           subtitle={
             selectedSpecialtyObj?.name
               ? `Chuyên khoa: ${selectedSpecialtyObj.name}`
-              : 'Bác sĩ trực ngoài giờ 17:30 - 20:30'
+              : 'Bác sĩ trực ngoài giờ 17:00 - 20:30'
           }
           searchPlaceholder="Tìm kiếm theo tên bác sĩ, học vị..."
           options={doctorOptions}
@@ -178,7 +178,7 @@ export default function AfterHoursBookingScreen() {
           visible={modalType === 'slot'}
           onClose={() => setModalType(null)}
           title="Chọn khung giờ ngoài giờ"
-          subtitle={selectedDate ? `Ngày ${formatDateVi(selectedDate)} • Khung giờ tối 17:30 - 20:30` : 'Khung giờ khám'}
+          subtitle={selectedDate ? `Ngày ${formatDateVi(selectedDate)} • Khung giờ tối 17:00 - 20:30` : 'Khung giờ khám'}
           options={slotOptions}
           selectedId={
             selectedSlotId ||

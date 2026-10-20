@@ -61,8 +61,8 @@ export const METHOD_INFO: Record<BookingMethod, MethodInfoItem> = {
   },
   AFTER_HOURS: {
     title: 'Khám Ngoài Giờ',
-    badge: '17:30 - 20:30',
-    desc: 'Khung giờ tối 17:30 - 20:30 tiện lợi cho người bận rộn',
+    badge: '17:00 - 20:30',
+    desc: 'Khung giờ tối 17:00 - 20:30 tiện lợi cho người bận rộn',
     icon: 'time-outline',
     color: '#b45309',
     bgColor: 'bg-amber-50',

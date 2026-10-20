@@ -55,7 +55,7 @@ export const appointmentService = {
 
   async getPaymentStatus(id: string | number): Promise<any> {
     try {
-      const res = await api.get(`/api/v1/appointments/${id}/payment-status`)
+      const res = await api.get(`/api/v1/payments/appointments/${id}/status`)
       return unwrapNestResponse<any>(res.data)
     } catch {
       return null
@@ -113,7 +113,7 @@ export const appointmentService = {
   },
 
   async checkout(payload: CheckoutPayload): Promise<CheckoutResult> {
-    const res = await api.post('/api/v1/appointments/checkout', payload)
+    const res = await api.post('/api/v1/bookings/checkout', payload)
     return unwrapNestResponse<CheckoutResult>(res.data)
   },
 

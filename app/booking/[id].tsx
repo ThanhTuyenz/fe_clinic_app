@@ -102,17 +102,17 @@ export default function BookingConfirmationScreen() {
             </Text>
             </>}
             {isOnline && (
-              <View className="w-full rounded-lg border border-blue-200 bg-blue-50 p-3 mb-4">
-                <Text className="text-xs text-blue-800 text-center">
+              <View className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4">
+                <Text className="text-xs text-slate-600 text-center">
                   Chuẩn bị camera, micro và kết nối Internet ổn định trước giờ hẹn.
                 </Text>
                 {appointment && canJoinTelehealth(appointment) && (
                   <TouchableOpacity
                     onPress={() => router.push(`/consultation/${id}`)}
                     accessibilityRole="button"
-                    className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 px-4 py-3"
+                    className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 active:bg-primary-700 py-2.5 px-4"
                   >
-                    <Ionicons name="videocam-outline" size={18} color="white" />
+                    <Ionicons name="videocam" size={17} color="white" />
                     <Text className="ml-2 text-xs font-bold text-white">Vào phòng tư vấn</Text>
                   </TouchableOpacity>
                 )}

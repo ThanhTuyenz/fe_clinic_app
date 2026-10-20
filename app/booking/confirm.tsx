@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -52,7 +52,8 @@ export default function BookingConfirmScreen() {
 
   const [inputCode, setInputCode] = useState('')
   const [isValidating, setIsValidating] = useState(false)
-  const [isCodeExpanded, setIsCodeExpanded] = useState(true)
+  const [isCodeExpanded, setIsCodeExpanded] = useState(false)
+  const hasAutoAppliedRef = useRef(false)
 
   // Query branches to show branch name / address
   const { data: branches = [] } = useQuery({
@@ -95,11 +96,53 @@ export default function BookingConfirmScreen() {
     : draft.doctor?.avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200'
 
   // Query vouchers — nhất quán với cách fetch branches ở trên
-  const { data: availableVouchers = [] } = useQuery({
+  const { data: availableVouchers = [], isLoading: loadingVouchers } = useQuery({
     queryKey: ['vouchers-available'],
     queryFn: () => voucherService.getAvailableVouchers(),
     staleTime: 5 * 60 * 1000, // cache 5 phút
   })
+
+  // Helper tính mức giảm giá của voucher theo giá trị đơn subtotal
+  const calculateVoucherDiscount = (v: any, amount: number) => {
+    if (v.discountType === 'PERCENTAGE') {
+      const calculated = (amount * Number(v.discountValue)) / 100
+      return v.maxDiscount ? Math.min(calculated, Number(v.maxDiscount)) : calculated
+    }
+    return Number(v.discountValue)
+  }
+
+  // Tự động tìm voucher tối ưu nhất (giảm nhiều tiền nhất & đủ điều kiện)
+  const bestVoucher = useMemo(() => {
+    if (!availableVouchers.length || subtotal <= 0) return null
+    const eligible = availableVouchers.filter((v: any) => !v.minOrderValue || subtotal >= Number(v.minOrderValue))
+    if (!eligible.length) return null
+
+    let best = eligible[0]
+    let maxDiscount = calculateVoucherDiscount(best, subtotal)
+    for (let i = 1; i < eligible.length; i++) {
+      const discount = calculateVoucherDiscount(eligible[i], subtotal)
+      if (discount > maxDiscount) {
+        maxDiscount = discount
+        best = eligible[i]
+      }
+    }
+    return maxDiscount > 0 ? { voucher: best, discountAmount: maxDiscount } : null
+  }, [availableVouchers, subtotal])
+
+  // Tự động ưu tiên chọn voucher tốt nhất cho người dùng khi tải xong
+  useEffect(() => {
+    if (bestVoucher && !hasAutoAppliedRef.current && !draft.appliedVoucher && !draft.voucherCode) {
+      hasAutoAppliedRef.current = true
+      setAppliedVoucher({
+        code: bestVoucher.voucher.code,
+        name: bestVoucher.voucher.name,
+        discountAmount: bestVoucher.discountAmount,
+        discountType: bestVoucher.voucher.discountType,
+        discountValue: bestVoucher.voucher.discountValue,
+      })
+      setVoucherCode(bestVoucher.voucher.code)
+    }
+  }, [bestVoucher, draft.appliedVoucher, draft.voucherCode])
 
 
   // Calculate discount and final amount
@@ -280,16 +323,32 @@ export default function BookingConfirmScreen() {
           {/* Dải phân cách xám dày */}
           <View className="h-2 bg-slate-100 border-y border-slate-200/60" />
 
-          {/* 3. ADD CODE OR GIFT CARD (Mã giảm giá & Ưu đãi nằm trên Order Summary) */}
+          {/* 3. MÃ GIẢM GIÁ & ƯU ĐÃI (Load trực tiếp từ backend) */}
           <View className="bg-white">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setIsCodeExpanded(!isCodeExpanded)}
               className="p-4 flex-row items-center justify-between"
             >
-              <Text className="text-sm font-bold text-slate-900">
-                Add Code or Gift Card
-              </Text>
+              <View className="flex-row items-center gap-2 flex-1 pr-2 flex-wrap">
+                <Ionicons name="pricetag-outline" size={16} color="#28a745" />
+                <Text className="text-sm font-bold text-slate-900">
+                  {appliedVoucher ? 'Mã ưu đãi:' : 'Mã ưu đãi & Voucher giảm giá'}
+                </Text>
+                {appliedVoucher && (
+                  <View
+                    className="flex-row items-center gap-1 px-2 py-0.5 rounded border border-[#28a745]/30"
+                    style={{ backgroundColor: 'rgba(40, 167, 69, 0.08)' }}
+                  >
+                    <Text className="text-xs font-bold text-slate-900">
+                      {appliedVoucher.code}
+                    </Text>
+                    <Text className="text-xs font-bold text-[#28a745]">
+                      (-{formatCurrencyVi(appliedVoucher.discountAmount)})
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Ionicons
                 name={isCodeExpanded ? 'chevron-up' : 'chevron-down'}
                 size={18}
@@ -299,84 +358,136 @@ export default function BookingConfirmScreen() {
 
             {isCodeExpanded && (
               <View className="px-4 pb-4 pt-1">
-                {appliedVoucher ? (
-                  <View className="flex-row items-center justify-between bg-primary-50 border border-primary-200 rounded-md p-3">
-                    <View className="flex-row items-center flex-1 pr-2">
-                      <Ionicons name="ticket-outline" size={18} color="#28a745" style={{ marginRight: 8 }} />
-                      <View className="flex-1">
-                        <Text className="text-xs font-bold text-primary-950">
-                          Mã: {appliedVoucher.code}
-                        </Text>
-                        <Text className="text-[11px] font-semibold text-primary-700 mt-0.5">
-                          Đã giảm - {formatCurrencyVi(appliedVoucher.discountAmount)}
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={handleRemoveVoucher}
-                      className="px-2.5 py-1 rounded border border-rose-200 bg-rose-50"
-                    >
-                      <Text className="text-xs font-semibold text-rose-700">Gỡ bỏ</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View>
-                    <View className="flex-row items-center gap-2 mb-2">
-                      <TextInput
-                        value={inputCode}
-                        onChangeText={setInputCode}
-                        placeholder="Nhập mã ưu đãi (VD: VITACARE50)"
-                        placeholderTextColor="#94a3b8"
-                        autoCapitalize="characters"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-md px-3 py-2.5 text-xs text-slate-800"
-                      />
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        disabled={isValidating || !inputCode.trim()}
-                        onPress={() => handleApplyVoucherCode(inputCode)}
-                        className={`px-4 py-2.5 rounded-md items-center justify-center ${inputCode.trim() ? 'bg-primary-600 active:bg-primary-700' : 'bg-slate-200'
-                          }`}
-                      >
-                        {isValidating ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <Text
-                            className={`text-xs font-bold ${inputCode.trim() ? 'text-white' : 'text-slate-400'
-                              }`}
-                          >
-                            Áp dụng
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
 
-                    {availableVouchers.length > 0 ? (
-                      <View className="flex-row flex-wrap gap-1.5 mt-1">
-                        {availableVouchers.slice(0, 4).map((v) => (
+                {/* Nhập mã thủ công */}
+                <View className="flex-row items-center gap-2 mb-2">
+                  <TextInput
+                    value={inputCode}
+                    onChangeText={setInputCode}
+                    placeholder="Nhập mã ưu đãi (VD: CHAOBANMOI)"
+                    placeholderTextColor="#94a3b8"
+                    autoCapitalize="characters"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-800"
+                  />
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    disabled={isValidating || !inputCode.trim()}
+                    onPress={() => handleApplyVoucherCode(inputCode)}
+                    className={`px-4 py-2.5 rounded-md items-center justify-center ${
+                      inputCode.trim() ? 'bg-[#28a745] active:bg-[#218838]' : 'bg-slate-200'
+                    }`}
+                  >
+                    {isValidating ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text
+                        className={`text-xs font-bold ${
+                          inputCode.trim() ? 'text-white' : 'text-slate-400'
+                        }`}
+                      >
+                        Áp dụng
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Danh sách Voucher tải trực tiếp từ backend khi click mở accordion */}
+                <View className="mt-2 pt-2 border-t border-slate-100">
+                  <Text className="text-[11px] font-bold text-slate-700 mb-2">
+                    Ưu đãi khả dụng từ hệ thống:
+                  </Text>
+
+                  {loadingVouchers ? (
+                    <View className="flex-row items-center justify-center py-3 gap-2">
+                      <ActivityIndicator size="small" color="#28a745" />
+                      <Text className="text-xs text-slate-500">Đang tải mã giảm giá...</Text>
+                    </View>
+                  ) : availableVouchers.length === 0 ? (
+                    <Text className="text-xs text-slate-400 py-1">Hiện chưa có mã ưu đãi khả dụng.</Text>
+                  ) : (
+                    <View className="gap-2">
+                      {availableVouchers.map((v) => {
+                        const isCurrent = appliedVoucher?.code === v.code
+                        const isBest = bestVoucher?.voucher.code === v.code
+                        const minOrder = Number(v.minOrderValue || 0)
+                        const isEligible = !minOrder || subtotal >= minOrder
+                        const discountBadge =
+                          v.discountType === 'PERCENTAGE'
+                            ? `Giảm ${v.discountValue}%${v.maxDiscount ? ` (tối đa ${formatCurrencyVi(Number(v.maxDiscount))})` : ''}`
+                            : `Giảm ${formatCurrencyVi(Number(v.discountValue))}`
+
+                        return (
                           <TouchableOpacity
                             key={v.id || v.code}
-                            activeOpacity={0.7}
-                            onPress={() => handleApplyVoucherCode(v.code)}
-                            className="border border-dashed border-primary-300 bg-primary-50/50 px-2 py-1 rounded flex-row items-center gap-1"
+                            activeOpacity={isEligible ? 0.7 : 1}
+                            disabled={isValidating || !isEligible}
+                            onPress={() => {
+                              if (isCurrent) {
+                                handleRemoveVoucher()
+                              } else {
+                                handleApplyVoucherCode(v.code)
+                              }
+                            }}
+                            className={`p-3 rounded-lg border border-slate-200/90 transition-all ${
+                              isCurrent
+                                ? 'bg-[#28a745]/[0.06]'
+                                : isEligible
+                                  ? 'bg-white'
+                                  : 'bg-slate-50/80 opacity-60'
+                            }`}
+                            style={isCurrent ? { backgroundColor: 'rgba(40, 167, 69, 0.06)' } : { backgroundColor: '#ffffff' }}
                           >
-                            <Ionicons name="pricetag-outline" size={10} color="#28a745" />
-                            <Text className="text-[11px] font-bold text-primary-800">{v.code}</Text>
+                            <View className="flex-row items-center justify-between gap-2">
+                              <View className="flex-1 pr-2">
+                                <View className="flex-row items-center gap-1.5 flex-wrap">
+                                  <Text className="text-xs font-bold text-slate-900 tracking-wide">
+                                    {v.code}
+                                  </Text>
+                                  <View className="bg-[#28a745]/10 px-2 py-0.5 rounded border border-[#28a745]/20">
+                                    <Text className="text-[10px] font-bold text-[#28a745]">
+                                      {discountBadge}
+                                    </Text>
+                                  </View>
+                                  {isBest && (
+                                    <View className="bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                      <Text className="text-[9px] font-bold text-amber-700">Tốt nhất</Text>
+                                    </View>
+                                  )}
+                                </View>
+                                {Boolean(v.description || v.name) && (
+                                  <Text className="text-[11px] text-slate-600 mt-1 leading-4">
+                                    {v.description || v.name}
+                                  </Text>
+                                )}
+                                {minOrder > 0 && (
+                                  <Text className="text-[10px] text-slate-400 mt-0.5">
+                                    Đơn tối thiểu: {formatCurrencyVi(minOrder)}
+                                  </Text>
+                                )}
+                              </View>
+
+                              {/* Radio Selection Status */}
+                              <View className="self-center">
+                                {isCurrent ? (
+                                  <View
+                                    className="w-5 h-5 rounded-full items-center justify-center bg-[#28a745]"
+                                    style={{ backgroundColor: '#28a745' }}
+                                  >
+                                    <Ionicons name="checkmark" size={13} color="#ffffff" />
+                                  </View>
+                                ) : isEligible ? (
+                                  <View className="w-5 h-5 rounded-full border border-slate-300 bg-white" />
+                                ) : (
+                                  <Text className="text-[10px] font-semibold text-slate-400">Chưa đủ ĐK</Text>
+                                )}
+                              </View>
+                            </View>
                           </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : (
-                      <View className="flex-row gap-1.5 mt-1">
-                        <TouchableOpacity
-                          onPress={() => handleApplyVoucherCode('VITACARE50')}
-                          className="border border-dashed border-slate-300 bg-slate-50 px-2 py-1 rounded"
-                        >
-                          <Text className="text-[11px] font-semibold text-slate-600">Gợi ý: VITACARE50</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                )}
+                        )
+                      })}
+                    </View>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -384,39 +495,42 @@ export default function BookingConfirmScreen() {
           {/* Dải phân cách xám dày */}
           <View className="h-2 bg-slate-100 border-y border-slate-200/60" />
 
-          {/* 4. ORDER SUMMARY (Chi tiết thanh toán viện phí nằm dưới Voucher) */}
+          {/* 4. CHI TIẾT THANH TOÁN (Nằm dưới Voucher) */}
           <View className="p-4 bg-white">
-            <Text className="text-base font-extrabold text-slate-900 mb-2.5">
-              Order Summary
+            <Text className="text-sm font-bold text-slate-900 mb-3">
+              Chi tiết thanh toán
             </Text>
 
-            <View className="space-y-2">
+            <View className="gap-y-2">
               <View className="flex-row justify-between items-center py-0.5">
-                <Text className="text-xs font-medium text-slate-600">Subtotal:</Text>
-                <Text className="text-xs font-bold text-slate-800">
+                <Text className="text-xs text-slate-600">Tạm tính:</Text>
+                <Text className="text-xs font-semibold text-slate-900">
                   {formatCurrencyVi(subtotal)}
                 </Text>
               </View>
 
               <View className="flex-row justify-between items-center py-0.5">
-                <Text className="text-xs font-medium text-slate-600">Phí tiện ích:</Text>
-                <Text className="text-xs font-bold text-slate-800">
-                  {formatCurrencyVi(serviceFee)}
+                <Text className="text-xs text-slate-600">Phí tiện ích:</Text>
+                <Text className="text-xs font-semibold text-slate-900">
+                  {serviceFee > 0 ? formatCurrencyVi(serviceFee) : 'Miễn phí'}
                 </Text>
               </View>
 
               {discountAmount > 0 && (
                 <View className="flex-row justify-between items-center py-0.5">
-                  <Text className="text-xs font-medium text-primary-700">Giảm giá voucher:</Text>
-                  <Text className="text-xs font-bold text-primary-700">
+                  <Text className="text-xs font-medium text-[#28a745]">Giảm giá voucher:</Text>
+                  <Text className="text-xs font-bold text-[#28a745]">
                     - {formatCurrencyVi(discountAmount)}
                   </Text>
                 </View>
               )}
 
-              <View className="border-t border-slate-200 mt-2 pt-2.5 flex-row justify-between items-center">
-                <Text className="text-base font-extrabold text-slate-900">Total</Text>
-                <Text className="text-base font-black text-slate-900">
+              <View
+                className="pt-2.5 mt-1 flex-row justify-between items-center"
+                style={{ borderTopWidth: 1, borderTopColor: '#e2e8f0' }}
+              >
+                <Text className="text-sm font-bold text-slate-900">Tổng thanh toán:</Text>
+                <Text className="text-base font-bold text-slate-900">
                   {formatCurrencyVi(totalAmount)}
                 </Text>
               </View>
