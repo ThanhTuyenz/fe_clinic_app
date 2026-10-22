@@ -1,4 +1,5 @@
 import { api, unwrapNestResponse } from './api'
+import { normalizeBirthDate } from '../utils/date'
 
 export interface PatientProfile {
   id: string
@@ -39,22 +40,24 @@ export const patientProfileService = {
   },
 
   async createPatientProfile(payload: CreatePatientProfilePayload): Promise<PatientProfile> {
-    const res = await api.post('/api/v1/patient-profiles', payload)
+    const dateOfBirth = normalizeBirthDate(payload.dateOfBirth)
+    if (!dateOfBirth) throw new Error('Ngày sinh không hợp lệ. Vui lòng chọn lại ngày sinh.')
+    const res = await api.post('/api/v1/patient-profiles', { ...payload, dateOfBirth })
     return unwrapNestResponse<PatientProfile>(res.data)
   },
 
   async updatePatientProfile(id: string, payload: Partial<CreatePatientProfilePayload>): Promise<PatientProfile> {
-    const res = await api.patch(`/api/v1/patient-profiles/${id}`, payload)
+    const dateOfBirth = payload.dateOfBirth !== undefined ? normalizeBirthDate(payload.dateOfBirth) : undefined
+    if (dateOfBirth === null) throw new Error('Ngày sinh không hợp lệ. Vui lòng chọn lại ngày sinh.')
+    const res = await api.patch(`/api/v1/patient-profiles/${id}`, {
+      ...payload, ...(dateOfBirth !== undefined ? { dateOfBirth } : {}),
+    })
     return unwrapNestResponse<PatientProfile>(res.data)
   },
 
-  async getMedicalRecords(patientProfileId: string): Promise<any[]> {
-    try {
-      const res = await api.get(`/api/v1/patient-profiles/${patientProfileId}/medical-records`)
-      const data = unwrapNestResponse<any[]>(res.data)
-      return Array.isArray(data) ? data : []
-    } catch {
-      return []
-    }
+  async getMedicalRecords(patientProfileId: string): Promise<any> {
+    const res = await api.get(`/api/v1/patient-profiles/${patientProfileId}/medical-records`)
+    const data = unwrapNestResponse<any>(res.data)
+    return data?.medicalRecord || data
   },
 }

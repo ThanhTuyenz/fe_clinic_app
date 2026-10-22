@@ -12,10 +12,11 @@ export interface RecommendedPackageItem {
   priority?: 'HIGH' | 'MEDIUM' | 'LOW'
   badge?: string
   clinicalReason?: string
-  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'RECENT_VIEW' | 'PROFILE_AI' | 'POPULAR'
+  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'RECENT_VIEW' | 'PROFILE_AI' | 'POPULAR' | 'BOTH'
 }
 
 export interface HomeRecommendationResponse {
+  trackingToken?: string
   profileId?: string
   profileName?: string
   updatedAt: string
@@ -85,13 +86,10 @@ export const recommendationService = {
     profileId?: string
     sessionId?: string
   }): Promise<HomeRecommendationResponse> {
-    try {
-      const res = await api.get('/api/v1/recommendations/home', { params })
-      const data = unwrapNestResponse<HomeRecommendationResponse>(res.data)
-      return data || { updatedAt: new Date().toISOString(), source: 'FALLBACK', packages: [] }
-    } catch {
-      return { updatedAt: new Date().toISOString(), source: 'FALLBACK', packages: [] }
-    }
+    const res = await api.get('/api/v1/recommendations/home', { params, timeout: 60000 })
+    const data = unwrapNestResponse<HomeRecommendationResponse>(res.data)
+    if (!data || !Array.isArray(data.packages)) throw new Error('Dữ liệu gợi ý không hợp lệ.')
+    return data
   },
 
   async trackBehavior(payload: TrackBehaviorPayload): Promise<{ success: boolean }> {
@@ -108,17 +106,8 @@ export const recommendationService = {
   async refreshProfileRecommendations(
     profileId: string
   ): Promise<HomeRecommendationResponse> {
-    try {
-      const res = await api.post(
-        `/api/v1/recommendations/patient-profile/${profileId}/refresh`,
-        {},
-        {}
-      )
-      const data = unwrapNestResponse<HomeRecommendationResponse>(res.data)
-      return data || { updatedAt: new Date().toISOString(), source: 'AI_PROFILE', packages: [] }
-    } catch {
-      return { updatedAt: new Date().toISOString(), source: 'AI_PROFILE', packages: [] }
-    }
+    const res = await api.post(`/api/v1/recommendations/patient-profile/${profileId}/refresh`, {}, { timeout: 60000 })
+    return unwrapNestResponse<HomeRecommendationResponse>(res.data)
   },
 
   async semanticSearch(

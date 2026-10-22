@@ -63,7 +63,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
     }
   }
 
-  const fee = doctor.consultation_fee || (doctor as any).consultationFee || doctor.price || 300000
+  const fee = doctor.consultation_fee ?? (doctor as any).consultationFee ?? doctor.price ?? 0
 
   return (
     <View

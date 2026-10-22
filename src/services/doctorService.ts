@@ -27,7 +27,8 @@ export const doctorService = {
     const rows = unwrapNestResponse<any[]>(res.data) || []
     return (Array.isArray(rows) ? rows : []).map((d: any) => {
       const primarySpecialty = d.specialties?.[0]?.specialty || d.specialty
-      const branchIdFound = d.user?.branchAssignments?.[0]?.branch?.id || d.branchId || branchId
+      const assignments = d.branchAssignments || d.user?.branchAssignments || []
+      const branchIdFound = branchId || d.branchId || assignments.find((item: any) => item.isPrimary)?.branch?.id || assignments[0]?.branch?.id
       return {
         ...d,
         id: d.id || d._id,
@@ -91,7 +92,6 @@ export const doctorService = {
   },
 
   async getHealthPackages(branchId?: string): Promise<any[]> {
-    try {
       const res = await api.get('/api/v1/services/packages/health', {
         params: branchId ? { branchId } : undefined,
       })
@@ -99,10 +99,6 @@ export const doctorService = {
       if (Array.isArray(unwrapped)) return unwrapped
       if (Array.isArray(unwrapped?.data)) return unwrapped.data
       return []
-    } catch (err) {
-      console.warn('Could not fetch health packages', err)
-      return []
-    }
   },
 
   async getAllPackages(params?: {
@@ -113,7 +109,6 @@ export const doctorService = {
     type?: 'all' | 'health-package' | 'specialty'
     needPagination?: boolean
   }): Promise<any[]> {
-    try {
       const res = await api.get('/api/v1/public/packages', {
         params: {
           limit: params?.limit || 200,
@@ -128,10 +123,6 @@ export const doctorService = {
       if (Array.isArray(unwrapped)) return unwrapped
       if (Array.isArray(unwrapped?.data)) return unwrapped.data
       return []
-    } catch (err) {
-      console.warn('Could not fetch all packages', err)
-      return []
-    }
   },
 
   async getPackageDetail(idOrSlug: string): Promise<any> {
@@ -155,7 +146,6 @@ export const doctorService = {
   },
 
   async getSpecialtyPackages(branchId?: string): Promise<any[]> {
-    try {
       const res = await api.get('/api/v1/services/packages/specialty', {
         params: branchId ? { branchId } : undefined,
       })
@@ -163,31 +153,8 @@ export const doctorService = {
       if (Array.isArray(unwrapped)) return unwrapped
       if (Array.isArray(unwrapped?.data)) return unwrapped.data
       return []
-    } catch {
-      return []
-    }
   },
 
-  async getBookingMethods(branchId?: string): Promise<any[]> {
-    try {
-      let targetBranchId = branchId
-      if (!targetBranchId) {
-        const branches = await this.getBranches().catch(() => [])
-        const activeBranch = branches.find((b: any) => b.code === 'VC-CENTRAL') || branches[0]
-        targetBranchId = activeBranch?.id
-      }
 
-      const res = await api.get('/api/v1/schedules/booking-methods', {
-        params: targetBranchId ? { branchId: targetBranchId } : undefined,
-      })
-      const rows = unwrapNestResponse<any[]>(res.data)
-      if (Array.isArray(rows) && rows.length > 0) {
-        return rows
-      }
-    } catch (err) {
-      console.warn('Could not fetch booking methods from backend', err)
-    }
-    return []
-  },
 
 }

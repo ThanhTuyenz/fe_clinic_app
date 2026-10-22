@@ -9,6 +9,8 @@ export default function BookingLayout() {
       }}
     >
       <Stack.Screen name="index" />
+      <Stack.Screen name="family" />
+      <Stack.Screen name="family-result" />
       <Stack.Screen name="doctor/index" />
       <Stack.Screen name="doctor/time" />
       <Stack.Screen name="specialty/index" />

@@ -1,60 +1,17 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { recommendationService } from '../services/recommendationService'
 
 import { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
+import { RECENTLY_VIEWED_KEY, type RecentlyViewedPackage } from '../utils/recentlyViewedPackages'
+export type { RecentlyViewedPackage } from '../utils/recentlyViewedPackages'
 export { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
-const RECENTLY_VIEWED_KEY = 'vitacare_mobile_recently_viewed_packages'
-
-export interface RecentlyViewedPackage {
-  id: string
-  name: string
-  code?: string
-  price: number
-  durationMin?: number
-  specialtyId?: number | null
-  specialtyName?: string
-  description?: string
-  image?: string
-  viewedAt: number
-}
 
 /**
  * Hook quản lý Telemetry Tracking hành vi người dùng trên Mobile
  */
 export function useBehaviorTracker() {
-  const [sessionId, setSessionId] = useState<string>('')
-  const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedPackage[]>([])
   const lastTrackedQueryRef = useRef<string>('')
-
-  // Khởi tạo Session ID & Đọc danh sách gói đã xem gần đây
-  useEffect(() => {
-    let isMounted = true
-
-    const init = async () => {
-      const sid = await getOrGenerateGuestSessionId()
-      if (!isMounted) return
-      setSessionId(sid)
-
-      try {
-        const raw = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY)
-        if (raw && isMounted) {
-          const parsed = JSON.parse(raw)
-          if (Array.isArray(parsed)) {
-            setRecentlyViewed(parsed)
-          }
-        }
-      } catch (err) {
-        console.warn('[Telemetry] Failed to load recently viewed packages:', err)
-      }
-    }
-
-    void init()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
 
   /**
    * 1. Tracking Tìm kiếm triệu chứng / dịch vụ (SEARCH +3 điểm)
@@ -66,8 +23,7 @@ export function useBehaviorTracker() {
       if (cleanQ === lastTrackedQueryRef.current) return
       lastTrackedQueryRef.current = cleanQ
 
-      const sid = sessionId || (await getOrGenerateGuestSessionId())
-      console.log('🔍 [Mobile Telemetry] SEARCH (+3 pts):', { query: cleanQ, specialtyId, sessionId: sid })
+      const sid = await getOrGenerateGuestSessionId()
 
       void recommendationService.trackBehavior({
         sessionId: sid,
@@ -76,7 +32,7 @@ export function useBehaviorTracker() {
         targetSpecialtyId: specialtyId,
       })
     },
-    [sessionId]
+    []
   )
 
   /**
@@ -97,8 +53,7 @@ export function useBehaviorTracker() {
       }
     ) => {
       if (!packageId) return
-      const sid = sessionId || (await getOrGenerateGuestSessionId())
-      console.log('👁️ [Mobile Telemetry] VIEW_PACKAGE (+2 pts):', { packageId, specialtyId, sessionId: sid })
+      const sid = await getOrGenerateGuestSessionId()
 
       // Gửi event lên Backend
       void recommendationService.trackBehavior({
@@ -131,13 +86,12 @@ export function useBehaviorTracker() {
           ].slice(0, 10)
 
           await AsyncStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(updated))
-          setRecentlyViewed(updated)
         } catch (err) {
           console.warn('[Telemetry] Failed to save recently viewed package:', err)
         }
       }
     },
-    [sessionId]
+    []
   )
 
   /**
@@ -146,8 +100,7 @@ export function useBehaviorTracker() {
   const trackDropOff = useCallback(
     async (packageId?: string, specialtyId?: number) => {
       if (!packageId && !specialtyId) return
-      const sid = sessionId || (await getOrGenerateGuestSessionId())
-      console.log('🚪 [Mobile Telemetry] DROP_OFF (+5 pts):', { packageId, specialtyId, sessionId: sid })
+      const sid = await getOrGenerateGuestSessionId()
 
       void recommendationService.trackBehavior({
         sessionId: sid,
@@ -156,27 +109,12 @@ export function useBehaviorTracker() {
         targetSpecialtyId: specialtyId,
       })
     },
-    [sessionId]
+    []
   )
 
-  /**
-   * Xóa lịch sử các gói đã xem gần đây
-   */
-  const clearRecentlyViewed = useCallback(async () => {
-    try {
-      await AsyncStorage.removeItem(RECENTLY_VIEWED_KEY)
-      setRecentlyViewed([])
-    } catch (err) {
-      console.warn('[Telemetry] Failed to clear recently viewed packages:', err)
-    }
-  }, [])
-
   return {
-    sessionId,
-    recentlyViewed,
     trackSearch,
     trackViewPackage,
     trackDropOff,
-    clearRecentlyViewed,
   }
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react'
 import {
   Animated,
+  ActivityIndicator,
   Modal,
   PanResponder,
   Platform,
@@ -11,6 +12,9 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
+import { bookingService } from '../../services/bookingService'
+import type { BookingMethodCode } from '../../types/appointment'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useBookingStore } from '../../store/useBookingStore'
 
@@ -21,6 +25,7 @@ interface BookingMethodsModalProps {
 
 interface MethodMeta {
   id: string
+  code: BookingMethodCode
   title: string
   desc: string
   icon: keyof typeof Ionicons.glyphMap
@@ -30,59 +35,30 @@ interface MethodMeta {
   path: string
 }
 
-// Danh sách cố định 5 hình thức khám chính thức (đã bỏ Tái khám và Gói khám sức khỏe)
-const FIXED_BOOKING_METHODS: MethodMeta[] = [
-  {
-    id: 'specialty',
-    title: 'Khám Chuyên Khoa',
-    desc: 'Hơn 12 chuyên khoa mũi nhọn (Tim mạch, Mắt, Nhi, Da liễu...)',
-    icon: 'medkit-outline',
-    color: '#28a745',
-    bgColor: '#f0faf2',
-    borderColor: '#d9f2df',
-    path: '/booking/specialty',
+// Native navigation and visuals only; availability, titles and descriptions come from the API.
+// Follow-up and health-package entries remain outside this mobile selector.
+const METHOD_METAS: Record<string, Pick<MethodMeta, 'icon' | 'color' | 'bgColor' | 'borderColor' | 'path'>> = {
+  SPECIALTY_EXAM: {
+    icon: 'medkit-outline', color: '#28a745', bgColor: '#f0faf2', borderColor: '#d9f2df',
+    path: '/booking?method=specialty',
   },
-  {
-    id: 'doctor',
-    title: 'Khám Cùng Bác Sĩ',
-    desc: 'Chủ động chọn bác sĩ CKI - CKII theo học hàm và kinh nghiệm',
-    icon: 'person-outline',
-    color: '#1d4ed8',
-    bgColor: '#eff6ff',
-    borderColor: '#dbeafe',
-    path: '/booking/doctor',
+  CONSULTATION: {
+    icon: 'person-outline', color: '#1d4ed8', bgColor: '#eff6ff', borderColor: '#dbeafe',
+    path: '/booking?method=doctor',
   },
-  {
-    id: 'online',
-    title: 'Tư Vấn Online',
-    desc: 'Gọi video 1:1 cùng bác sĩ, đọc kết quả xét nghiệm từ xa',
-    icon: 'videocam-outline',
-    color: '#0f766e',
-    bgColor: '#f0fdfa',
-    borderColor: '#ccfbf1',
-    path: '/booking/online',
+  ONLINE_CONSULTATION: {
+    icon: 'videocam-outline', color: '#0f766e', bgColor: '#f0fdfa', borderColor: '#ccfbf1',
+    path: '/booking?method=online',
   },
-  {
-    id: 'family',
-    title: 'Khám Gia Đình',
-    desc: 'Chăm sóc ông bà, cha mẹ và con nhỏ trên cùng một tài khoản',
-    icon: 'people-outline',
-    color: '#7c3aed',
-    bgColor: '#f5f3ff',
-    borderColor: '#ede9fe',
-    path: '/booking/specialty?flow=family',
+  FAMILY_BOOKING: {
+    icon: 'people-outline', color: '#7c3aed', bgColor: '#f5f3ff', borderColor: '#ede9fe',
+    path: '/booking?method=family',
   },
-  {
-    id: 'after-hours',
-    title: 'Khám Ngoài Giờ',
-    desc: '17:00 - 20:30 tiện lợi cho người bận rộn, không lo chờ đợi',
-    icon: 'time-outline',
-    color: '#b45309',
-    bgColor: '#fefce8',
-    borderColor: '#fef08a',
-    path: '/booking/after-hours',
+  AFTER_HOURS: {
+    icon: 'time-outline', color: '#b45309', bgColor: '#fefce8', borderColor: '#fef08a',
+    path: '/booking?mode=after-hours',
   },
-]
+}
 
 export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
   visible,
@@ -90,6 +66,22 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
 }) => {
   const router = useRouter()
   const { setBookingMethod, setIsAfterHours, resetBooking } = useBookingStore()
+  const { data: dbMethods = [], isPending, isFetching, isError, refetch } = useQuery({
+    queryKey: ['booking-methods', 'all'],
+    queryFn: () => bookingService.getBookingMethods(),
+    enabled: visible,
+    staleTime: 30_000,
+    refetchOnMount: 'always',
+  })
+  const methods = useMemo<MethodMeta[]>(() => dbMethods.flatMap(method => {
+    const code = String(method.code || method.type || '').toUpperCase()
+    const meta = Object.hasOwn(METHOD_METAS, code) ? METHOD_METAS[code] : undefined
+    if (!meta || method.isEnabled === false) return []
+    return [{
+      ...meta, id: method.bookingMethodId || method.id, code: code as BookingMethodCode,
+      title: method.displayName, desc: method.description || '',
+    }]
+  }), [dbMethods])
 
   const translateY = useRef(new Animated.Value(0)).current
   const handleBarRef = useRef<any>(null)
@@ -206,34 +198,10 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
   const handleSelectMethod = (item: MethodMeta) => {
     onClose()
     setTimeout(() => {
-      const id = item.id.toLowerCase()
       resetBooking()
-
-      if (id === 'specialty') {
-        setBookingMethod('SPECIALTY_EXAM')
-        setIsAfterHours(false)
-        router.push('/booking?method=specialty')
-      } else if (id === 'doctor') {
-        setBookingMethod('CONSULTATION')
-        setIsAfterHours(false)
-        router.push('/booking?method=doctor')
-      } else if (id === 'online') {
-        setBookingMethod('ONLINE_CONSULTATION')
-        setIsAfterHours(false)
-        router.push('/booking?method=online')
-      } else if (id === 'family') {
-        setBookingMethod('FAMILY_BOOKING')
-        setIsAfterHours(false)
-        router.push('/booking?method=family')
-      } else if (id === 'after-hours') {
-        setBookingMethod('AFTER_HOURS')
-        setIsAfterHours(true)
-        router.push('/booking?mode=after-hours' as any)
-      } else {
-        setBookingMethod('SPECIALTY_EXAM')
-        setIsAfterHours(false)
-        router.push('/booking?method=specialty')
-      }
+      setBookingMethod(item.code)
+      setIsAfterHours(item.code === 'AFTER_HOURS')
+      router.push(item.path as any)
     }, 150)
   }
 
@@ -327,15 +295,40 @@ export const BookingMethodsModal: React.FC<BookingMethodsModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Danh sách 5 phương thức cố định */}
+          {/* Danh sách phương thức đang bật và có flow tương ứng trên mobile */}
           <ScrollView
-            className="flex-1"
+            style={{ flexGrow: 0, flexShrink: 1 }}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled={true}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ gap: 10, paddingBottom: 16 }}
           >
-            {FIXED_BOOKING_METHODS.map((item) => (
+            {isPending ? (
+              <View className="items-center justify-center py-10">
+                <ActivityIndicator color="#28a745" />
+                <Text className="text-sm text-slate-500 mt-3">Đang tải phương thức đặt lịch...</Text>
+              </View>
+            ) : isError && methods.length === 0 ? (
+              <View className="items-center py-8">
+                <Text className="text-sm text-slate-600 text-center">
+                  Không thể tải phương thức đặt lịch. Vui lòng kiểm tra kết nối và thử lại.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => { void refetch() }}
+                  disabled={isFetching}
+                  accessibilityRole="button"
+                  className="mt-4 px-5 py-2.5 rounded-lg bg-emerald-600"
+                >
+                  <Text className="text-white font-semibold">{isFetching ? 'Đang tải...' : 'Thử lại'}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : methods.length === 0 ? (
+              <View className="items-center py-8">
+                <Text className="text-sm text-slate-500 text-center">
+                  Hiện chưa có phương thức đặt lịch khả dụng trên ứng dụng.
+                </Text>
+              </View>
+            ) : methods.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.75}

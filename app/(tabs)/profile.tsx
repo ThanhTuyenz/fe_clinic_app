@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import Constants from 'expo-constants'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
@@ -18,6 +19,7 @@ import { api } from '../../src/services/api'
 export default function ProfileScreen() {
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuthStore()
+  const appVersion = Constants.expoConfig?.version || 'Đang cập nhật'
 
   const [logoutModalVisible, setLogoutModalVisible] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -138,16 +140,14 @@ export default function ProfileScreen() {
         {/* Hỗ trợ & Thông tin chung */}
         <View className="bg-white rounded-lg border border-slate-200/90 overflow-hidden mb-5">
           <TouchableOpacity
-            onPress={() =>
-              Alert.alert('Tổng đài hỗ trợ', 'Hotline CSKH: 1900 1234 (24/7)')
-            }
+            onPress={() => router.push('/facilities')}
             className="flex-row items-center p-4 border-b border-slate-100 active:bg-slate-50"
           >
             <View className="w-8 h-8 rounded-lg bg-slate-50 items-center justify-center mr-3">
               <Ionicons name="call-outline" size={18} color="#64748b" />
             </View>
             <Text className="text-sm font-semibold text-slate-800 flex-1">
-              Tổng đài phòng khám (1900 1234)
+              Liên hệ cơ sở phòng khám
             </Text>
             <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
           </TouchableOpacity>
@@ -156,7 +156,7 @@ export default function ProfileScreen() {
             onPress={() =>
               Alert.alert(
                 'VitaCare Clinic',
-                'Phiên bản ứng dụng: 2.0.0 (Expo Router & NativeWind)'
+                `Phiên bản ứng dụng: ${appVersion}`
               )
             }
             className="flex-row items-center p-4 active:bg-slate-50"
@@ -167,7 +167,7 @@ export default function ProfileScreen() {
             <Text className="text-sm font-semibold text-slate-800 flex-1">
               Thông tin ứng dụng
             </Text>
-            <Text className="text-xs text-slate-400">v2.0.0</Text>
+            <Text className="text-xs text-slate-400">{appVersion}</Text>
           </TouchableOpacity>
         </View>
 

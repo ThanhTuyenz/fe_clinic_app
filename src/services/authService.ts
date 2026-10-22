@@ -3,6 +3,7 @@ import { api, unwrapNestResponse } from './api'
 import { resolveApiBaseUrl } from '../constants/config'
 import { User } from '../types/user'
 import { getGoogleIdToken } from '../utils/googleSignIn'
+import { createGoogleLoginStep, type GoogleLoginStep } from '../utils/googleLoginProgress'
 
 export interface LoginPayload {
   email: string // Chấp nhận email hoặc số điện thoại (VD: 0946135382 hoặc user@example.com)
@@ -117,16 +118,22 @@ export const authService = {
    * Native: chọn tài khoản Google và đổi ID Token lấy phiên đăng nhập VitaCare.
    * Web: giữ luồng OAuth redirect.
    */
-  async loginWithGoogle() {
+  async loginWithGoogle(step: GoogleLoginStep = createGoogleLoginStep()) {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const baseUrl = resolveApiBaseUrl().replace(/\/$/, '')
       const authUrl = `${baseUrl}/api/v1/auth/google?state=${encodeURIComponent(window.location.origin)}`
       window.location.href = authUrl
       return null
     }
-    const idToken = await getGoogleIdToken()
+    const idToken = await getGoogleIdToken(step)
     if (!idToken) return null
-    const res = await api.post('/api/v1/auth/google', { idToken })
+    // Axios omits a header set to false. This exchange must not validate an old VitaCare session.
+    const res = await step('backend', () => api.post('/api/v1/auth/google', { idToken }, {
+      headers: { Authorization: false },
+    }))
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && res.headers?.['server-timing']) {
+      console.info(`[GoogleLogin] server: ${res.headers['server-timing']}`)
+    }
     const result = unwrapNestResponse<any>(res.data) || res.data
     return {
       token: (result.token || result.accessToken) as string,

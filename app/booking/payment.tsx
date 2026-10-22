@@ -1,3 +1,4 @@
+import { isUuid } from '../../src/utils/validation'
 import { useRef, useState } from 'react'
 import {
   Alert,
@@ -115,10 +116,10 @@ export default function BookingPaymentScreen() {
 
       // slotId phải được lưu sẵn khi chọn giờ ở bước 2
       const slotId = draft.slotId
-      if (!slotId) {
+      if (!isUuid(slotId)) {
         Alert.alert(
           'Cần chọn lại giờ khám',
-          'Thông tin khung giờ bị thiếu. Vui lòng quay lại bước chọn ngày & giờ và chọn lại.',
+          'Thông tin khung giờ không hợp lệ. Vui lòng quay lại bước chọn ngày & giờ và chọn lại.',
           [{ text: 'Quay lại', onPress: () => router.back() }]
         )
         return

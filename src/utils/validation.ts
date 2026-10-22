@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+const uuidSchema = z.uuid()
+
+export function isUuid(value: unknown): value is string {
+  return uuidSchema.safeParse(value).success
+}
+
 export const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/
 
 export const loginSchema = z.object({

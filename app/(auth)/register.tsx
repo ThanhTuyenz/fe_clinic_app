@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -24,7 +25,7 @@ export default function RegisterScreen() {
   const router = useRouter()
   const draft = useBookingStore((state) => state.draft)
   const [loading, setLoading] = useState(false)
-  const { loginWithGoogle, googleLoading } = useGoogleLogin()
+  const { loginWithGoogle, googleLoading, googleLoadingMessage } = useGoogleLogin()
   const [zaloLoginModalVisible, setZaloLoginModalVisible] = useState(false)
 
 
@@ -286,7 +287,7 @@ export default function RegisterScreen() {
                 onPress={() => { void loginWithGoogle() }}
                 className="w-28 h-14 bg-white rounded-lg border border-slate-200 shadow-xs items-center justify-center active:bg-slate-50"
               >
-                <Ionicons name="logo-google" size={26} color="#ea4335" />
+                {googleLoading ? <ActivityIndicator color="#28a745" /> : <Ionicons name="logo-google" size={26} color="#ea4335" />}
               </TouchableOpacity>
 
               {/* Zalo */}
@@ -299,6 +300,12 @@ export default function RegisterScreen() {
                 <ZaloLogo size={32} />
               </TouchableOpacity>
             </View>
+
+            {googleLoading && (
+              <Text accessibilityLiveRegion="polite" className="text-sm text-slate-500 text-center mb-4">
+                {googleLoadingMessage}
+              </Text>
+            )}
 
             {/* Chân trang */}
             <View className="items-center">

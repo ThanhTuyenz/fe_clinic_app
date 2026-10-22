@@ -1,5 +1,8 @@
-import React from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import React, { useState } from 'react'
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
+import { SelectModal } from '../common/SelectModal'
+import { PatientProfile } from '../../services/patientProfileService'
+import { searchAnalytics } from '../../services/searchAnalytics'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useQuery } from '@tanstack/react-query'
@@ -8,12 +11,20 @@ import { useAuthStore } from '../../store/useAuthStore'
 import { RecommendedPackageItem } from '../../services/recommendationService'
 import { PackageCard, PackageCardBadge } from './PackageCard'
 import { formatDateVi } from '../../utils/date'
+import { useRecommendationImpressions } from '../../hooks/useRecommendationImpressions'
 
 export interface RecommendationSectionProps {
   packages: RecommendedPackageItem[]
   isLoading?: boolean
   onRefresh?: () => void
   onSelectPackage: (pkg: RecommendedPackageItem) => void
+  profiles?: PatientProfile[]
+  profileId?: string
+  onSelectProfile?: (id: string) => void
+  trackingToken?: string
+  refreshing?: boolean
+  error?: boolean
+  onRetry?: () => void
 }
 
 export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
@@ -21,14 +32,20 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
   isLoading,
   onRefresh,
   onSelectPackage,
+  profiles = [], profileId, onSelectProfile, trackingToken, refreshing, error, onRetry,
 }) => {
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const userId = useAuthStore((state) => state.user?.id)
+  const [showProfiles, setShowProfiles] = useState(false)
+  const activeProfile = profiles.find(profile => profile.id === profileId)
+  const impressions = useRecommendationImpressions(packages, trackingToken)
 
   const { data: appointments = [] } = useQuery({
-    queryKey: ['myAppointments'],
+    queryKey: ['myAppointments', userId],
     queryFn: () => appointmentService.getMyAppointments(),
     enabled: isAuthenticated,
+    staleTime: 30_000,
   })
 
   // Lấy lịch hẹn sắp tới gần nhất (chưa hủy / chưa hoàn thành)
@@ -37,28 +54,64 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
   )
 
   return (
-    <View className="mt-7 pt-1">
+    <View ref={impressions.containerRef} collapsable={false} className="mt-7 pt-1">
       {/* 1. Header Khối 1 */}
-      <View className="px-5 flex-row items-center justify-between mb-3.5">
+      <View className="px-5 flex-row items-start justify-between mb-3.5">
         <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
-            Gợi ý cho bạn
+            {isAuthenticated ? 'Gợi ý cho bạn' : 'Gói khám nổi bật'}
           </Text>
-          <Text className="text-[11px] text-slate-400 mt-0.5">
-            Đề xuất phù hợp với bạn
-          </Text>
+          {isAuthenticated && profiles.length > 0 ? (
+            <View className="flex-row items-center mt-2">
+              <Text className="text-xs text-slate-500 mr-2">Dành cho</Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`Chọn hồ sơ nhận gợi ý${activeProfile ? `, hiện tại ${activeProfile.fullName}` : ''}`}
+                accessibilityState={{ expanded: showProfiles }}
+                onPress={() => setShowProfiles(true)}
+                activeOpacity={0.7}
+                className="flex-row items-center shrink min-h-11 rounded-full  px-3 py-2"
+              >
+                <Text numberOfLines={1} className="shrink text-xs font-medium text-primary-800 mr-2">
+                  {activeProfile?.fullName || 'Chọn hồ sơ'}
+                </Text>
+                <Ionicons name="chevron-down" size={13} color="#28a745" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text className="text-xs text-slate-500 mt-1 leading-4">
+              {isAuthenticated
+                ? 'Khám phá các gói khám phù hợp với nhu cầu của bạn'
+                : 'Khám phá các gói khám nổi bật tại VitaCare Clinic'}
+            </Text>
+          )}
         </View>
 
         {onRefresh && (
           <TouchableOpacity
             onPress={onRefresh}
-            className="flex-row items-center bg-slate-50 px-2.5 py-1 rounded border border-slate-200/80 active:bg-slate-100"
+            disabled={refreshing || isLoading}
+            accessibilityRole="button"
+            accessibilityLabel={refreshing ? 'Đang làm mới gợi ý' : 'Làm mới gợi ý'}
+            accessibilityState={{ disabled: Boolean(refreshing || isLoading), busy: refreshing }}
+            className="w-11 h-11 items-center justify-center rounded-full active:bg-primary-50"
           >
-            <Ionicons name="refresh" size={11} color="#28a745" style={{ marginRight: 4 }} />
-            <Text className="text-[11px] font-semibold text-slate-700">Làm mới</Text>
+            {refreshing ? <ActivityIndicator size="small" color="#28a745" /> : <Ionicons name="refresh-outline" size={18} color={isLoading ? '#94a3b8' : '#28a745'} />}
           </TouchableOpacity>
         )}
       </View>
+
+      {isAuthenticated && profiles.length > 0 && (
+        <SelectModal
+          visible={showProfiles}
+          title="Chọn hồ sơ nhận gợi ý"
+          onClose={() => setShowProfiles(false)}
+          options={profiles.map(profile => ({ id: profile.id, title: profile.fullName }))}
+          selectedId={profileId}
+          onSelect={option => { onSelectProfile?.(String(option.id)); setShowProfiles(false) }}
+        />
+      )}
+      {error && <View className="mx-5 mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3"><Text className="text-sm text-rose-700">Không thể tải hoặc làm mới gợi ý lúc này.</Text><TouchableOpacity onPress={onRetry}><Text className="mt-2 font-semibold text-primary-700">Thử lại</Text></TouchableOpacity></View>}
 
       {/* 2. Thẻ Nhắc lịch khám (Nếu có lịch hẹn) */}
       {upcomingAppointment && (
@@ -91,7 +144,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       {/* 3. Danh sách gói khám AI cá nhân hóa (Hồ sơ + Hành vi) */}
       {isLoading ? (
         <ActivityIndicator size="small" color="#28a745" className="py-6" />
-      ) : packages.length === 0 ? (
+      ) : error && packages.length === 0 ? null : packages.length === 0 ? (
         <View className="bg-white mx-5 p-5 rounded-lg border border-slate-100 items-center">
           <Ionicons name="sparkles-outline" size={24} color="#cbd5e1" />
           <Text className="text-slate-400 text-xs text-center mt-1.5 font-medium">
@@ -99,12 +152,16 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
           </Text>
         </View>
       ) : (
-        <ScrollView
+        <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20 }}
-        >
-          {packages.map((pkg) => {
+          data={packages}
+          keyExtractor={pkg => `${trackingToken || ''}:${pkg.packageId}`}
+          initialNumToRender={3}
+          maxToRenderPerBatch={3}
+          windowSize={3}
+          renderItem={({ item: pkg, index }) => {
             let badge: PackageCardBadge | null = {
               label: pkg.badge || 'Tầm soát định kỳ',
               color: 'text-primary-700',
@@ -126,9 +183,9 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
                 bg: 'bg-blue-50 border-blue-200',
                 icon: 'search-outline',
               }
-            } else if (pkg.sourceType === 'PROFILE_AI' || pkg.badge === 'Phù hợp hồ sơ') {
+            } else if (pkg.sourceType === 'PROFILE_AI' || pkg.sourceType === 'BOTH' || pkg.badge === 'Phù hợp hồ sơ') {
               badge = {
-                label: 'Phù hợp hồ sơ',
+                label: pkg.sourceType === 'BOTH' ? 'Phù hợp cả hai' : 'Phù hợp hồ sơ',
                 color: 'text-purple-700',
                 bg: 'bg-purple-50 border-purple-200',
                 icon: 'heart-outline',
@@ -136,20 +193,21 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
             }
 
             return (
+              <View ref={node => impressions.register(pkg.packageId, index + 1, node)} collapsable={false}>
               <PackageCard
-                key={pkg.packageId}
                 id={pkg.packageId}
                 name={pkg.name}
                 description={pkg.clinicalReason}
                 price={pkg.price}
                 specialtyName={pkg.specialtyName}
                 badge={badge}
-                onPress={() => onSelectPackage(pkg)}
-                onDetailPress={() => router.push(`/package/${pkg.packageId}` as any)}
+                onPress={() => { if (trackingToken) void searchAnalytics.recommendation('RECOMMEND_CLICK', trackingToken, pkg.packageId, index + 1).catch(() => {}); onSelectPackage(pkg) }}
+                onDetailPress={() => { if (trackingToken) void searchAnalytics.recommendation('RECOMMEND_CLICK', trackingToken, pkg.packageId, index + 1).catch(() => {}); router.push(`/package/${pkg.packageId}` as any) }}
               />
+              </View>
             )
-          })}
-        </ScrollView>
+          }}
+        />
       )}
     </View>
   )

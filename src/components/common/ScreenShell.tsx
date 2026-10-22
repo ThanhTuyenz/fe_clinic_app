@@ -8,7 +8,7 @@ import {
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs'
+import { BottomTabBarHeightContext } from 'expo-router/js-tabs'
 
 interface ScreenShellProps {
   children: React.ReactNode

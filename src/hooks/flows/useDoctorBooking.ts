@@ -41,8 +41,8 @@ export function useDoctorBooking() {
 
   // Tự động xác định chi nhánh theo bác sĩ đã chọn
   const effectiveBranchId = useMemo(() => {
-    if (selectedDoctor?.branchId) return selectedDoctor.branchId
     if (params.branchId) return params.branchId
+    if (selectedDoctor?.branchId) return selectedDoctor.branchId
     if (draft.branchId) return draft.branchId
     const defaultBranch = branches.find((b: any) => b.code === 'VC-CENTRAL') || branches[0]
     return defaultBranch?.id || ''
@@ -71,7 +71,7 @@ export function useDoctorBooking() {
     }
 
     setBranchId(effectiveBranchId)
-    setDoctor(selectedDoctor)
+    setDoctor({ ...selectedDoctor, branchId: effectiveBranchId })
     const specId = extractDoctorSpecialtyId(selectedDoctor) || 1
     setSpecialty({
       id: specId,

@@ -1,4 +1,5 @@
 import {
+  Alert,
   ActivityIndicator,
   ScrollView,
   Text,
@@ -6,7 +7,9 @@ import {
   View,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { appointmentStatusTitle, canCancelAppointment, canShowCheckInQr } from '../../src/utils/appointmentStatus'
+import { useAuthStore } from '../../src/store/useAuthStore'
 import QRCode from 'react-native-qrcode-svg'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { appointmentService } from '../../src/services/appointmentService'
@@ -18,11 +21,19 @@ export default function BookingConfirmationScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
 
-  const { data: appointment, isLoading } = useQuery({
-    queryKey: ['appointment', id],
+  const client = useQueryClient()
+  const userId = useAuthStore(state => state.user?.id)
+  const { data: appointment, isLoading, refetch } = useQuery({
+    queryKey: ['appointment', userId, id],
     queryFn: () => appointmentService.getAppointmentById(id!),
-    enabled: Boolean(id && id !== 'new'),
+    enabled: Boolean(userId && id && id !== 'new'),
   })
+
+  const cancel = useMutation({ mutationFn: () => appointmentService.cancelAppointment(id!, 'Bệnh nhân yêu cầu hủy lịch'), onSuccess: async () => {
+    await Promise.all([client.invalidateQueries({ queryKey: ['myAppointments'] }), client.invalidateQueries({ queryKey: ['appointment'] }), client.invalidateQueries({ queryKey: ['family-order'] })])
+  }, onError: (error: Error) => Alert.alert('Không thể hủy lịch', error.message) })
+  if (isLoading) return <ScreenShell title="Thông tin lịch khám"><ActivityIndicator color="#28a745" /></ScreenShell>
+  if (!appointment) return <ScreenShell showBackButton title="Thông tin lịch khám"><View className="p-5"><Text className="text-slate-600">Không tải được lịch khám. Vui lòng kiểm tra đăng nhập và thử lại.</Text><TouchableOpacity onPress={() => { void refetch() }}><Text className="mt-4 text-primary-700">Thử lại</Text></TouchableOpacity></View></ScreenShell>
 
   const doctorName =
     appointment?.doctor?.full_name ||
@@ -33,23 +44,20 @@ export default function BookingConfirmationScreen() {
     appointment?.healthPackage?.name ||
     appointment?.service?.name ||
     doctorName
-  const dateFormatted = formatDateVi(appointment?.appointment_date || appointment?.appointmentDate || new Date().toISOString())
+  const actualDate = appointment.appointment_date || appointment.appointmentDate
+  const dateFormatted = actualDate ? formatDateVi(actualDate) : 'Chưa có ngày khám'
   const slotTime =
     appointment?.startTime && appointment?.endTime
       ? `${String(appointment.startTime).slice(0, 5)} - ${String(appointment.endTime).slice(0, 5)}`
-      : appointment?.startTime || appointment?.slot || '08:00'
-  const appointmentCode = appointment?.code || appointment?.bookingCode || `VC-${String(id).slice(-6).toUpperCase()}`
-  const qrString = appointment?.qrPayload || appointmentCode
-  const branchName = appointment?.branch?.name || appointment?.branch?.address || 'VitaCare Clinic, Tầng 2 Sảnh Khám Bệnh'
+      : appointment?.startTime || appointment?.slot || 'Chưa có giờ khám'
+  const appointmentCode = appointment.code || appointment.bookingCode || 'Chưa phát hành mã vé'
+  const qrString = appointment.qrPayload
+  const branchName = appointment?.branch?.name || appointment?.branch?.address || 'Chưa cập nhật cơ sở'
   const roomName = appointment?.room?.name ? `Phòng ${appointment.room.name}` : null
   const queueNum = appointment?.queueNumber
   const isOnline = Boolean(appointment?.isTelehealth || appointment?.bookingMethod?.code === 'ONLINE_CONSULTATION')
   const status = appointment?.status?.toUpperCase()
-  const statusLabel = status === 'HOLD' ? 'Đã giữ chỗ'
-    : status === 'CANCELLED' ? 'Đã hủy'
-    : status === 'COMPLETED' ? 'Đã hoàn thành'
-    : status === 'IN_EXAMINATION' ? (isOnline ? 'Đang tư vấn' : 'Đang khám')
-    : isOnline ? 'Đã xác nhận tư vấn online' : 'Sẵn sàng tiếp đón'
+  const statusLabel = appointmentStatusTitle(status)
 
   return (
     <ScreenShell title={isOnline ? 'Phiếu tư vấn trực tuyến' : 'Phiếu khám bệnh'}>
@@ -62,12 +70,12 @@ export default function BookingConfirmationScreen() {
           {/* Thông báo đặt lịch thành công gọn gàng */}
           <View className="mb-3 items-center">
             <Text className="text-base font-extrabold text-slate-900 text-center">
-              {isOnline ? 'Lịch tư vấn trực tuyến của bạn' : 'Đặt lịch khám thành công!'}
+              {statusLabel}
             </Text>
             <Text className="text-xs text-slate-500 text-center mt-0.5">
               {isOnline
                 ? 'Đến giờ hẹn, vào phòng tư vấn trực tuyến để gặp bác sĩ. Không cần check-in tại quầy.'
-                : 'Vui lòng lưu lại mã QR phiếu khám này để check-in tại quầy tiếp đón.'}
+                : canShowCheckInQr(appointment) ? 'Vui lòng lưu lại mã QR phiếu khám này để check-in tại quầy tiếp đón.' : 'Mã QR chỉ được hiển thị khi lịch hợp lệ và máy chủ đã phát hành vé.'}
             </Text>
           </View>
 
@@ -88,7 +96,7 @@ export default function BookingConfirmationScreen() {
             )}
 
             {/* QR Code */}
-            {!isOnline && !isLoading && <>
+            {canShowCheckInQr(appointment) && qrString && <>
             <View className="p-3 bg-white border border-slate-200 rounded-lg shadow-2xs mb-3.5">
               <QRCode
                 value={qrString}
@@ -157,6 +165,7 @@ export default function BookingConfirmationScreen() {
               )}
             </View>
           </View>
+          {canCancelAppointment(appointment.status) && <TouchableOpacity disabled={cancel.isPending} onPress={() => Alert.alert('Hủy lịch khám', 'Bạn muốn hủy lịch khám này? Phí hoàn trả (nếu có) áp dụng theo chính sách phòng khám.', [{ text: 'Đóng', style: 'cancel' }, { text: 'Hủy lịch', style: 'destructive', onPress: () => cancel.mutate() }])} className="mb-5 rounded-lg border border-rose-200 bg-rose-50 p-3"><Text className="text-center font-semibold text-rose-700">{cancel.isPending ? 'Đang hủy...' : 'Hủy lịch khám'}</Text></TouchableOpacity>}
         </ScrollView>
 
         {/* Cố định Bottom Bar với 2 nút có Icon trực quan */}

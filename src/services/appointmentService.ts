@@ -1,3 +1,4 @@
+import { isUuid } from '../utils/validation'
 import { api, unwrapNestResponse } from './api'
 import { Appointment, CheckInPass } from '../types/appointment'
 
@@ -26,9 +27,30 @@ export interface CheckoutResult {
   totalAmount?: number
 }
 
+export interface FamilyCheckoutResult {
+  bookingOrderId: string
+  paymentId: string
+  totalAmount: number
+  subtotal: number
+  serviceFee: number
+  discountAmount: number
+  holdExpiresAt: string
+  appointments: { appointmentId: string; patientProfileId: string; status: string }[]
+}
+
 export const appointmentService = {
+  async batchCheckout(items: CheckoutPayload[], voucherCode?: string): Promise<FamilyCheckoutResult> {
+    if (!items.length || items.length > 5) throw new Error('Vui lòng chọn từ 1 đến 5 người khám.')
+    if (new Set(items.map(item => item.patientProfileId)).size !== items.length) throw new Error('Mỗi người chỉ được chọn một lần.')
+    for (const item of items) {
+      if (!isUuid(item.patientProfileId) || !isUuid(item.scheduleSlotId) || !isUuid(item.servicePackageId)) throw new Error('Vui lòng chọn đủ hồ sơ, dịch vụ và khung giờ hợp lệ cho từng người.')
+    }
+    const res = await api.post('/api/v1/bookings/batch-checkout', { items, groupType: 'FAMILY', ...(voucherCode?.trim() ? { voucherCode: voucherCode.trim() } : {}) })
+    const result = unwrapNestResponse<FamilyCheckoutResult>(res.data)
+    if (!result?.bookingOrderId || !result.appointments?.length) throw new Error('Máy chủ chưa trả về đơn đặt khám gia đình.')
+    return result
+  },
   async getMyAppointments(): Promise<Appointment[]> {
-    try {
       const res = await api.get('/api/v1/appointments/my-bookings')
       const data = unwrapNestResponse<any>(res.data)
       const list = Array.isArray(data) ? data : data?.appointments || []
@@ -36,12 +58,9 @@ export const appointmentService = {
         ...item,
         id: String(item.id),
         appointment_date: item.appointmentDate || item.appointment_date,
-        startTime: item.startTime || item.slot || '08:00',
+        startTime: item.startTime || item.slot || null,
         code: item.bookingCode || item.code,
       }))
-    } catch {
-      return []
-    }
   },
 
   async getCheckInPass(id: string | number): Promise<CheckInPass | null> {
@@ -84,6 +103,7 @@ export const appointmentService = {
         branch: pass.branch,
         room: pass.room,
         totalAmount: pass.totalAmount,
+        paymentStatus: pass.paymentStatus,
         qrPayload: pass.qrPayload ?? undefined,
       } as Appointment
     }
@@ -101,6 +121,8 @@ export const appointmentService = {
         code: payStatus.bookingCode,
         bookingCode: payStatus.bookingCode,
         status: payStatus.status,
+        invoiceStatus: payStatus.invoiceStatus,
+        paymentStatus: payStatus.paymentStatus,
         isTelehealth: payStatus.isTelehealth,
         bookingMethod: payStatus.bookingMethod,
         queueNumber: payStatus.queueNumber || payStatus.estimatedQueueNumber,
@@ -113,6 +135,15 @@ export const appointmentService = {
   },
 
   async checkout(payload: CheckoutPayload): Promise<CheckoutResult> {
+    if (!isUuid(payload.scheduleSlotId)) {
+      throw new Error('Khung giờ không hợp lệ. Vui lòng chọn lại giờ khám.')
+    }
+    if (!isUuid(payload.patientProfileId)) {
+      throw new Error('Hồ sơ không hợp lệ. Vui lòng chọn lại người khám.')
+    }
+    if (payload.servicePackageId !== undefined && !isUuid(payload.servicePackageId)) {
+      throw new Error('Gói khám không hợp lệ. Vui lòng chọn lại dịch vụ khám.')
+    }
     const res = await api.post('/api/v1/bookings/checkout', payload)
     return unwrapNestResponse<CheckoutResult>(res.data)
   },

@@ -1,3 +1,5 @@
+import { packageBookingRoute } from '../../src/utils/packageBooking'
+import { Alert } from 'react-native'
 import { useMemo, useState, useEffect } from 'react'
 import {
   ActivityIndicator,
@@ -184,28 +186,14 @@ export default function PackageDetailScreen() {
   }
 
   const handleBookNow = () => {
-    const store = useBookingStore.getState()
-    store.resetBooking()
-    const method = bookingMethodCode || pkg?.bookingMethod?.code || pkg?.branchBookingMethod?.bookingMethod?.code
-    const targetBranch = branchId || pkg?.branchId || pkg?.branchBookingMethod?.branchId
-    if (targetBranch) store.setBranchId(targetBranch)
-    if (method === 'SPECIALTY_EXAM') {
-      router.push({ pathname: '/booking/specialty', params: {
-        specialtyId: String(pkg?.specialtyId || pkg?.specialty?.id || ''),
-        serviceId: String(pkg?.id || id), branchId: targetBranch || '',
-      } })
+    const route = packageBookingRoute({ ...pkg, id: pkg?.id || id, branchId: branchId || pkg?.branchId, bookingMethodCode: bookingMethodCode || pkg?.bookingMethodCode })
+    if (route.pathname === '/package/[id]') {
+      Alert.alert('Chưa thể đặt gói này', 'Gói khám chưa có hình thức tiếp nhận phù hợp. Vui lòng chọn cơ sở hoặc dịch vụ khác.')
       return
     }
-    store.setBookingMethod('HEALTH_PACKAGE')
-    if (pkg) {
-      store.setHealthPackage({
-        id: String(pkg.id || id),
-        name: pkg.name || name,
-        price: price,
-        specialtyId: pkg.specialtyId || pkg.specialty?.id,
-      })
-    }
-    router.push('/booking/package')
+    const store = useBookingStore.getState()
+    store.resetBooking()
+    router.push(route)
   }
 
   return (
@@ -473,16 +461,8 @@ export default function PackageDetailScreen() {
                             specialtyName={itemSpecialty}
                             image={item.imageUrl || item.image}
                             onPress={() => {
-                              const store = useBookingStore.getState()
-                              store.resetBooking()
-                              store.setBookingMethod('HEALTH_PACKAGE')
-                              store.setHealthPackage({
-                                id: String(item.id),
-                                name: item.name,
-                                price: itemPrice,
-                                specialtyId: item.specialtyId || item.specialty?.id,
-                              })
-                              router.push('/booking/package')
+                              useBookingStore.getState().resetBooking()
+                              router.push(packageBookingRoute(item))
                             }}
                             onDetailPress={() => {
                               router.push(`/package/${item.id || item.slug}`)

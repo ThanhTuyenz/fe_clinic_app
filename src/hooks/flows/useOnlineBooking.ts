@@ -1,3 +1,5 @@
+import { isUuid } from '../../utils/validation'
+import { filterDoctors } from '../../utils/doctorFilters'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -14,6 +16,8 @@ import {
 import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useOnlineBooking() {
+  const [priceFilter, setPriceFilter] = useState('all')
+  const [experienceFilter, setExperienceFilter] = useState('all')
   const router = useRouter()
   const params = useLocalSearchParams<{ doctorId?: string; branchId?: string }>()
   const { draft, setBranchId, setDoctor, setSpecialty, setDateTime, setIsAfterHours } = useBookingStore()
@@ -81,12 +85,6 @@ export function useOnlineBooking() {
   const availableSlotsList = useMemo(() => {
     return (bookingSlots?.slots || [])
       .filter(() => !selectedDate || !bookingSlots?.date || bookingSlots.date === selectedDate)
-      .map((slot) => ({
-        ...slot,
-        id: slot.representativeSlotId,
-        isAvailable: !slot.isFull,
-        remainingCapacity: slot.remainingSlots,
-      }))
   }, [bookingSlots, selectedDate])
 
   useEffect(() => {
@@ -99,7 +97,7 @@ export function useOnlineBooking() {
 
   // 4. UI Options
   const doctorOptions: SelectModalOption<Doctor>[] = useMemo(
-    () => doctors.map((doctor) => {
+    () => filterDoctors(doctors, priceFilter, experienceFilter, true).map((doctor) => {
       const specialty = typeof doctor.specialty === 'object'
         ? doctor.specialty?.name
         : doctor.specialty || doctor.specialty_name
@@ -114,7 +112,7 @@ export function useOnlineBooking() {
         extra: doctor,
       }
     }),
-    [doctors]
+    [doctors, priceFilter, experienceFilter]
   )
 
   const branchOptions: SelectModalOption[] = useMemo(
@@ -143,12 +141,12 @@ export function useOnlineBooking() {
 
   const slotOptions: SelectModalOption[] = useMemo(
     () =>
-      availableSlotsList.map((s: any, idx: number) => {
-        const startStr = (typeof s === 'string' ? s : s.startTime || '').trim().slice(0, 5)
-        const endStr = (typeof s === 'object' && s.endTime ? s.endTime : '').trim().slice(0, 5)
+      availableSlotsList.filter((s) => isUuid(s.representativeSlotId)).map((s) => {
+        const startStr = (s.startTime || '').trim().slice(0, 5)
+        const endStr = (s.endTime || '').trim().slice(0, 5)
         const timeRange = endStr ? `${startStr} - ${endStr}` : startStr
-        const slotId = typeof s === 'object' && s.id ? s.id : `slot-${idx}`
-        const isAvail = typeof s === 'object' && s.isAvailable !== undefined ? Boolean(s.isAvailable) : true
+        const slotId = s.representativeSlotId
+        const isAvail = !s.isFull && s.remainingSlots > 0
         const hour = parseInt(startStr.slice(0, 2), 10)
         const periodLabel = hour >= 17 ? 'Ca tối' : hour >= 12 ? 'Ca chiều' : 'Ca sáng'
 
@@ -225,15 +223,15 @@ export function useOnlineBooking() {
       return
     }
 
-    let slotId = selectedSlotId
-    if (!slotId) {
-      const found = availableSlotsList.find((s: any) => {
-        const t = typeof s === 'string' ? s : s.startTime
-        return t && t.slice(0, 5) === selectedSlot.slice(0, 5)
-      })
-      if (found && typeof found === 'object' && found.id) {
-        slotId = found.id
-      }
+    const selected = availableSlotsList.find((slot) =>
+      isUuid(selectedSlotId)
+        ? slot.representativeSlotId === selectedSlotId
+        : slot.startTime.slice(0, 5) === selectedSlot.slice(0, 5)
+    )
+    const slotId = selected?.representativeSlotId
+    if (!isUuid(slotId) || selected?.isFull || !selected || selected.remainingSlots <= 0) {
+      Alert.alert('Cần chọn lại giờ khám', 'Khung giờ không còn hợp lệ. Vui lòng chọn lại giờ khám.')
+      return
     }
 
     setBranchId(selectedBranchId)
@@ -254,6 +252,7 @@ export function useOnlineBooking() {
   }
 
   return {
+    priceFilter, setPriceFilter, experienceFilter, setExperienceFilter,
     tomorrow,
     selectedBranchId,
     selectedBranchObj,

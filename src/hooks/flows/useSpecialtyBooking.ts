@@ -1,3 +1,4 @@
+import { isUuid } from '../../utils/validation'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -14,7 +15,8 @@ import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../uti
 
 export function useSpecialtyBooking() {
   const router = useRouter()
-  const params = useLocalSearchParams<{ specialtyId?: string; branchId?: string; serviceId?: string }>()
+  const params = useLocalSearchParams<{ specialtyId?: string; branchId?: string; serviceId?: string; flow?: string }>()
+  const flow = params.flow === 'after-hours' ? 'after-hours' : 'specialty'
   const {
     draft,
     setBranchId,
@@ -47,9 +49,9 @@ export function useSpecialtyBooking() {
   // 2. Data Queries
   // Danh sách chuyên khoa
   const { data: bookingInit, isLoading: loadingInit } = useQuery({
-    queryKey: ['booking', 'init', 'specialty', selectedBranchId, selectedSpecialtyId],
+    queryKey: ['booking', 'init', flow, selectedBranchId, selectedSpecialtyId],
     queryFn: () => bookingService.getBookingInit({
-      flow: 'specialty',
+      flow,
       branchId: selectedBranchId || undefined,
       specialtyId: selectedSpecialtyId,
     }),
@@ -283,11 +285,11 @@ export function useSpecialtyBooking() {
 
   const slotOptions: SelectModalOption[] = useMemo(
     () =>
-      availableSlotsList.map((s: any, idx: number) => {
+      availableSlotsList.filter((s) => isUuid(s.representativeSlotId)).map((s) => {
         const startStr = (s.startTime || '').trim().slice(0, 5)
         const endStr = (s.endTime || '').trim().slice(0, 5)
         const timeRange = endStr ? `${startStr} - ${endStr}` : startStr
-        const slotId = s.representativeSlotId || `slot-${idx}`
+        const slotId = s.representativeSlotId
         const isAvail = !s.isFull && (s.remainingSlots === undefined || s.remainingSlots > 0)
         const hour = parseInt(startStr.slice(0, 2), 10)
         const periodLabel =
@@ -490,16 +492,21 @@ export function useSpecialtyBooking() {
     }
 
     let slotId = selectedSlotId
-    if (!slotId && (selectedDoctor as any)?.slotId) {
+    if (!isUuid(slotId) && (selectedDoctor as any)?.slotId) {
       slotId = (selectedDoctor as any).slotId
+    }
+
+    if (!isUuid(slotId)) {
+      Alert.alert('Cần chọn lại giờ khám', 'Thông tin khung giờ không hợp lệ. Vui lòng chọn lại giờ khám và bác sĩ.')
+      return
     }
 
     setBranchId(selectedBranchId)
     setDoctor(selectedDoctor)
     if (selectedSpecialtyObj) setSpecialty(selectedSpecialtyObj)
     if (selectedService) setSpecialtyService(selectedService)
-    useBookingStore.getState().setBookingMethod('SPECIALTY_EXAM')
-    setIsAfterHours(false)
+    useBookingStore.getState().setBookingMethod(flow === 'after-hours' ? 'AFTER_HOURS' : 'SPECIALTY_EXAM')
+    setIsAfterHours(flow === 'after-hours')
     setDateTime(selectedDate, selectedSlot, slotId)
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {

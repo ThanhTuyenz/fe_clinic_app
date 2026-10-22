@@ -1,11 +1,12 @@
 import { isRunningInExpoGo } from 'expo'
 import { Platform, TurboModuleRegistry } from 'react-native'
+import { createGoogleLoginStep, type GoogleLoginStep } from './googleLoginProgress'
 
 type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin')
 
 let googleModule: GoogleSignInModule | undefined
 
-export async function getGoogleIdToken(): Promise<string | null> {
+export async function getGoogleIdToken(step: GoogleLoginStep = createGoogleLoginStep()): Promise<string | null> {
   if (isRunningInExpoGo()) {
     throw new Error('Đăng nhập Google cần bản app development build. Vui lòng mở bản VitaCare đã cài riêng.')
   }
@@ -28,10 +29,10 @@ export async function getGoogleIdToken(): Promise<string | null> {
 
   const { GoogleSignin, isSuccessResponse, isErrorWithCode, statusCodes } = googleModule
   try {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true })
+    await step('playServices', () => GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true }))
     // Show account selection again after the patient signs out of VitaCare.
-    if (GoogleSignin.hasPreviousSignIn()) await GoogleSignin.signOut()
-    const response = await GoogleSignin.signIn()
+    if (GoogleSignin.hasPreviousSignIn()) await step('signOut', () => GoogleSignin.signOut())
+    const response = await step('account', () => GoogleSignin.signIn())
     if (!isSuccessResponse(response)) return null
     if (!response.data.idToken) {
       throw new Error('Google chưa trả về ID Token. Vui lòng kiểm tra cấu hình Web Client ID.')

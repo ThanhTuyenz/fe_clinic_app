@@ -1,3 +1,4 @@
+import { packageBookingRoute } from '../../src/utils/packageBooking'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
@@ -10,7 +11,7 @@ import {
   View,
 } from 'react-native'
 import { Image } from 'expo-image'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
@@ -134,10 +135,11 @@ const getPackageImage = (name: string, specialtyName?: string, customImage?: str
 
 export default function ServicesScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams<{ specialtyId?: string; branchId?: string }>()
   const { trackSearch } = useBehaviorTracker()
   const [searchQuery, setSearchQuery] = useState('')
   const { results: semanticResults, isSearching, error: searchError, retry: retrySearch } = useSemanticSearch(searchQuery)
-  const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<number | 'all'>('all')
+  const [selectedSpecialtyId, setSelectedSpecialtyId] = useState<number | 'all'>(Number(params.specialtyId) > 0 ? Number(params.specialtyId) : 'all')
   const [priceFilter, setPriceFilter] = useState<'all' | 'under1m' | '1to3m' | 'over3m'>('all')
   const [sortBy, setSortBy] = useState<'default' | 'priceAsc' | 'priceDesc'>('default')
   const [favorites, setFavorites] = useState<Record<string, boolean>>({})
@@ -158,12 +160,13 @@ export default function ServicesScreen() {
   const {
     data: allPackages = [],
     isLoading: loadingPackages,
+    isError: packagesError,
     refetch: refetchPackages,
     isRefetching,
   } = useQuery({
-    queryKey: ['allClinicPackages'],
+    queryKey: ['allClinicPackages', params.branchId],
     queryFn: async () => {
-      const pkgs = await doctorService.getAllPackages({ type: 'all', limit: 200, needPagination: false })
+      const pkgs = await doctorService.getAllPackages({ type: 'all', limit: 200, needPagination: false, branchId: params.branchId })
       return Array.isArray(pkgs) ? pkgs : []
     },
   })
@@ -230,22 +233,7 @@ export default function ServicesScreen() {
     if (semanticResults?.searchId) await searchAnalytics.click(semanticResults.searchId, 'PACKAGE', String(pkg.id), semanticResults.packages.findIndex(item => item.id === String(pkg.id)) + 1, pkg.branchId).catch(() => {})
     const store = useBookingStore.getState()
     store.resetBooking()
-    const branchId = pkg.branchId || pkg.branchBookingMethod?.branchId || ''
-    if (branchId) store.setBranchId(branchId)
-    if ((pkg.bookingMethodCode || pkg.bookingMethod?.code || pkg.branchBookingMethod?.bookingMethod?.code) === 'SPECIALTY_EXAM') {
-      router.push({ pathname: '/booking/specialty', params: {
-        branchId, specialtyId: String(pkg.specialtyId || pkg.specialty?.id || ''), serviceId: String(pkg.id),
-      } })
-      return
-    }
-    store.setBookingMethod('HEALTH_PACKAGE')
-    store.setHealthPackage({
-      id: String(pkg.id),
-      name: pkg.displayName || pkg.name,
-      price: Number(pkg.price || 0),
-      specialtyId: pkg.specialtyId || pkg.specialty?.id,
-    })
-    router.push('/booking/package')
+    router.push(packageBookingRoute(pkg))
   }
 
   return (
@@ -435,6 +423,8 @@ export default function ServicesScreen() {
             <Text className="text-sm text-primary-700">Thử lại</Text>
           </TouchableOpacity>
         </View>
+      ) : packagesError ? (
+        <TouchableOpacity onPress={() => { void refetchPackages() }} className="p-8"><Text className="text-center text-rose-700">Không tải được gói khám. Nhấn để thử lại.</Text></TouchableOpacity>
       ) : loadingPackages || isSearching ? (
         <View className="flex-1 items-center justify-center py-20">
           <ActivityIndicator size="large" color="#28a745" />

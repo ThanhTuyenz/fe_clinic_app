@@ -23,7 +23,7 @@ export default function AppointmentsScreen() {
   const { isAuthenticated } = useAuthStore()
   const [tab, setTab] = useState<'upcoming' | 'history'>('upcoming')
 
-  const { data: appointments = [], isLoading, refetch, isRefetching } = useMyAppointments()
+  const { data: appointments = [], isLoading, isError, refetch, isRefetching } = useMyAppointments()
 
   const isUpcoming = (status?: string) => {
     const s = (status || '').toUpperCase()
@@ -309,6 +309,8 @@ export default function AppointmentsScreen() {
         <View className="flex-1 px-4 pt-3">
           {isLoading ? (
             <ActivityIndicator size="small" color="#28a745" className="py-8" />
+          ) : isError ? (
+            <Button title="Không tải được lịch khám. Thử lại" variant="outline" onPress={() => { void refetch() }} />
           ) : displayedList.length === 0 ? (
             <View className="flex-1 items-center justify-center py-16">
               <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />

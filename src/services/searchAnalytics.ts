@@ -5,7 +5,7 @@ import { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
 
 type Target = 'PACKAGE' | 'DOCTOR' | 'BRANCH'
 interface Source { searchId?: string; sourceViewId?: string; analyticsSessionId: string; at: number; branchId?: string }
-interface Event { id: string; sessionId: string; searchId?: string; eventType: 'RESULT_CLICK' | 'PACKAGE_VIEW'; targetType: Target; targetId: string; position?: number; branchId?: string; at: number }
+interface Event { id: string; sessionId: string; searchId?: string; recommendationToken?: string; eventType: 'RESULT_CLICK' | 'PACKAGE_VIEW' | 'RECOMMEND_IMPRESSION' | 'RECOMMEND_CLICK'; targetType: Target; targetId: string; position?: number; branchId?: string; at: number }
 interface Stored { events: Event[]; clicks: Record<string, Source>; views: Record<string, Source> }
 const KEY = 'vitacare_search_analytics_v1'
 const TTL = 24 * 3600_000
@@ -60,6 +60,12 @@ function schedule() {
 function active(source?: Source) { return source && source.at > Date.now() - TTL ? source : undefined }
 
 export const searchAnalytics = {
+  async recommendation(eventType: 'RECOMMEND_IMPRESSION' | 'RECOMMEND_CLICK', recommendationToken: string, targetId: string, position: number) {
+    if (!recommendationToken) return
+    const sessionId = await getOrGenerateGuestSessionId()
+    await mutate(value => { value.events.push({ id: analyticsEventId(), sessionId, eventType, recommendationToken, targetType: 'PACKAGE', targetId, position, at: Date.now() }) })
+    schedule()
+  },
   async click(searchId: string | undefined, targetType: Target, targetId: string, position: number, branchId?: string) {
     if (!searchId) return
     const sessionId = await getOrGenerateGuestSessionId()

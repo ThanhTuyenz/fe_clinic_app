@@ -24,6 +24,17 @@ export function getTodayDateString(): string {
   return dayjs().format('YYYY-MM-DD')
 }
 
+/** Keep birth dates as calendar dates, including values read from ISO API responses. */
+export function normalizeBirthDate(value: string): string | null {
+  const input = typeof value === 'string' ? value.trim() : ''
+  if (!/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(input)) return null
+  if (input.length > 10 && !Number.isFinite(Date.parse(input))) return null
+  const dateOnly = input.slice(0, 10)
+  const date = new Date(`${dateOnly}T00:00:00.000Z`)
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== dateOnly) return null
+  return dateOnly <= getTodayDateString() ? dateOnly : null
+}
+
 export function getTomorrowDateString(): string {
   return dayjs().add(1, 'day').format('YYYY-MM-DD')
 }

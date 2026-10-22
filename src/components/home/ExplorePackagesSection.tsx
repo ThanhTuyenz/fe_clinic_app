@@ -1,43 +1,39 @@
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import React, { useCallback, useState } from 'react'
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useQuery } from '@tanstack/react-query'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { doctorService } from '../../services/doctorService'
-import { useBookingStore } from '../../store/useBookingStore'
+import { clinicHomepageQuery } from '../../queries/homeQueries'
 import { PackageCard } from './PackageCard'
-import { HEALTH_PACKAGES } from './HealthPackagesSection'
+import { RECENTLY_VIEWED_KEY, type RecentlyViewedPackage } from '../../utils/recentlyViewedPackages'
 
-export const ExplorePackagesSection: React.FC = () => {
+export const ExplorePackagesSection: React.FC = React.memo(() => {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'general' | 'recent'>('general')
-  const [recentPackages, setRecentPackages] = useState<any[]>([])
+  const [recentPackages, setRecentPackages] = useState<RecentlyViewedPackage[]>([])
 
-  const { data: generalPackages = [], isLoading: loadingGeneral } = useQuery({
-    queryKey: ['healthPackages'],
-    queryFn: () => doctorService.getHealthPackages(),
+  const { data: generalPackages = [], isLoading: loadingGeneral, isError, refetch } = useQuery({
+    ...clinicHomepageQuery,
+    select: data => data.healthPackages,
   })
 
   // Load recently viewed packages from AsyncStorage
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    if (activeTab !== 'recent') return
+    let active = true
     const loadRecents = async () => {
       try {
-        const raw = await AsyncStorage.getItem('vitacare_recently_viewed_packages')
-        if (raw) {
-          const list = JSON.parse(raw)
-          if (Array.isArray(list) && list.length > 0) {
-            setRecentPackages(list)
-          }
-        }
+        const raw = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY)
+        const list = raw ? JSON.parse(raw) : []
+        if (active) setRecentPackages(Array.isArray(list) ? list.slice(0, 10) : [])
       } catch {}
     }
-    loadRecents()
-  }, [activeTab])
+    void loadRecents()
+    return () => { active = false }
+  }, [activeTab]))
 
-  const displayList = activeTab === 'general'
-    ? (generalPackages.length > 0 ? generalPackages : HEALTH_PACKAGES)
-    : (recentPackages.length > 0 ? recentPackages : (generalPackages.length > 0 ? generalPackages.slice(0, 3) : HEALTH_PACKAGES.slice(0, 3)))
+  const displayList = activeTab === 'general' ? generalPackages : recentPackages
 
   return (
     <View className="mt-8 pt-1">
@@ -114,20 +110,27 @@ export const ExplorePackagesSection: React.FC = () => {
       {/* Danh sách thẻ gói khám */}
       {loadingGeneral && activeTab === 'general' ? (
         <ActivityIndicator size="small" color="#28a745" className="py-6" />
+      ) : isError && activeTab === 'general' ? (
+        <TouchableOpacity onPress={() => { void refetch() }}><Text className="px-5 py-4 text-rose-700">Không tải được gói khám. Nhấn để thử lại.</Text></TouchableOpacity>
+      ) : displayList.length === 0 ? (
+        <Text className="px-5 py-4 text-sm text-slate-500">{activeTab === 'recent' ? 'Bạn chưa xem gói khám nào.' : 'Chưa có gói khám.'}</Text>
       ) : (
-        <ScrollView
+        <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, alignItems: 'flex-start' }}
-        >
-          {displayList.map((pkg: any, idx: number) => {
+          data={displayList}
+          keyExtractor={pkg => String(pkg.id)}
+          initialNumToRender={3}
+          maxToRenderPerBatch={3}
+          windowSize={3}
+          renderItem={({ item: pkg }) => {
             const specialtyName =
               pkg.specialty?.name || pkg.specialtyName || pkg.category || 'Tổng quát'
-            const price = Number(pkg.price || 1500000)
+            const price = Number(pkg.price ?? 0)
 
             return (
               <PackageCard
-                key={pkg.id || idx}
                 id={String(pkg.id)}
                 name={pkg.name}
                 description={pkg.description || pkg.desc}
@@ -149,23 +152,14 @@ export const ExplorePackagesSection: React.FC = () => {
                       }
                 }
                 onPress={() => {
-                  const store = useBookingStore.getState()
-                  store.resetBooking()
-                  store.setBookingMethod('HEALTH_PACKAGE')
-                  store.setHealthPackage({
-                    id: String(pkg.id),
-                    name: pkg.name,
-                    price: price,
-                    specialtyId: pkg.specialtyId || pkg.specialty?.id,
-                  })
-                  router.push('/booking/package')
+                  router.push({ pathname: '/package/[id]', params: { id: String(pkg.id) } })
                 }}
                 onDetailPress={() => router.push(`/package/${pkg.id || pkg.slug}`)}
               />
             )
-          })}
-        </ScrollView>
+          }}
+        />
       )}
     </View>
   )
-}
+})

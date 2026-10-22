@@ -23,7 +23,7 @@ export default function BookingDispatcherScreen() {
       (params.method === 'doctor' || Boolean(params.doctorId) || params.method === 'followup')
     const isAfterHours = params.mode === 'after-hours' || params.method === 'after-hours'
 
-    const targetRoute = isPackage
+    const targetRoute = params.method === 'family' || params.flow === 'family' ? '/booking/family' : isPackage
       ? '/booking/package'
       : isDoctor
         ? '/booking/doctor'

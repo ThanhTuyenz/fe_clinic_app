@@ -2,6 +2,16 @@ import { api, unwrapNestResponse } from './api'
 import { Doctor } from '../types/doctor'
 import { resolveDoctorAvatarUrl } from './doctorService'
 
+export interface BookingMethod {
+  id: string
+  bookingMethodId?: string
+  code: string
+  type?: string
+  displayName: string
+  description?: string | null
+  isEnabled: boolean
+}
+
 export type BookingFlow =
   | 'doctor'
   | 'specialty'
@@ -79,6 +89,15 @@ function normalizeDoctor(raw: any): Doctor {
 }
 
 export const bookingService = {
+  async getBookingMethods(branchId?: string): Promise<BookingMethod[]> {
+    const response = await api.get('/api/v1/schedules/booking-methods', {
+      params: branchId ? { branchId } : undefined,
+    })
+    const methods = unwrapNestResponse<BookingMethod[]>(response.data)
+    if (!Array.isArray(methods)) throw new Error('Dữ liệu phương thức đặt lịch không hợp lệ.')
+    return methods
+  },
+
   async getBookingInit(params: {
     flow?: BookingFlow
     branchId?: string

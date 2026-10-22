@@ -1,17 +1,16 @@
 import React from 'react'
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { doctorService } from '../../services/doctorService'
-import { useBookingStore } from '../../store/useBookingStore'
+import { clinicHomepageQuery } from '../../queries/homeQueries'
 import { PackageCard } from './PackageCard'
 
-export const SpecialtiesGridSection: React.FC = () => {
+export const SpecialtiesGridSection: React.FC = React.memo(() => {
   const router = useRouter()
 
-  const { data: specialtyPackages = [], isLoading: loadingPkgs } = useQuery({
-    queryKey: ['specialtyPackages'],
-    queryFn: () => doctorService.getSpecialtyPackages(),
+  const { data: specialtyPackages = [], isLoading: loadingPkgs, isError, refetch } = useQuery({
+    ...clinicHomepageQuery,
+    select: data => data.specialtyPackages,
   })
 
   return (
@@ -37,68 +36,36 @@ export const SpecialtiesGridSection: React.FC = () => {
       {/* Danh sách Gói khám chuyên khoa cuộn ngang */}
       {loadingPkgs ? (
         <ActivityIndicator size="small" color="#28a745" className="py-4" />
+      ) : isError ? (
+        <TouchableOpacity onPress={() => { void refetch() }}><Text className="px-5 py-4 text-rose-700">Không tải được gói khám. Nhấn để thử lại.</Text></TouchableOpacity>
+      ) : specialtyPackages.length === 0 ? (
+        <Text className="px-5 py-4 text-sm text-slate-500">Chưa có gói khám chuyên khoa.</Text>
       ) : (
-        <ScrollView
+        <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8, alignItems: 'flex-start' }}
-        >
-          {(specialtyPackages.length > 0 ? specialtyPackages : displayFallbackPackages).map(
-            (pkg: any, idx: number) => (
+          data={specialtyPackages}
+          keyExtractor={pkg => String(pkg.id)}
+          initialNumToRender={3}
+          maxToRenderPerBatch={3}
+          windowSize={3}
+          renderItem={({ item: pkg }) => (
               <PackageCard
-                key={pkg.id || idx}
                 id={String(pkg.id)}
                 name={pkg.name}
                 description={pkg.description || pkg.desc}
-                price={Number(pkg.price || 1200000)}
+                price={Number(pkg.price ?? 0)}
                 image={pkg.imageUrl || pkg.image}
                 specialtyName={pkg.specialty?.name || pkg.specialtyName || 'Chuyên khoa'}
                 onPress={() => {
-                  const store = useBookingStore.getState()
-                  store.resetBooking()
-                  store.setBookingMethod('HEALTH_PACKAGE')
-                  store.setHealthPackage({
-                    id: String(pkg.id),
-                    name: pkg.name,
-                    price: Number(pkg.price || 1200000),
-                    specialtyId: pkg.specialtyId || pkg.specialty?.id,
-                  })
-                  router.push('/booking/package')
+                  router.push({ pathname: '/package/[id]', params: { id: String(pkg.id) } })
                 }}
                 onDetailPress={() => router.push(`/package/${pkg.id || pkg.slug}`)}
               />
-            )
           )}
-        </ScrollView>
+        />
       )}
     </View>
   )
-}
-
-const displayFallbackPackages = [
-  {
-    id: 'sp-1',
-    name: 'Tầm soát & Chẩn đoán Tim mạch Toàn diện',
-    desc: 'Đo điện tâm đồ ECG, siêu âm tim Doppler và đánh giá xơ vữa động mạch',
-    price: 1850000,
-    specialtyName: 'Tim mạch',
-    image: 'https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=600&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'sp-2',
-    name: 'Khám & Tầm soát Tiêu hóa - Gan Mật',
-    desc: 'Siêu âm ổ bụng tổng quát, kiểm tra men gan và tầm soát viêm dạ dày',
-    price: 1600000,
-    specialtyName: 'Tiêu hóa',
-    image: 'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=600&auto=format&fit=crop&q=80',
-  },
-  {
-    id: 'sp-3',
-    name: 'Tầm soát Thoái hóa Cơ Xương Khớp & Cột sống',
-    desc: 'Chụp X-quang kỹ thuật số, định lượng Axit Uric và tư vấn phục hồi chức năng',
-    price: 1350000,
-    specialtyName: 'Cơ Xương Khớp',
-    image: 'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=600&auto=format&fit=crop&q=80',
-  },
-]
-
+})

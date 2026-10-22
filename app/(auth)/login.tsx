@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -10,7 +11,7 @@ import {
 } from 'react-native'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useRouter } from 'expo-router'
+import { Link, useLocalSearchParams, useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Image } from 'expo-image'
 import { loginSchema, LoginFormValues } from '@/utils'
@@ -23,10 +24,11 @@ import { useGoogleLogin } from '@/hooks/useGoogleLogin'
 
 export default function LoginScreen() {
   const router = useRouter()
+  const { redirect } = useLocalSearchParams<{ redirect?: string }>()
   const setAuth = useAuthStore((state) => state.setAuth)
   const draft = useBookingStore((state) => state.draft)
   const [loading, setLoading] = useState(false)
-  const { loginWithGoogle, googleLoading } = useGoogleLogin()
+  const { loginWithGoogle, googleLoading, googleLoadingMessage } = useGoogleLogin()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zaloModalVisible, setZaloModalVisible] = useState(false)
 
@@ -60,7 +62,9 @@ export default function LoginScreen() {
           draft.date &&
           draft.slot
         )
-        if (hasDraft) {
+        if (redirect === '/booking/family') {
+          router.replace('/booking/family')
+        } else if (hasDraft) {
           router.replace('/booking/patient-info')
         } else if (router.canGoBack()) {
           router.back()
@@ -226,7 +230,7 @@ export default function LoginScreen() {
                 onPress={() => { void loginWithGoogle() }}
                 className="w-28 h-14 bg-white rounded-lg border border-slate-200 shadow-xs items-center justify-center active:bg-slate-50"
               >
-                <Ionicons name="logo-google" size={26} color="#ea4335" />
+                {googleLoading ? <ActivityIndicator color="#28a745" /> : <Ionicons name="logo-google" size={26} color="#ea4335" />}
               </TouchableOpacity>
 
               {/* Zalo */}
@@ -239,6 +243,12 @@ export default function LoginScreen() {
                 <ZaloLogo size={32} />
               </TouchableOpacity>
             </View>
+
+            {googleLoading && (
+              <Text accessibilityLiveRegion="polite" className="text-sm text-slate-500 text-center mb-4">
+                {googleLoadingMessage}
+              </Text>
+            )}
 
             {/* Chân trang */}
             <View className="items-center">

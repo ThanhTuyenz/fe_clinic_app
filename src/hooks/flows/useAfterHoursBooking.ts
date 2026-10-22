@@ -1,3 +1,4 @@
+import { isUuid } from '../../utils/validation'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -154,12 +155,12 @@ export function useAfterHoursBooking() {
 
   const slotOptions: SelectModalOption[] = useMemo(
     () =>
-      availableSlotsList.map((s: any, idx: number) => {
-        const startStr = (typeof s === 'string' ? s : s.startTime || '').trim().slice(0, 5)
-        const endStr = (typeof s === 'object' && s.endTime ? s.endTime : '').trim().slice(0, 5)
+      availableSlotsList.filter((s) => isUuid(s.representativeSlotId)).map((s) => {
+        const startStr = (s.startTime || '').trim().slice(0, 5)
+        const endStr = (s.endTime || '').trim().slice(0, 5)
         const timeRange = endStr ? `${startStr} - ${endStr}` : startStr
-        const slotId = typeof s === 'object' && s.id ? s.id : `slot-${idx}`
-        const isAvail = typeof s === 'object' && s.isAvailable !== undefined ? Boolean(s.isAvailable) : true
+        const slotId = s.representativeSlotId
+        const isAvail = !s.isFull && s.remainingSlots > 0
 
         return {
           id: slotId,
@@ -266,15 +267,15 @@ export function useAfterHoursBooking() {
       return
     }
 
-    let slotId = selectedSlotId
-    if (!slotId) {
-      const found = availableSlotsList.find((s: any) => {
-        const t = typeof s === 'string' ? s : s.startTime
-        return t && t.slice(0, 5) === selectedSlot.slice(0, 5)
-      })
-      if (found && typeof found === 'object' && found.representativeSlotId) {
-        slotId = found.representativeSlotId
-      }
+    const selected = availableSlotsList.find((slot) =>
+      isUuid(selectedSlotId)
+        ? slot.representativeSlotId === selectedSlotId
+        : slot.startTime.slice(0, 5) === selectedSlot.slice(0, 5)
+    )
+    const slotId = selected?.representativeSlotId
+    if (!isUuid(slotId) || selected?.isFull || !selected || selected.remainingSlots <= 0) {
+      Alert.alert('Cần chọn lại giờ khám', 'Khung giờ không còn hợp lệ. Vui lòng chọn lại giờ khám.')
+      return
     }
 
     setBranchId(selectedBranchId)

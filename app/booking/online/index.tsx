@@ -1,6 +1,7 @@
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 
 import { useOnlineBooking } from '../../../src/hooks/flows/useOnlineBooking'
+import { DoctorFilterControls } from '../../../src/components/booking/DoctorFilterControls'
 import { ScreenShell } from '../../../src/components/common/ScreenShell'
 import { SelectInput } from '../../../src/components/common/SelectInput'
 import { Button } from '../../../src/components/common/Button'
@@ -13,6 +14,7 @@ import { formatDateVi } from '../../../src/utils/date'
 
 export default function OnlineBookingScreen() {
   const {
+    priceFilter, setPriceFilter, experienceFilter, setExperienceFilter,
     tomorrow,
     selectedBranchId,
     selectedBranchObj,
@@ -77,6 +79,7 @@ export default function OnlineBookingScreen() {
               onPress={() => setModalType('branch')}
             />
 
+            <DoctorFilterControls price={priceFilter} experience={experienceFilter} onPrice={setPriceFilter} onExperience={setExperienceFilter} online />
             <SelectInput
               label="Bác sĩ tư vấn online"
               required

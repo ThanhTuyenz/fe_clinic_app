@@ -49,7 +49,7 @@ export const BOOKING_METHODS: BookingMethodItem[] = [
     name: 'Khám gia đình',
     image: 'https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&w=300&q=80',
     color: '#7c3aed',
-    path: '/booking/specialty?flow=family',
+    path: '/booking/family',
   },
   {
     id: 'after-hours',

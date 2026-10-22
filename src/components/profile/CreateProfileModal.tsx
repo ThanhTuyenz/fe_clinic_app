@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Alert,
+  FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -10,6 +12,8 @@ import {
   View,
 } from 'react-native'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import { Calendar, LocaleConfig } from 'react-native-calendars'
+import { formatDateVi, getTodayDateString, normalizeBirthDate } from '../../utils/date'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Input, Button, CccdScannerModal } from '../common'
 import { ParsedCccd } from '../../utils/cccdParser'
@@ -19,6 +23,15 @@ import {
   PatientProfile,
   CreatePatientProfilePayload,
 } from '../../services/patientProfileService'
+
+LocaleConfig.locales.vi ??= {
+  monthNames: Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`),
+  monthNamesShort: Array.from({ length: 12 }, (_, i) => `Th${i + 1}`),
+  dayNames: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'],
+  dayNamesShort: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+  today: 'Hôm nay',
+}
+LocaleConfig.defaultLocale = 'vi'
 
 interface CreateProfileModalProps {
   visible: boolean
@@ -37,6 +50,12 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets()
   const [showScanner, setShowScanner] = useState(false)
+  const [showBirthDatePicker, setShowBirthDatePicker] = useState(false)
+  const [showBirthYears, setShowBirthYears] = useState(false)
+  const [birthCalendarMonth, setBirthCalendarMonth] = useState(getTodayDateString)
+  const today = getTodayDateString()
+  const birthYears = useMemo(() => Array.from({ length: Number(today.slice(0, 4)) },
+    (_, index) => Number(today.slice(0, 4)) - index), [today])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [form, setForm] = useState<CreatePatientProfilePayload>({
     fullName: '',
@@ -51,6 +70,8 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
   useEffect(() => {
     if (visible) {
+      setShowBirthDatePicker(false)
+      setShowBirthYears(false)
       // Load the module while the form is open; camera access starts only after tapping scan.
       if (Platform.OS !== 'web') getNativeCameraModule()
       if (initialData) {
@@ -66,14 +87,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
             .join(', ') ||
           ''
 
-        let dob = ''
-        if (initialData.dateOfBirth) {
-          const rawDob =
-            typeof initialData.dateOfBirth === 'string'
-              ? initialData.dateOfBirth
-              : String(initialData.dateOfBirth)
-          dob = rawDob.split('T')[0]
-        }
+        const dob = normalizeBirthDate(initialData.dateOfBirth || '') || ''
 
         setForm({
           fullName: initialData.fullName || '',
@@ -107,7 +121,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
       ...prev,
       fullName: parsed.fullName,
       nationalId: parsed.nationalId,
-      dateOfBirth: parsed.dateOfBirth,
+      dateOfBirth: normalizeBirthDate(parsed.dateOfBirth) || '',
       gender: parsed.gender,
       address: parsed.address || prev.address,
     }))
@@ -122,8 +136,8 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập số điện thoại liên hệ.')
       return
     }
-    if (!form.dateOfBirth?.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập ngày sinh bệnh nhân (YYYY-MM-DD).')
+    if (!normalizeBirthDate(form.dateOfBirth)) {
+      Alert.alert('Ngày sinh không hợp lệ', 'Vui lòng chọn ngày sinh bệnh nhân từ lịch.')
       return
     }
 
@@ -186,7 +200,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
             {/* Header */}
             <View className="flex-row items-center justify-between px-5 py-3.5 border-b border-slate-100">
               <Text className="text-base font-bold text-slate-900">
-                {initialData ? 'Xem chi tiết & Cập nhật hồ sơ' : 'Thêm hồ sơ bệnh nhân mới'}
+                {showBirthDatePicker ? 'Chọn ngày sinh' : initialData ? 'Xem chi tiết & Cập nhật hồ sơ' : 'Thêm hồ sơ bệnh nhân mới'}
               </Text>
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -198,8 +212,82 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
               </TouchableOpacity>
             </View>
 
+            {showBirthDatePicker && (
+              <View className="px-4 pb-4">
+                <TouchableOpacity
+                  onPress={() => showBirthYears ? setShowBirthYears(false) : setShowBirthDatePicker(false)}
+                  accessibilityRole="button"
+                  className="flex-row items-center py-3"
+                >
+                  <Ionicons name="chevron-back" size={18} color="#047857" />
+                  <Text className="text-sm text-emerald-700 ml-1">
+                    {showBirthYears ? 'Quay lại lịch' : 'Quay lại hồ sơ'}
+                  </Text>
+                </TouchableOpacity>
+                {showBirthYears ? (
+                  <FlatList
+                    style={{ height: 320 }}
+                    data={birthYears}
+                    numColumns={4}
+                    keyExtractor={year => String(year)}
+                    keyboardShouldPersistTaps="handled"
+                    renderItem={({ item: year }) => (
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={`Chọn năm ${year}`}
+                        onPress={() => {
+                          setBirthCalendarMonth(`${String(year).padStart(4, '0')}-${birthCalendarMonth.slice(5, 7)}-01`)
+                          setShowBirthYears(false)
+                        }}
+                        className={`flex-1 m-1 py-3 rounded-lg items-center ${Number(birthCalendarMonth.slice(0, 4)) === year ? 'bg-emerald-600' : 'bg-slate-50'}`}
+                      >
+                        <Text className={Number(birthCalendarMonth.slice(0, 4)) === year ? 'text-white font-semibold' : 'text-slate-700'}>
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                ) : (
+                  <>
+                    <Text className="text-xs text-slate-500 text-center mb-1">Nhấn vào tháng/năm để chọn nhanh năm sinh</Text>
+                    <Calendar
+                      key={birthCalendarMonth}
+                      current={birthCalendarMonth}
+                      maxDate={today}
+                      firstDay={1}
+                      disableAllTouchEventsForDisabledDays
+                      onMonthChange={month => setBirthCalendarMonth(month.dateString)}
+                      renderHeader={() => (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          accessibilityLabel="Chọn năm sinh"
+                          onPress={() => setShowBirthYears(true)}
+                          className="flex-row items-center px-3 py-2"
+                        >
+                          <Text className="text-base font-bold text-slate-800">
+                            Tháng {Number(birthCalendarMonth.slice(5, 7))} / {birthCalendarMonth.slice(0, 4)}
+                          </Text>
+                          <Ionicons name="chevron-down" size={16} color="#047857" style={{ marginLeft: 6 }} />
+                        </TouchableOpacity>
+                      )}
+                      markedDates={form.dateOfBirth ? {
+                        [form.dateOfBirth]: { selected: true, selectedColor: '#059669' },
+                      } : {}}
+                      onDayPress={day => {
+                        const dateOfBirth = normalizeBirthDate(day.dateString)
+                        if (!dateOfBirth) return
+                        setForm(previous => ({ ...previous, dateOfBirth }))
+                        setShowBirthDatePicker(false)
+                      }}
+                      theme={{ arrowColor: '#059669', todayTextColor: '#059669', selectedDayBackgroundColor: '#059669' }}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+
             <ScrollView
-              style={{ flexShrink: 1 }}
+              style={{ flexShrink: 1, display: showBirthDatePicker ? 'none' : 'flex' }}
               contentContainerStyle={{ padding: 20 }}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
@@ -240,12 +328,24 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
 
               <View className="flex-row gap-3">
                 <View className="flex-1">
-                  <Input
-                    label="Ngày sinh (YYYY-MM-DD) *"
-                    placeholder="2000-01-01"
-                    value={form.dateOfBirth}
-                    onChangeText={(val) => setForm((p) => ({ ...p, dateOfBirth: val }))}
-                  />
+                  <Text className="text-xs font-semibold text-slate-700 mb-1.5">Ngày sinh *</Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Chọn ngày sinh"
+                    disabled={isSubmitting}
+                    onPress={() => {
+                      Keyboard.dismiss()
+                      setBirthCalendarMonth(normalizeBirthDate(form.dateOfBirth) || today)
+                      setShowBirthYears(false)
+                      setShowBirthDatePicker(true)
+                    }}
+                    className="flex-row items-center justify-between border border-slate-200 rounded-lg px-3.5 h-[46px] bg-slate-50/60 mb-3.5"
+                  >
+                    <Text className={form.dateOfBirth ? 'text-sm text-slate-800' : 'text-sm text-slate-400'}>
+                      {form.dateOfBirth ? formatDateVi(form.dateOfBirth) : 'Chọn ngày sinh'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={18} color="#64748b" />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Giới tính */}
@@ -342,7 +442,7 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
             </ScrollView>
 
             {/* Keep actions above the Android navigation bar while the form scrolls. */}
-            <View className="flex-row gap-3 px-5 py-3 border-t border-slate-100 bg-white">
+            <View className="flex-row gap-3 px-5 py-3 border-t border-slate-100 bg-white" style={{ display: showBirthDatePicker ? 'none' : 'flex' }}>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={onClose}

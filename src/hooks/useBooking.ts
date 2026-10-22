@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { bookingService } from '../services/bookingService'
 import { appointmentService, CheckoutPayload } from '../services/appointmentService'
 import { getTomorrowDateString } from '../utils/date'
+import { useAuthStore } from '../store/useAuthStore'
 
 export function useDoctorAvailability(doctorId?: string | number, date?: string, branchId?: string) {
   const tomorrow = getTomorrowDateString()
@@ -27,9 +28,11 @@ export function useCreateAppointment() {
 }
 
 export function useMyAppointments() {
+  const { user, isAuthenticated } = useAuthStore()
   return useQuery({
-    queryKey: ['myAppointments'],
+    queryKey: ['myAppointments', user?.id],
     queryFn: () => appointmentService.getMyAppointments(),
+    enabled: isAuthenticated,
     staleTime: 1000 * 60,
   })
 }

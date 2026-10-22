@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { RefreshControl, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { useBookingStore } from '../../src/store/useBookingStore'
-import { doctorService } from '../../src/services/doctorService'
+import { homeDoctorsQuery } from '../../src/queries/homeQueries'
 import {
-  recommendationService,
   RecommendedPackageItem,
   SemanticSearchResultItem,
   SearchDoctorItem,
@@ -14,8 +13,9 @@ import {
 } from '../../src/services/recommendationService'
 import { notificationService } from '../../src/services/notificationService'
 import { usePushNotifications } from '../../src/hooks/usePushNotifications'
-import { useBehaviorTracker } from '../../src/hooks/useBehaviorTracker'
+import { useAnalyticsSession } from '../../src/hooks/useAnalyticsSession'
 import { useSemanticSearch } from '../../src/hooks/useSemanticSearch'
+import { useHomeRecommendations } from '../../src/hooks/useHomeRecommendations'
 import { searchAnalytics } from '../../src/services/searchAnalytics'
 import { Doctor } from '../../src/types/doctor'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
@@ -35,65 +35,44 @@ import {
 
 export default function HomeScreen() {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuthStore()
-  const { sessionId, trackSearch } = useBehaviorTracker()
+  const user = useAuthStore(state => state.user)
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const authLoading = useAuthStore(state => state.isLoading)
+  const sessionId = useAnalyticsSession()
+  const queryClient = useQueryClient()
   usePushNotifications(isAuthenticated)
 
   const setDoctor = useBookingStore((state) => state.setDoctor)
   const [searchQuery, setSearchQuery] = useState('')
   const [bookingModalVisible, setBookingModalVisible] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const refreshBusy = useRef(false)
+  const openBooking = useCallback(() => setBookingModalVisible(true), [])
   const { results: searchResults, isSearching, error: searchError, retry: retrySearch } = useSemanticSearch(searchQuery)
-  useEffect(() => {
-    if (searchResults && !searchResults.partial && !isSearching) void trackSearch(searchResults.query)
-  }, [searchResults, isSearching, trackSearch])
-
-
   const {
     data: doctors = [],
     isLoading: loadingDoctors,
     refetch: refetchDoctors,
-    isRefetching,
-  } = useQuery({
-    queryKey: ['doctors'],
-    queryFn: () => doctorService.getDoctors(),
-  })
+  } = useQuery(homeDoctorsQuery)
 
-  const { refetch: refetchDepts } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => doctorService.getDepartments(),
-  })
-
-  const {
-    data: homeRecs,
-    isLoading: loadingRecs,
-    refetch: refetchRecs,
-  } = useQuery({
-    queryKey: ['homeRecommendations', user?.id, sessionId],
-    queryFn: () => recommendationService.getHomeRecommendations({ sessionId: sessionId || undefined }),
-  })
+  const recommendations = useHomeRecommendations(user?.id ? String(user.id) : undefined, isAuthenticated, sessionId, !authLoading)
+  const { data: homeRecs, isLoading: loadingRecs, refetch: refetchRecs } = recommendations
 
   const { data: unreadData, refetch: refetchNotifs } = useQuery({
     queryKey: ['unreadNotifications', user?.id],
     queryFn: () => notificationService.getUnreadCount(),
     enabled: isAuthenticated,
+    staleTime: 30_000,
   })
 
   const handleSelectDoctor = (doc: Doctor) => {
+    useBookingStore.getState().resetBooking()
     setDoctor(doc)
     router.push(`/booking?doctorId=${doc.id}` as any)
   }
 
   const handleSelectRecommendedPackage = (pkg: RecommendedPackageItem) => {
-    const store = useBookingStore.getState()
-    store.resetBooking()
-    store.setBookingMethod('HEALTH_PACKAGE')
-    store.setHealthPackage({
-      id: pkg.packageId,
-      name: pkg.name,
-      price: pkg.price,
-      specialtyId: pkg.specialtyId,
-    })
-    router.push('/booking/package')
+    router.push({ pathname: '/package/[id]', params: { id: pkg.packageId } })
   }
 
   const handleSelectSearchPackage = async (pkg: SemanticSearchResultItem) => {
@@ -117,7 +96,7 @@ export default function HomeScreen() {
 
   const patientName = user?.full_name || user?.fullName || user?.name || 'Quý khách'
 
-  const filteredDoctors = doctors.filter((doc) => {
+  const filteredDoctors = useMemo(() => doctors.filter((doc) => {
     if (!searchQuery.trim()) return true
     const q = searchQuery.toLowerCase().trim()
     const name = (doc.full_name || doc.fullName || doc.name || '').toLowerCase()
@@ -125,7 +104,24 @@ export default function HomeScreen() {
       typeof doc.specialty === 'object' ? doc.specialty?.name : doc.specialty || ''
     ).toLowerCase()
     return name.includes(q) || spec.includes(q)
-  })
+  }), [doctors, searchQuery])
+
+  const refreshHome = async () => {
+    if (refreshBusy.current) return
+    refreshBusy.current = true
+    setRefreshing(true)
+    try {
+      await Promise.allSettled([
+        refetchDoctors(),
+        queryClient.refetchQueries({ queryKey: ['clinicHomepage'], exact: true, type: 'active' }),
+        ...(!authLoading && sessionId && !recommendations.loadingProfiles && !recommendations.profilesError ? [refetchRecs()] : []),
+        ...(isAuthenticated ? [refetchNotifs(), queryClient.refetchQueries({ queryKey: ['myAppointments', user?.id], exact: true, type: 'active' })] : []),
+      ])
+    } finally {
+      refreshBusy.current = false
+      setRefreshing(false)
+    }
+  }
 
   return (
     <ScreenShell>
@@ -138,15 +134,10 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
-            refreshing={isRefetching}
+            refreshing={refreshing}
             tintColor="#28a745"
             colors={['#28a745']}
-            onRefresh={() => {
-              refetchDoctors()
-              refetchDepts()
-              refetchRecs()
-              if (isAuthenticated) refetchNotifs()
-            }}
+            onRefresh={() => { void refreshHome() }}
           />
         }
       >
@@ -171,17 +162,24 @@ export default function HomeScreen() {
           onSelectPackage={handleSelectSearchPackage}
           onSelectDoctor={handleSelectSearchDoctor}
           onSelectBranch={handleSelectSearchBranch}
-          onFilterPress={() => router.push({ pathname: '/booking', params: { method: 'doctor' } })}
+          onFilterPress={() => router.push('/doctors')}
         />
 
 
-        <HeroBanner onStartBooking={() => setBookingModalVisible(true)} />
+        <HeroBanner onStartBooking={openBooking} />
 
         {/* 1. [Khối Cá nhân hóa] Gợi ý cho bạn & Nhắc lịch khám */}
         <RecommendationSection
           packages={homeRecs?.packages || []}
-          isLoading={loadingRecs}
-          onRefresh={refetchRecs}
+          isLoading={loadingRecs || recommendations.loadingProfiles}
+          onRefresh={recommendations.refresh}
+          refreshing={recommendations.refreshing}
+          error={Boolean(recommendations.error || recommendations.refreshError || recommendations.profilesError)}
+          onRetry={() => { if (recommendations.profilesError) void recommendations.retryProfiles(); else void refetchRecs() }}
+          profiles={recommendations.profiles}
+          profileId={recommendations.profileId}
+          onSelectProfile={recommendations.selectProfile}
+          trackingToken={homeRecs?.trackingToken}
           onSelectPackage={handleSelectRecommendedPackage}
         />
 
@@ -197,11 +195,11 @@ export default function HomeScreen() {
           isLoading={loadingDoctors}
           searchQuery={searchQuery}
           onSelectDoctor={handleSelectDoctor}
-          onViewAll={() => router.push('/booking')}
+          onViewAll={() => router.push('/doctors')}
         />
 
         {/* Khối cơ sở y tế & Thống kê */}
-        <FacilitiesSection onStartBooking={() => setBookingModalVisible(true)} />
+        <FacilitiesSection />
         <ClinicStatsSection />
         <MedicalNewsSection />
       </ScrollView>

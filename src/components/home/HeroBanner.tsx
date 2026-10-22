@@ -7,7 +7,7 @@ export interface HeroBannerProps {
   onStartBooking: () => void
 }
 
-export const HeroBanner: React.FC<HeroBannerProps> = ({ onStartBooking }) => {
+export const HeroBanner: React.FC<HeroBannerProps> = React.memo(({ onStartBooking }: HeroBannerProps) => {
   return (
     <View className="px-5 pt-3">
       <View className="bg-gradient-to-r from-primary-500 via-primary-500 to-primary-600 bg-primary-600 rounded-lg px-4 py-3 shadow-xs relative overflow-hidden">
@@ -53,4 +53,4 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onStartBooking }) => {
       </View>
     </View>
   )
-}
+})

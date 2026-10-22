@@ -132,7 +132,7 @@ export interface BookingDraft {
   doctor: Doctor | null
   date: string // YYYY-MM-DD
   slot: string // e.g. "08:30"
-  slotId?: string // uuid or virtual slot id
+  slotId?: string // UUID của khung giờ thực tế từ API
   patientProfileId?: string
   patientType: 'self' | 'relative'
   patientName: string

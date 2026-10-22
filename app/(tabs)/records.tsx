@@ -160,7 +160,7 @@ export default function RecordsScreen() {
         <View className="flex-row items-center pt-3 border-t border-slate-100 gap-2.5">
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/(tabs)/appointments')}
+            onPress={() => router.push({ pathname: '/medical-records', params: { profileId: item.id } })}
             className="flex-1 bg-blue-50 border border-blue-200/90 py-2.5 rounded-lg flex-row items-center justify-center active:bg-blue-100"
           >
             <Ionicons name="time-outline" size={14} color="#2563eb" style={{ marginRight: 5 }} />

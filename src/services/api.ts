@@ -16,6 +16,8 @@ api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
       config.baseURL = resolveApiBaseUrl()
+      // Preserve an explicit token (getMe) or an explicitly disabled header (Google login).
+      if (config.headers.has('Authorization')) return config
       const token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`
@@ -55,6 +57,9 @@ api.interceptors.response.use(
     // 1. Không kết nối được server
     if (!error.response) {
       const currentBase = resolveApiBaseUrl()
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return Promise.reject(new Error('Máy chủ phản hồi quá lâu. Vui lòng kiểm tra kết nối mạng và thử lại.'))
+      }
       const msg = `Không thể kết nối đến máy chủ (${currentBase}). Vui lòng kiểm tra backend và kết nối mạng.`
       return Promise.reject(new Error(msg))
     }
