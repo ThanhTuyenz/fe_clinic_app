@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { authService } from '@/services'
+import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store/useAuthStore'
 import { Button, Input, ScreenShell } from '@/components/common'
 

@@ -87,7 +87,7 @@ export default function BookingConfirmationScreen() {
             <Text className="text-xl font-black text-primary-700 tracking-wider mb-2">
               {appointmentCode}
             </Text>
-            {!isOnline && Boolean(queueNum) && (
+            {queueNum != null && (
               <View className="bg-primary-50 border border-primary-200 px-3 py-1 rounded-md mb-4">
                 <Text className="text-xs font-bold text-primary-800">
                   Số thứ tự dự kiến: #{queueNum}
@@ -106,7 +106,7 @@ export default function BookingConfirmationScreen() {
               />
             </View>
             <Text className="text-[11px] text-slate-400 text-center mb-4">
-              Đưa mã QR cho nhân viên y tế tại sảnh phòng khám để quét mã
+              {isOnline ? 'Mã QR xác nhận lịch tư vấn trực tuyến của bạn' : 'Đưa mã QR cho nhân viên y tế tại sảnh phòng khám để quét mã'}
             </Text>
             </>}
             {isOnline && (

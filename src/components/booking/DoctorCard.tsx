@@ -26,8 +26,8 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
       ? doctor.specialty?.name
       : doctor.specialty || doctor.specialty_name || 'Đa khoa'
   const fee = online
-    ? doctor.onlineConsultationFee || doctor.consultation_fee || doctor.price || 300000
-    : doctor.consultation_fee || doctor.price || 300000
+    ? doctor.onlineConsultationFee ?? doctor.consultation_fee ?? doctor.price ?? 0
+    : doctor.consultation_fee ?? doctor.price ?? 0
 
   return (
     <TouchableOpacity

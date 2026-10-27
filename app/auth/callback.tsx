@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { authService } from '@/services'
+import { authService } from '@/services/authService'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useBookingStore } from '@/store/useBookingStore'
 import AsyncStorage from '@react-native-async-storage/async-storage'

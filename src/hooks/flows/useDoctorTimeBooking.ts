@@ -10,19 +10,20 @@ import { SelectModalOption } from '../../components/common/SelectModal'
 import { BookingModalType } from '../../components/booking/BookingModals'
 import { formatDateVi, getTomorrowDateString } from '../../utils/date'
 
-export function useDoctorTimeBooking() {
+export function useDoctorTimeBooking(flow: 'doctor' | 'online' = 'doctor') {
   const router = useRouter()
   const { draft, setDateTime, setIsAfterHours } = useBookingStore()
 
   const doctor = draft.doctor
   const branchId = draft.branchId || ''
+  const doctorRoute = flow === 'online' ? '/booking/online' : '/booking/doctor'
 
   // 1. Check if doctor is selected
   useEffect(() => {
     if (!doctor) {
-      router.replace('/booking/doctor')
+      router.replace(doctorRoute)
     }
-  }, [doctor, router])
+  }, [doctor, router, doctorRoute])
 
   // 2. Local State
   const tomorrow = getTomorrowDateString()
@@ -53,7 +54,7 @@ export function useDoctorTimeBooking() {
       branchId,
       date: selectedDate,
     }),
-    enabled: Boolean(doctor?.id && selectedDate),
+    enabled: Boolean(doctor?.id && branchId && selectedDate),
     staleTime: 30 * 1000,
   })
 
@@ -68,10 +69,10 @@ export function useDoctorTimeBooking() {
       availableDatesList.map((dStr: string) => ({
         id: dStr,
         title: formatDateVi(dStr),
-        subtitle: dStr === tomorrow ? 'Ngày mai (Sớm nhất)' : `Lịch khám ngày ${dStr}`,
+        subtitle: dStr === tomorrow ? 'Ngày mai (Sớm nhất)' : `${flow === 'online' ? 'Lịch tư vấn' : 'Lịch khám'} ngày ${dStr}`,
         badge: dStr === tomorrow ? 'Khuyên chọn' : undefined,
       })),
-    [availableDatesList, tomorrow]
+    [availableDatesList, tomorrow, flow]
   )
 
   const slotOptions: SelectModalOption[] = useMemo(
@@ -118,23 +119,23 @@ export function useDoctorTimeBooking() {
   }
 
   const handleChangeDoctor = () => {
-    router.back()
+    router.navigate(doctorRoute)
   }
 
   const isFormComplete = Boolean(doctor && selectedDate && selectedSlot)
 
   const handleContinue = () => {
     if (!doctor) {
-      Alert.alert('Chưa chọn bác sĩ', 'Vui lòng quay lại chọn bác sĩ khám bệnh.')
-      router.replace('/booking/doctor')
+      Alert.alert('Chưa chọn bác sĩ', flow === 'online' ? 'Vui lòng quay lại chọn bác sĩ tư vấn.' : 'Vui lòng quay lại chọn bác sĩ khám bệnh.')
+      router.replace(doctorRoute)
       return
     }
     if (!selectedDate) {
-      Alert.alert('Chưa chọn ngày khám', 'Vui lòng chọn ngày khám bệnh.')
+      Alert.alert(flow === 'online' ? 'Chưa chọn ngày tư vấn' : 'Chưa chọn ngày khám', 'Vui lòng chọn ngày phù hợp để tiếp tục.')
       return
     }
     if (!selectedSlot) {
-      Alert.alert('Chưa chọn giờ khám', 'Vui lòng chọn khung giờ khám phù hợp.')
+      Alert.alert(flow === 'online' ? 'Chưa chọn giờ tư vấn' : 'Chưa chọn giờ khám', 'Vui lòng chọn khung giờ phù hợp.')
       return
     }
 
@@ -150,6 +151,7 @@ export function useDoctorTimeBooking() {
     }
 
     setIsAfterHours(false)
+    useBookingStore.getState().setBookingMethod(flow === 'online' ? 'ONLINE_CONSULTATION' : 'CONSULTATION')
     setDateTime(selectedDate, selectedSlot, slotId)
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {

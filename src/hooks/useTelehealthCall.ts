@@ -23,7 +23,6 @@ export function useTelehealthCall(appointmentId: string) {
   const [videoOff, setVideoOff] = useState(false)
   const [peerVideoOff, setPeerVideoOff] = useState(false)
   const [messages, setMessages] = useState<CallMessage[]>([])
-  const [ending, setEnding] = useState(false)
   const socketRef = useRef<Socket | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const peerRef = useRef<RTCPeerConnection | null>(null)
@@ -69,7 +68,6 @@ export function useTelehealthCall(appointmentId: string) {
       setLocalStream(null)
       setStatus('finished')
       setEnabled(false)
-      setEnding(false)
     }
 
     async function start() {
@@ -201,18 +199,8 @@ export function useTelehealthCall(appointmentId: string) {
     socketRef.current?.emit('telehealth:toggle-media', { appointmentId, ...(kind === 'audio' ? { isAudioMuted: muted } : { isVideoOff: muted }) })
   }, [appointmentId])
 
-  const endCall = useCallback(() => {
-    if (!socketRef.current?.connected || ending) return
-    setEnding(true)
-    socketRef.current.timeout(15000).emit('telehealth:end-call', { appointmentId, endedByRole: 'PATIENT' },
-      (cause: Error | null, result?: { success: boolean; message?: string }) => {
-        setEnding(false)
-        if (cause || !result?.success) setError(result?.message || 'Chưa xác nhận được kết thúc cuộc gọi. Hãy thử lại.')
-      })
-  }, [appointmentId, ending])
-
   return {
-    rtc, status, error, localStream, remoteStream, audioMuted, videoOff, peerVideoOff, messages, ending,
+    rtc, status, error, localStream, remoteStream, audioMuted, videoOff, peerVideoOff, messages,
     join: () => { setMessages([]); setEnabled(true) },
     leave: () => { setEnabled(false); setLocalStream(null); setRemoteStream(null); setStatus('idle') },
     toggleAudio: () => toggleMedia('audio'), toggleVideo: () => toggleMedia('video'),
@@ -220,6 +208,5 @@ export function useTelehealthCall(appointmentId: string) {
     sendMessage: (text: string) => {
       if (text.trim()) socketRef.current?.emit('telehealth:send-chat', { appointmentId, text: text.trim() })
     },
-    endCall,
   }
 }

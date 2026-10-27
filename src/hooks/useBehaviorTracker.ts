@@ -4,8 +4,6 @@ import { recommendationService } from '../services/recommendationService'
 
 import { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
 import { RECENTLY_VIEWED_KEY, type RecentlyViewedPackage } from '../utils/recentlyViewedPackages'
-export type { RecentlyViewedPackage } from '../utils/recentlyViewedPackages'
-export { getOrGenerateGuestSessionId } from '../utils/analyticsSession'
 
 /**
  * Hook quản lý Telemetry Tracking hành vi người dùng trên Mobile

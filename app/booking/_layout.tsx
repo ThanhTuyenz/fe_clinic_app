@@ -17,6 +17,7 @@ export default function BookingLayout() {
       <Stack.Screen name="package/index" />
       <Stack.Screen name="after-hours/index" />
       <Stack.Screen name="online/index" />
+      <Stack.Screen name="online/time" />
       <Stack.Screen name="patient-info" />
       <Stack.Screen name="confirm" />
       <Stack.Screen name="payment" />

@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { authService } from '@/services'
+import { authService } from '@/services/authService'
 import { Button, Input, ScreenShell } from '@/components/common'
 
 export default function ForgotPasswordScreen() {

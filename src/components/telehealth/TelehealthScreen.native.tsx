@@ -89,11 +89,11 @@ export function TelehealthScreen({ appointmentId }: { appointmentId: string }) {
                 {control('camera-reverse', 'Đổi cam', call.switchCamera)}
                 {control('chatbubble-ellipses', 'Chat', () => setChatOpen(!chatOpen), chatOpen)}
               </View>
-              <TouchableOpacity disabled={call.ending} style={[styles.join, styles.endButton]} onPress={() => {
-                Alert.alert('Kết thúc buổi tư vấn?', 'Lịch hẹn sẽ được đánh dấu đã hoàn thành. Nếu chỉ muốn ra ngoài tạm thời, hãy dùng nút quay lại.', [
-                  { text: 'Tiếp tục gọi', style: 'cancel' }, { text: 'Kết thúc', style: 'destructive', onPress: call.endCall },
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Rời phòng tư vấn" style={[styles.join, styles.endButton]} onPress={() => {
+                Alert.alert('Rời phòng tư vấn?', 'Camera và micro sẽ tắt. Bạn có thể vào lại nếu buổi tư vấn chưa kết thúc.', [
+                  { text: 'Ở lại', style: 'cancel' }, { text: 'Rời phòng', onPress: call.leave },
                 ])
-              }}><Text style={styles.joinText}>{call.ending ? 'Đang xác nhận kết thúc…' : 'Kết thúc tư vấn'}</Text></TouchableOpacity>
+              }}><Text style={styles.joinText}>Rời phòng</Text></TouchableOpacity>
             </> : <View style={styles.lobby}>
               <Ionicons name={call.status === 'finished' ? 'checkmark-circle-outline' : 'videocam-outline'} size={62} color="#28a745" />
               <Text style={styles.title}>{call.status === 'finished' ? 'Đã hoàn tất buổi tư vấn' : 'Tư vấn video cùng bác sĩ'}</Text>

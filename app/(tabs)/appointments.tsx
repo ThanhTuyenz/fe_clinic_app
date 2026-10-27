@@ -197,15 +197,15 @@ export default function AppointmentsScreen() {
             </Text>
           </View>
 
-          {/* Phòng khám / STT (nếu khám tại quầy) */}
-          {!isOnline && (roomName || queueNumber) ? (
+          {/* Phòng khám / Số thứ tự */}
+          {(!isOnline && roomName) || queueNumber ? (
             <View className="flex-row items-center justify-between mb-1.5">
               <View className="flex-row items-center">
                 <Ionicons name="medical-outline" size={14} color="#64748b" />
-                <Text className="text-xs text-slate-500 ml-1.5">Tiếp đón:</Text>
+                <Text className="text-xs text-slate-500 ml-1.5">{isOnline ? 'Số thứ tự:' : 'Tiếp đón:'}</Text>
               </View>
               <Text className="text-xs font-bold text-primary-700">
-                {roomName ? `${roomName}` : ''}{roomName && queueNumber ? ' • ' : ''}{queueNumber ? `STT #${queueNumber}` : ''}
+                {!isOnline && roomName ? `${roomName}` : ''}{!isOnline && roomName && queueNumber ? ' • ' : ''}{queueNumber ? `STT #${queueNumber}` : ''}
               </Text>
             </View>
           ) : null}

@@ -543,7 +543,7 @@ export default function BookingConfirmScreen() {
         {/* Cố định Bottom Bar: Giống các step trước */}
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3">
           <Button
-            title="Tiến hành thanh toán"
+            title="Thanh toán"
             onPress={() => router.push('/booking/payment')}
             className="py-3 rounded-lg w-full"
           />
