@@ -1,7 +1,7 @@
 import { isUuid } from '../../utils/validation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Platform } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { useBookingStore } from '../../store/useBookingStore'
@@ -12,6 +12,7 @@ import { formatDateVi, getTomorrowDateString } from '../../utils/date'
 
 export function useDoctorTimeBooking(flow: 'doctor' | 'online' = 'doctor') {
   const router = useRouter()
+  const params = useLocalSearchParams<{ date?: string; time?: string; slotId?: string }>()
   const { draft, setDateTime, setIsAfterHours } = useBookingStore()
 
   const doctor = draft.doctor
@@ -19,24 +20,26 @@ export function useDoctorTimeBooking(flow: 'doctor' | 'online' = 'doctor') {
   const doctorRoute = flow === 'online' ? '/booking/online' : '/booking/doctor'
 
   // 1. Check if doctor is selected
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!doctor) {
       router.replace(doctorRoute)
     }
-  }, [doctor, router, doctorRoute])
+  }, [doctor, router, doctorRoute]))
 
   // 2. Local State
   const tomorrow = getTomorrowDateString()
-  const initialDate = doctor && draft.date && draft.date >= tomorrow ? draft.date : ''
+  const requestedDate = params.date || draft.date
+  const initialDate = doctor && requestedDate && requestedDate >= tomorrow ? requestedDate : ''
   const [selectedDate, setSelectedDate] = useState<string>(initialDate)
-  const [selectedSlot, setSelectedSlot] = useState<string>(draft.slot || '')
-  const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(draft.slotId)
+  const [selectedSlot, setSelectedSlot] = useState<string>(params.time || draft.slot || '')
+  const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(params.slotId || draft.slotId)
   const [modalType, setModalType] = useState<BookingModalType>(null)
 
   // 3. Available Dates for selected doctor
   const { data: bookingSlots, isLoading: loadingDates } = useQuery({
-    queryKey: ['booking', 'slots', branchId, doctor?.id],
-    queryFn: () => bookingService.getBookingSlots({ doctorId: String(doctor!.id), branchId }),
+    queryKey: ['booking', 'slots', branchId, doctor?.id, flow],
+    queryFn: () => bookingService.getBookingSlots({ doctorId: String(doctor!.id), branchId,
+      bookingMethodCode: flow === 'online' ? 'ONLINE_CONSULTATION' : 'CONSULTATION' }),
     enabled: Boolean(doctor?.id && branchId),
     staleTime: 30 * 1000,
   })
@@ -48,11 +51,12 @@ export function useDoctorTimeBooking(flow: 'doctor' | 'online' = 'doctor') {
 
   // 4. Available Slots for selected doctor on the chosen date
   const { data: selectedBookingSlots, isLoading: loadingSlots } = useQuery({
-    queryKey: ['booking', 'slots', branchId, doctor?.id, selectedDate],
+    queryKey: ['booking', 'slots', branchId, doctor?.id, selectedDate, flow],
     queryFn: () => bookingService.getBookingSlots({
       doctorId: String(doctor!.id),
       branchId,
       date: selectedDate,
+      bookingMethodCode: flow === 'online' ? 'ONLINE_CONSULTATION' : 'CONSULTATION',
     }),
     enabled: Boolean(doctor?.id && branchId && selectedDate),
     staleTime: 30 * 1000,
@@ -62,6 +66,20 @@ export function useDoctorTimeBooking(flow: 'doctor' | 'online' = 'doctor') {
     () => selectedBookingSlots?.slots || [],
     [selectedBookingSlots?.slots]
   )
+
+  const suggestionChecked = useRef(false)
+  useEffect(() => {
+    if (suggestionChecked.current || !params.slotId || !selectedBookingSlots) return
+    suggestionChecked.current = true
+    const valid = selectedBookingSlots.date === selectedDate && availableSlotsList.some(slot => !slot.isFull
+      && slot.doctors.some(item => String(item.doctorId) === String(doctor?.id)
+        && item.slotId === params.slotId && item.remainingSlots > 0))
+    if (!valid) {
+      setSelectedSlot('')
+      setSelectedSlotId(undefined)
+      Alert.alert('Cần chọn lại giờ khám', 'Lịch được đề xuất không còn khả dụng. Vui lòng chọn lại giờ khám.')
+    }
+  }, [selectedBookingSlots, availableSlotsList, selectedDate, doctor?.id, params.slotId])
 
   // 5. Modal Options
   const dateOptions: SelectModalOption[] = useMemo(

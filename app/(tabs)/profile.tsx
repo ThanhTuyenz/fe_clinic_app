@@ -221,13 +221,10 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 disabled={loggingOut}
                 onPress={handleConfirmLogout}
-                className="flex-1 py-3 rounded-xl bg-rose-600 active:bg-rose-700 items-center justify-center shadow-xs"
+                className="flex-1 flex-row gap-2 py-3 rounded-xl bg-rose-600 active:bg-rose-700 items-center justify-center shadow-xs"
               >
-                {loggingOut ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text className="text-xs font-bold text-white">Đăng xuất</Text>
-                )}
+                <Text className="text-xs font-bold text-white">Đăng xuất</Text>
+                {loggingOut && <ActivityIndicator size="small" color="#ffffff" />}
               </TouchableOpacity>
             </View>
           </View>

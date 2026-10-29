@@ -9,7 +9,16 @@ import { telehealthService } from '../services/telehealthService'
 type WebRTC = typeof import('react-native-webrtc')
 type Candidate = ConstructorParameters<WebRTC['RTCIceCandidate']>[0]
 type Description = ConstructorParameters<WebRTC['RTCSessionDescription']>[0]
-export interface CallMessage { senderId: string; senderName: string; text: string; timestamp: string }
+export interface CallMessage { id?: string; senderId: string; senderName: string; text: string; timestamp: string }
+
+function mergeChatMessages(...groups: CallMessage[][]): CallMessage[] {
+  const unique = new Map<string, CallMessage>()
+  for (const message of groups.flat()) {
+    const key = message.id || JSON.stringify([message.senderId, message.timestamp, message.text])
+    unique.set(key, message)
+  }
+  return [...unique.values()]
+}
 type CallStatus = 'idle' | 'connecting' | 'waiting' | 'connected' | 'disconnected' | 'finished' | 'error'
 
 export function useTelehealthCall(appointmentId: string) {
@@ -143,7 +152,8 @@ export function useTelehealthCall(appointmentId: string) {
               if (result?.success === false) fail(result.message || 'Không có quyền vào phòng tư vấn.')
             })
         })
-        socket.on('telehealth:joined-success', (data: { otherPeer?: { socketId: string } }) => {
+        socket.on('telehealth:joined-success', (data: { otherPeer?: { socketId: string }; messages?: CallMessage[] }) => {
+          setMessages(previous => mergeChatMessages(data.messages || [], previous))
           clearTimeout(joinTimer)
           target = data.otherPeer?.socketId || null
           setStatus('waiting')
@@ -173,7 +183,7 @@ export function useTelehealthCall(appointmentId: string) {
         socket.on('telehealth:peer-media-toggled', (data: { isVideoOff?: boolean }) => {
           if (typeof data.isVideoOff === 'boolean') setPeerVideoOff(data.isVideoOff)
         })
-        socket.on('telehealth:new-chat', (message: CallMessage) => setMessages(previous => [...previous, message]))
+        socket.on('telehealth:new-chat', (message: CallMessage) => setMessages(previous => mergeChatMessages(previous, [message])))
         socket.on('telehealth:call-ended', finish)
         socket.on('connect_error', () => fail('Không kết nối được máy chủ cuộc gọi. Kiểm tra mạng và đăng nhập rồi thử lại.'))
         socket.on('disconnect', () => fail('Đã mất kết nối phòng tư vấn. Vui lòng vào lại.'))
@@ -205,8 +215,15 @@ export function useTelehealthCall(appointmentId: string) {
     leave: () => { setEnabled(false); setLocalStream(null); setRemoteStream(null); setStatus('idle') },
     toggleAudio: () => toggleMedia('audio'), toggleVideo: () => toggleMedia('video'),
     switchCamera: () => streamRef.current?.getVideoTracks()[0]?._switchCamera(),
-    sendMessage: (text: string) => {
-      if (text.trim()) socketRef.current?.emit('telehealth:send-chat', { appointmentId, text: text.trim() })
-    },
+    sendMessage: (text: string) => new Promise<void>((resolve, reject) => {
+      const socket = socketRef.current
+      if (!text.trim() || !socket?.connected) return reject(new Error('Chưa kết nối phòng tư vấn. Vui lòng thử lại.'))
+      socket.timeout(10000).emit('telehealth:send-chat', { appointmentId, text: text.trim() },
+        (error: Error | null, result?: { success: boolean; message?: string }) => {
+          if (error) return reject(new Error('Chưa nhận được xác nhận gửi tin nhắn. Vui lòng kiểm tra kết nối.'))
+          if (!result?.success) return reject(new Error(result?.message || 'Không thể lưu tin nhắn. Vui lòng thử lại.'))
+          resolve()
+        })
+    }),
   }
 }

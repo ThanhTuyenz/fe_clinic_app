@@ -122,6 +122,7 @@ export const bookingService = {
   },
 
   async getBookingSlots(params: {
+    bookingMethodCode?: string
     branchId?: string
     specialtyId?: string | number
     doctorId?: string | number

@@ -1,189 +1,120 @@
-import { useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { aiService, ChatMessage } from '../../src/services/aiService'
+import { aiService, type AiChatResponse, type ChatMessage } from '../../src/services/aiService'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
+import { useAuthStore } from '../../src/store/useAuthStore'
+import { useBookingStore } from '../../src/store/useBookingStore'
+import { formatCurrencyVi } from '../../src/utils/date'
 
-const SUGGESTED_PROMPTS = [
-  'Tôi bị sốt và ho dai dẳng 3 ngày nay',
-  'Triệu chứng đau nửa đầu cần khám chuyên khoa gì?',
-  'Chi phí khám tổng quát tại phòng khám',
-  'Quy trình đặt lịch khám cho người thân',
-]
+const greeting: ChatMessage = {
+  role: 'assistant',
+  content: 'Xin chào! Tôi có thể giúp bạn tìm dịch vụ, bác sĩ và lịch trống tại VitaCare. Bạn muốn khám gì?',
+}
+const suggestions = ['Tìm cơ sở và chuyên khoa', 'Tìm dịch vụ khám mắt', 'Tìm bác sĩ tư vấn trực tuyến']
 
 export default function AiChatScreen() {
   const router = useRouter()
-  const flatListRef = useRef<FlatList>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content:
-        'Xin chào! Tôi là Trợ lý AI của VitaCare Clinic. Tôi có thể tư vấn sơ bộ về triệu chứng, gợi ý chuyên khoa phù hợp và hỗ trợ bạn đặt lịch khám nhanh chóng. Bạn đang gặp phải vấn đề sức khỏe gì?',
-    },
-  ])
+  const userId = useAuthStore(state => state.user?.id)
+  const [messages, setMessages] = useState<ChatMessage[]>([greeting])
   const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [response, setResponse] = useState<AiChatResponse | null>(null)
+  const sessionId = useRef<string | undefined>(undefined)
+  const generation = useRef(0)
+  const list = useRef<FlatList<ChatMessage>>(null)
 
-  const handleSend = async (textToSend?: string) => {
-    const content = (textToSend || input).trim()
-    if (!content || loading) return
+  const reset = () => {
+    generation.current++
+    sessionId.current = undefined
+    setMessages([greeting]); setResponse(null); setInput(''); setBusy(false)
+  }
+  useEffect(() => { reset() }, [userId])
+  useEffect(() => () => { generation.current++ }, [])
 
-    const newMessages: ChatMessage[] = [...messages, { role: 'user', content }]
-    setMessages(newMessages)
-    setInput('')
-    setLoading(true)
+  const accept = (data: AiChatResponse) => {
+    sessionId.current = data.sessionId
+    setResponse(data)
+    setMessages(previous => [...previous, { role: 'assistant', content: data.message, data }])
+  }
 
+  const send = async (text = input) => {
+    const message = text.trim()
+    if (!message || busy) return
+    const current = generation.current
+    setInput(''); setBusy(true)
+    setResponse(null)
+    setMessages(previous => [...previous, { role: 'user', content: message }])
     try {
-      const res = await aiService.sendMessage(newMessages)
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: res.reply || 'Cảm ơn bạn đã chia sẻ.' },
-      ])
-    } catch (e: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content:
-            'Xin lỗi, hiện tại hệ thống AI đang bận hoặc gián đoạn kết nối. Bạn có thể nhấn trực tiếp vào nút Đặt lịch khám bên dưới để chọn bác sĩ nhé!',
-        },
-      ])
-    } finally {
-      setLoading(false)
-    }
+      const data = await aiService.sendMessage(message, sessionId.current)
+      if (current === generation.current) accept(data)
+    } catch (error) {
+      if (current === generation.current) setMessages(previous => [...previous, {
+        role: 'assistant', content: error instanceof Error ? error.message : 'Không kết nối được trợ lý AI. Vui lòng thử lại.',
+      }])
+    } finally { if (current === generation.current) setBusy(false) }
   }
 
-  const renderMessageItem = ({ item }: { item: ChatMessage }) => {
-    const isUser = item.role === 'user'
+  const continueBooking = () => {
+    const proposal = response?.proposal
+    if (!proposal || busy) return
+    useBookingStore.getState().resetBooking()
+    router.push({
+      pathname: proposal.bookingMethodCode === 'ONLINE_CONSULTATION' ? '/booking/online'
+        : proposal.bookingMethodCode === 'CONSULTATION' ? '/booking/doctor' : '/booking/specialty',
+      params: {
+        flow: proposal.bookingMethodCode === 'AFTER_HOURS' ? 'after-hours' : 'specialty',
+        branchId: proposal.branchId, doctorId: proposal.doctorId, specialtyId: proposal.specialtyId || '',
+        serviceId: proposal.servicePackageId || '', date: proposal.date.slice(0, 10),
+        time: proposal.startTime, slotId: proposal.slotId,
+      },
+    })
+  }
 
-    return (
-      <View
-        className={`mb-3.5 max-w-[85%] ${
-          isUser ? 'self-end' : 'self-start'
-        }`}
-      >
-        <View
-          className={`p-3.5 rounded-lg ${
-            isUser
-              ? 'bg-primary-600 rounded-tr-none'
-              : 'bg-white border border-slate-100 rounded-tl-none shadow-xs'
-          }`}
-        >
-          {!isUser && (
-            <View className="flex-row items-center mb-1">
-              <Ionicons name="sparkles" size={13} color="#28a745" />
-              <Text className="text-[11px] font-bold text-primary-700 ml-1">
-                Trợ lý VitaCare
-              </Text>
-            </View>
-          )}
-          <Text
-            className={`text-sm leading-relaxed ${
-              isUser ? 'text-white' : 'text-slate-800'
-            }`}
-          >
-            {item.content}
-          </Text>
+  const renderMessage = ({ item }: { item: ChatMessage }) => (
+    <View className={'mb-3 max-w-[92%] rounded-xl border border-slate-200 p-3 ' + (item.role === 'user' ? 'self-end bg-primary-50' : 'self-start bg-white')}>
+      <Text className="text-sm leading-6 text-slate-800">{item.content}</Text>
+      {item.data?.proposedPackages?.map(pkg => (
+        <TouchableOpacity key={pkg.id} onPress={() => router.push({ pathname: '/package/[id]', params: { id: pkg.id } })} className="mt-2 rounded-lg border border-primary-100 p-3">
+          <Text className="font-bold text-primary-700">{pkg.name}</Text>
+          <Text className="text-xs text-slate-600">{formatCurrencyVi(pkg.price)} · Xem dịch vụ</Text>
+        </TouchableOpacity>
+      ))}
+      {item.data?.doctors?.map(doctor => (
+        <View key={doctor.id} className="mt-2 rounded-lg border border-slate-100 p-2">
+          <Text className="font-bold text-slate-800">{doctor.fullName}</Text>
+          <Text className="text-xs text-slate-500">{doctor.specialtyName} · {doctor.branchName} · {formatCurrencyVi(doctor.consultationFee)}</Text>
         </View>
-
-        {!isUser && (
-          <TouchableOpacity
-            onPress={() => router.push('/booking')}
-            className="self-start mt-1.5 flex-row items-center bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200"
-          >
-            <Ionicons name="calendar-outline" size={14} color="#28a745" />
-            <Text className="text-xs font-bold text-primary-700 ml-1">
-              Đặt lịch theo gợi ý này
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    )
-  }
+      ))}
+    </View>
+  )
 
   return (
-    <ScreenShell title="Trợ lý AI y tế">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        <View className="flex-1 px-4 pt-3">
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(_, index) => String(index)}
-            renderItem={renderMessageItem}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
-          />
-
-          {loading && (
-            <View className="flex-row items-center p-3 mb-2 bg-white rounded-lg border border-slate-100 self-start shadow-xs">
-              <ActivityIndicator size="small" color="#28a745" />
-              <Text className="text-xs text-slate-500 font-medium ml-2">
-                Trợ lý AI đang phân tích triệu chứng...
-              </Text>
-            </View>
-          )}
-
-          {/* Gợi ý câu hỏi nhanh */}
-          {messages.length <= 2 && (
-            <View className="py-2">
-              <Text className="text-xs font-semibold text-slate-400 mb-2">
-                Gợi ý câu hỏi nhanh:
-              </Text>
-              <View className="flex-row flex-wrap">
-                {SUGGESTED_PROMPTS.map((prompt, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => handleSend(prompt)}
-                    className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg mr-1.5 mb-2 active:bg-slate-100"
-                  >
-                    <Text className="text-xs text-slate-700">{prompt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Input Chat Box */}
-          <View className="flex-row items-center bg-white rounded-lg border border-slate-200 px-3 py-2 mb-3 shadow-xs">
-            <TextInput
-              placeholder="Nhập triệu chứng hoặc câu hỏi của bạn..."
-              placeholderTextColor="#94a3b8"
-              value={input}
-              onChangeText={setInput}
-              className="flex-1 text-slate-800 text-sm py-1.5 max-h-24 outline-none"
-              style={{ outlineStyle: 'none' as any }}
-              multiline
-            />
-            <TouchableOpacity
-              onPress={() => handleSend()}
-              disabled={!input.trim() || loading}
-              className={`w-9 h-9 rounded-lg items-center justify-center ml-2 ${
-                input.trim() && !loading ? 'bg-primary-600' : 'bg-slate-100'
-              }`}
-            >
-              <Ionicons
-                name="arrow-up"
-                size={20}
-                color={input.trim() && !loading ? '#ffffff' : '#94a3b8'}
-              />
+    <ScreenShell title="Trợ lý VitaCare">
+      <KeyboardAvoidingView className="flex-1 px-4" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <TouchableOpacity onPress={reset} disabled={busy} className="self-end py-2"><Text className="text-xs text-primary-700">Cuộc trò chuyện mới</Text></TouchableOpacity>
+        <FlatList ref={list} data={messages} renderItem={renderMessage} keyExtractor={(_, index) => String(index)}
+          onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })} />
+        {response?.proposal && (
+          <View className="mb-2 rounded-xl border border-primary-200 bg-primary-50 p-3">
+            <Text className="font-bold text-slate-800">{response.proposal.packageName || response.proposal.doctorName}</Text>
+            <Text className="text-xs text-slate-600">{response.proposal.branchName} · {response.proposal.date} · {response.proposal.startTime}–{response.proposal.endTime}</Text>
+            <Text className="mt-1 text-xs text-slate-600">Phí khám dự kiến: {formatCurrencyVi(response.proposal.fee)}</Text>
+            <TouchableOpacity disabled={busy} onPress={continueBooking} className="mt-3 rounded-lg bg-primary-600 p-2">
+              <Text className="text-center font-bold text-white">Tiếp tục đặt lịch</Text>
             </TouchableOpacity>
+            <Text className="mt-2 text-xs text-slate-500">Kiểm tra lại lịch, chọn hồ sơ và xác nhận ở màn hình đặt lịch. Lịch chưa được giữ chỗ.</Text>
           </View>
+        )}
+        {busy && <ActivityIndicator className="my-2" color="#047857" />}
+        {messages.length === 1 && suggestions.map(text => <TouchableOpacity key={text} disabled={busy} onPress={() => { void send(text) }} className="mb-2 rounded-lg border border-slate-200 p-2"><Text className="text-xs text-slate-600">{text}</Text></TouchableOpacity>)}
+        <View className="mb-3 flex-row items-center rounded-xl border border-slate-200 bg-white p-2">
+          <TextInput value={input} onChangeText={setInput} maxLength={1000} multiline editable={!busy}
+            placeholder="Bạn muốn tìm dịch vụ hoặc lịch khám nào?" className="max-h-24 flex-1 p-2 text-sm text-slate-800" />
+          <TouchableOpacity accessibilityLabel="Gửi tin nhắn" disabled={busy || !input.trim()} onPress={() => { void send() }} className="p-2"><Ionicons name="send" size={22} color="#047857" /></TouchableOpacity>
         </View>
+        <Text className="mb-2 text-[10px] text-slate-500">AI hỗ trợ tìm kiếm và đặt lịch, không thay thế chẩn đoán của bác sĩ.</Text>
       </KeyboardAvoidingView>
     </ScreenShell>
   )

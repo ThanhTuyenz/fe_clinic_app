@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { recommendationService } from '../services/recommendationService'
+import { analyticsEventId } from '../services/searchAnalytics'
 
 export function useSemanticSearch(value: string, branchId?: string) {
   const query = value.trim()
   const [debounced, setDebounced] = useState('')
+  const execution = useRef<{ key: string; id: string } | null>(null)
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query), 400)
     return () => clearTimeout(timer)
@@ -13,7 +15,11 @@ export function useSemanticSearch(value: string, branchId?: string) {
   const current = valid && query === debounced
   const search = useQuery({
     queryKey: ['semantic-search', debounced, branchId || 'all'],
-    queryFn: ({ signal }) => recommendationService.semanticSearch(debounced, branchId, signal),
+    queryFn: ({ signal }) => {
+      const key = JSON.stringify([debounced, branchId || 'all'])
+      if (execution.current?.key !== key) execution.current = { key, id: analyticsEventId() }
+      return recommendationService.semanticSearch(debounced, branchId, signal, execution.current.id)
+    },
     enabled: current,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -24,6 +30,6 @@ export function useSemanticSearch(value: string, branchId?: string) {
     isSearching: valid && (!current || search.isFetching),
     error: query.length > 200 ? 'Vui lòng nhập tối đa 200 ký tự.'
       : current && search.isError ? 'Không thể tải kết quả tìm kiếm. Vui lòng thử lại.' : null,
-    retry: search.refetch,
+    retry: () => { execution.current = null; return search.refetch() },
   }
 }

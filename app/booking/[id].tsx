@@ -15,7 +15,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { appointmentService } from '../../src/services/appointmentService'
 import { formatDateVi } from '../../src/utils/date'
 import { ScreenShell } from '../../src/components/common/ScreenShell'
-import { canJoinTelehealth } from '../../src/services/telehealthService'
 
 export default function BookingConfirmationScreen() {
   const router = useRouter()
@@ -74,7 +73,7 @@ export default function BookingConfirmationScreen() {
             </Text>
             <Text className="text-xs text-slate-500 text-center mt-0.5">
               {isOnline
-                ? 'Đến giờ hẹn, vào phòng tư vấn trực tuyến để gặp bác sĩ. Không cần check-in tại quầy.'
+                ? 'Lịch tư vấn của bạn đã được ghi nhận. Xem lại thông tin trong mục Lịch hẹn.'
                 : canShowCheckInQr(appointment) ? 'Vui lòng lưu lại mã QR phiếu khám này để check-in tại quầy tiếp đón.' : 'Mã QR chỉ được hiển thị khi lịch hợp lệ và máy chủ đã phát hành vé.'}
             </Text>
           </View>
@@ -109,23 +108,6 @@ export default function BookingConfirmationScreen() {
               {isOnline ? 'Mã QR xác nhận lịch tư vấn trực tuyến của bạn' : 'Đưa mã QR cho nhân viên y tế tại sảnh phòng khám để quét mã'}
             </Text>
             </>}
-            {isOnline && (
-              <View className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 mb-4">
-                <Text className="text-xs text-slate-600 text-center">
-                  Chuẩn bị camera, micro và kết nối Internet ổn định trước giờ hẹn.
-                </Text>
-                {appointment && canJoinTelehealth(appointment) && (
-                  <TouchableOpacity
-                    onPress={() => router.push(`/consultation/${id}`)}
-                    accessibilityRole="button"
-                    className="mt-3 flex-row items-center justify-center rounded-lg bg-primary-600 active:bg-primary-700 py-2.5 px-4"
-                  >
-                    <Ionicons name="videocam" size={17} color="white" />
-                    <Text className="ml-2 text-xs font-bold text-white">Vào phòng tư vấn</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
 
             {/* Thông tin chi tiết */}
             <View className="w-full pt-3.5 border-t border-dashed border-slate-200">

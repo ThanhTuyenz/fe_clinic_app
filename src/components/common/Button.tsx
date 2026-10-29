@@ -27,6 +27,7 @@ export const Button: React.FC<ButtonProps> = ({
   rightIcon,
   disabled,
   className = '',
+  accessibilityState,
   ...props
 }) => {
   const getVariantStyles = () => {
@@ -68,24 +69,20 @@ export const Button: React.FC<ButtonProps> = ({
     }
   }
 
-  const isDisabled = disabled || isLoading
+  const isDisabled = Boolean(disabled || isLoading)
 
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       disabled={isDisabled}
-      className={`flex-row items-center justify-center ${getVariantStyles()} ${getSizeStyles()} ${
+      accessibilityRole="button"
+      accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: isLoading }}
+      className={`relative min-h-[44px] flex-row items-center justify-center ${getVariantStyles()} ${getSizeStyles()} ${
         isDisabled ? 'opacity-50' : ''
       } ${className}`}
       {...props}
     >
-      {isLoading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'outline' || variant === 'ghost' ? '#28a745' : '#ffffff'}
-        />
-      ) : (
-        <View className="flex-row items-center justify-center" style={{ maxWidth: '100%' }}>
+        <View className="flex-row items-center justify-center" style={{ maxWidth: '100%', paddingHorizontal: 20 }}>
           {leftIcon && <View className="mr-2">{leftIcon}</View>}
           <Text
             numberOfLines={singleLine ? 1 : undefined}
@@ -98,7 +95,12 @@ export const Button: React.FC<ButtonProps> = ({
           </Text>
           {rightIcon && <View className="ml-2">{rightIcon}</View>}
         </View>
-      )}
+      <View pointerEvents="none" className="absolute right-2 w-4 items-center justify-center">
+        {isLoading && <ActivityIndicator
+          size="small"
+          color={variant === 'outline' || variant === 'ghost' ? '#28a745' : '#ffffff'}
+        />}
+      </View>
     </TouchableOpacity>
   )
 }

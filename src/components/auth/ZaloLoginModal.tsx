@@ -121,14 +121,9 @@ export function ZaloLoginModal({ visible, onClose, onSuccess }: ZaloLoginModalPr
             onPress={handleZaloLogin}
             className="w-full bg-[#0068FF] active:bg-blue-700 py-3.5 rounded-xl items-center justify-center flex-row mb-3 shadow-xs"
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                <Text className="text-white text-sm font-bold">Xác nhận đăng nhập Zalo</Text>
-              </>
-            )}
+            <Ionicons name="shield-checkmark-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+            <Text className="shrink text-white text-sm font-bold">Xác nhận đăng nhập Zalo</Text>
+            {loading && <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />}
           </TouchableOpacity>
 
           <TouchableOpacity

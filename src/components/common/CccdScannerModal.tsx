@@ -388,14 +388,11 @@ export const CccdScannerModal: React.FC<CccdScannerModalProps> = ({
                   onPress={handlePickImage}
                   className="flex-row items-center justify-center bg-white border border-slate-200 p-3.5 rounded-xl mb-4"
                 >
-                  {isProcessingImage ? (
-                    <ActivityIndicator size="small" color="#28a745" style={{ marginRight: 8 }} />
-                  ) : (
-                    <Ionicons name="images-outline" size={20} color="#28a745" style={{ marginRight: 8 }} />
-                  )}
-                  <Text className="text-xs font-bold text-slate-800">
+                  <Ionicons name="images-outline" size={20} color="#28a745" style={{ marginRight: 8 }} />
+                  <Text className="shrink text-xs font-bold text-slate-800">
                     {isProcessingImage ? 'Đang đọc mã từ ảnh...' : 'Chọn ảnh CCCD từ thư viện máy'}
                   </Text>
+                  {isProcessingImage && <ActivityIndicator size="small" color="#28a745" style={{ marginLeft: 8 }} />}
                 </TouchableOpacity>
 
                 {/* Manual Paste Text */}

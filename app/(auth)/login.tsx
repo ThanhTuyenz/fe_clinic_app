@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -28,7 +27,7 @@ export default function LoginScreen() {
   const setAuth = useAuthStore((state) => state.setAuth)
   const draft = useBookingStore((state) => state.draft)
   const [loading, setLoading] = useState(false)
-  const { loginWithGoogle, googleLoading, googleLoadingMessage } = useGoogleLogin()
+  const { loginWithGoogle, googleLoading } = useGoogleLogin()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zaloModalVisible, setZaloModalVisible] = useState(false)
 
@@ -226,11 +225,13 @@ export default function LoginScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 accessibilityLabel="Đăng nhập bằng Google"
+                accessibilityRole="button"
+                accessibilityState={{ disabled: loading || googleLoading, busy: googleLoading }}
                 disabled={loading || googleLoading}
                 onPress={() => { void loginWithGoogle() }}
                 className="w-28 h-14 bg-white rounded-lg border border-slate-200 shadow-xs items-center justify-center active:bg-slate-50"
               >
-                {googleLoading ? <ActivityIndicator color="#28a745" /> : <Ionicons name="logo-google" size={26} color="#ea4335" />}
+                <Ionicons name="logo-google" size={26} color="#ea4335" />
               </TouchableOpacity>
 
               {/* Zalo */}
@@ -243,12 +244,6 @@ export default function LoginScreen() {
                 <ZaloLogo size={32} />
               </TouchableOpacity>
             </View>
-
-            {googleLoading && (
-              <Text accessibilityLiveRegion="polite" className="text-sm text-slate-500 text-center mb-4">
-                {googleLoadingMessage}
-              </Text>
-            )}
 
             {/* Chân trang */}
             <View className="items-center">

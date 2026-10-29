@@ -34,6 +34,7 @@ export interface PayosDeepLinkModalProps {
   appointmentId: string
   paymentData: PayosCreatePaymentResponse | null
   onPaymentSuccess: () => void
+  showDemoAction?: boolean
 }
 
 export function PayosDeepLinkModal({
@@ -42,6 +43,7 @@ export function PayosDeepLinkModal({
   appointmentId,
   paymentData,
   onPaymentSuccess,
+  showDemoAction = true,
 }: PayosDeepLinkModalProps) {
   const insets = useSafeAreaInsets()
   const { height } = useWindowDimensions()
@@ -422,7 +424,7 @@ export function PayosDeepLinkModal({
 
               {/* Explicit test action, separate from automatic real payment reconciliation. */}
               <View className="space-y-2">
-                <TouchableOpacity
+                {showDemoAction && <TouchableOpacity
                   activeOpacity={0.85}
                   accessibilityRole="button"
                   accessibilityLabel="Test thanh toán mô phỏng"
@@ -430,15 +432,12 @@ export function PayosDeepLinkModal({
                   disabled={isChecking}
                   className="bg-primary-600 py-3 rounded-xl items-center justify-center flex-row shadow-sm"
                 >
-                  {isChecking ? (
-                    <ActivityIndicator size="small" color="#ffffff" className="mr-2" />
-                  ) : (
-                    <Ionicons name="flash-outline" size={16} color="#ffffff" className="mr-1.5" />
-                  )}
+                  <Ionicons name="flash-outline" size={16} color="#ffffff" className="mr-1.5" />
                   <Text className="text-white  text-sm">
                     {isChecking ? 'Đang mô phỏng...' : 'Test thanh toán (mô phỏng)'}
                   </Text>
-                </TouchableOpacity>
+                  {isChecking && <ActivityIndicator size="small" color="#ffffff" className="ml-2" />}
+                </TouchableOpacity>}
 
 
                 {Boolean(paymentData?.checkoutUrl) && (

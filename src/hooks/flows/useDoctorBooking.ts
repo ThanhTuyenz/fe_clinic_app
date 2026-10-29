@@ -10,7 +10,7 @@ import { extractDoctorSpecialtyId } from '../../constants/bookingSlots'
 
 export function useDoctorBooking(flow: 'doctor' | 'online' = 'doctor') {
   const router = useRouter()
-  const params = useLocalSearchParams<{ doctorId?: string; branchId?: string }>()
+  const params = useLocalSearchParams<{ doctorId?: string; branchId?: string; date?: string; time?: string; slotId?: string }>()
   const { draft, setBranchId, setDoctor, setSpecialty, setDateTime } = useBookingStore()
   const bookingMethod = flow === 'online' ? 'ONLINE_CONSULTATION' : 'CONSULTATION'
 
@@ -44,6 +44,7 @@ export function useDoctorBooking(flow: 'doctor' | 'online' = 'doctor') {
 
   // Tự động xác định chi nhánh theo bác sĩ đã chọn
   const effectiveBranchId = useMemo(() => {
+    if (params.branchId && branches.some((branch: { id: string }) => branch.id === params.branchId)) return params.branchId
     if (flow === 'online' && selectedDoctor?.branchId) return selectedDoctor.branchId
     if (params.branchId) return params.branchId
     if (selectedDoctor?.branchId) return selectedDoctor.branchId
@@ -99,7 +100,8 @@ export function useDoctorBooking(flow: 'doctor' | 'online' = 'doctor') {
     }
 
     // Điều hướng sang Screen 2: Chọn thời gian khám với bác sĩ đã chọn
-    router.push(flow === 'online' ? '/booking/online/time' : '/booking/doctor/time')
+    router.push({ pathname: flow === 'online' ? '/booking/online/time' : '/booking/doctor/time',
+      params: { date: params.date || '', time: params.time || '', slotId: params.slotId || '' } })
   }
 
   return {

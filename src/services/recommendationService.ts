@@ -113,10 +113,11 @@ export const recommendationService = {
   async semanticSearch(
     query: string,
     branchId?: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    searchRequestId?: string
   ): Promise<SemanticSearchResponse> {
     const res = await api.get('/api/v1/recommendations/semantic-search', {
-      params: { q: query, sessionId: await getOrGenerateGuestSessionId(), ...(branchId ? { branchId } : {}) },
+      params: { q: query, sessionId: await getOrGenerateGuestSessionId(), searchRequestId, ...(branchId ? { branchId } : {}) },
       signal,
     })
     const data = unwrapNestResponse<SemanticSearchResponse>(res.data)

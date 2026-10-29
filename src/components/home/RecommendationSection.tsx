@@ -96,10 +96,15 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
             accessibilityState={{ disabled: Boolean(refreshing || isLoading), busy: refreshing }}
             className="w-11 h-11 items-center justify-center rounded-full active:bg-primary-50"
           >
-            {refreshing ? <ActivityIndicator size="small" color="#28a745" /> : <Ionicons name="refresh-outline" size={18} color={isLoading ? '#94a3b8' : '#28a745'} />}
+            <Ionicons name="refresh-outline" size={18} color={refreshing || isLoading ? '#94a3b8' : '#28a745'} />
           </TouchableOpacity>
         )}
       </View>
+
+      {refreshing && <View accessibilityLiveRegion="polite" className="mx-5 mb-3 flex-row items-center gap-2">
+        <ActivityIndicator size="small" color="#28a745" />
+        <Text className="text-xs text-slate-500">Đang làm mới gợi ý...</Text>
+      </View>}
 
       {isAuthenticated && profiles.length > 0 && (
         <SelectModal

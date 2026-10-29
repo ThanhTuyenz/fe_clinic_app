@@ -173,14 +173,9 @@ export function ZaloLinkModal({
                 onPress={handleRequestOtp}
                 className="w-full bg-[#0068FF] active:bg-blue-700 py-3.5 rounded-xl items-center justify-center flex-row mb-3 shadow-xs"
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="link-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                    <Text className="text-white text-sm font-bold">Liên kết ngay (Gửi OTP)</Text>
-                  </>
-                )}
+                <Ionicons name="link-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+                <Text className="shrink text-white text-sm font-bold">Liên kết ngay (Gửi OTP)</Text>
+                {loading && <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />}
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -220,11 +215,8 @@ export function ZaloLinkModal({
                   otp.length === 6 ? 'bg-[#0068FF] active:bg-blue-700' : 'bg-slate-300'
                 }`}
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text className="text-white text-sm font-bold">Xác nhận liên kết</Text>
-                )}
+                <Text className="text-white text-sm font-bold">Xác nhận liên kết</Text>
+                {loading && <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />}
               </TouchableOpacity>
 
               {/* Gửi lại OTP */}

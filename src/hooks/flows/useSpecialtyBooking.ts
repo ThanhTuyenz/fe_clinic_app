@@ -1,5 +1,5 @@
 import { isUuid } from '../../utils/validation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Platform } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
@@ -15,7 +15,7 @@ import { formatCurrencyVi, formatDateVi, getTomorrowDateString } from '../../uti
 
 export function useSpecialtyBooking() {
   const router = useRouter()
-  const params = useLocalSearchParams<{ specialtyId?: string; branchId?: string; serviceId?: string; flow?: string }>()
+  const params = useLocalSearchParams<{ specialtyId?: string; branchId?: string; serviceId?: string; flow?: string; date?: string; time?: string; doctorId?: string; slotId?: string }>()
   const flow = params.flow === 'after-hours' ? 'after-hours' : 'specialty'
   const {
     draft,
@@ -39,10 +39,11 @@ export function useSpecialtyBooking() {
   )
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(draft.doctor || null)
   const tomorrow = getTomorrowDateString()
-  const initialDate = draft.date && draft.date >= tomorrow ? draft.date : ''
+  const requestedDate = params.date || draft.date
+  const initialDate = requestedDate && requestedDate >= tomorrow ? requestedDate : ''
   const [selectedDate, setSelectedDate] = useState<string>(initialDate)
-  const [selectedSlot, setSelectedSlot] = useState<string>(draft.slot || '')
-  const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(draft.slotId)
+  const [selectedSlot, setSelectedSlot] = useState<string>(params.time || draft.slot || '')
+  const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(params.slotId || draft.slotId)
 
   const [modalType, setModalType] = useState<BookingModalType | 'service'>(null)
 
@@ -101,9 +102,10 @@ export function useSpecialtyBooking() {
 
   // Booking Slots API (BFF /api/v1/booking/slots) - Chỉ gọi khi đã chọn đủ Chuyên khoa, Chi nhánh và Dịch vụ
   const { data: bookingSlotsData, isLoading: loadingSlots } = useQuery({
-    queryKey: ['bookingSlots', selectedBranchId, selectedSpecialtyId, selectedService?.id, selectedDate],
+    queryKey: ['bookingSlots', flow, selectedBranchId, selectedSpecialtyId, selectedService?.id, selectedDate],
     queryFn: () =>
       bookingService.getBookingSlots({
+        bookingMethodCode: flow === 'after-hours' ? 'AFTER_HOURS' : 'SPECIALTY_EXAM',
         branchId: selectedBranchId,
         specialtyId: selectedSpecialtyId,
         servicePackageId: selectedService?.id,
@@ -124,6 +126,7 @@ export function useSpecialtyBooking() {
 
   const selectedSpecialtyObj = specialties.find((s: any) => String(s.id) === String(selectedSpecialtyId))
   const selectedBranchObj = branches.find((b: any) => String(b.id) === String(selectedBranchId))
+
 
   // Tự động chọn khung giờ khả dụng đầu tiên CHỈ KHI người dùng đã chọn ngày khám
   useEffect(() => {
@@ -221,7 +224,7 @@ export function useSpecialtyBooking() {
       const isCurrentDoctorInSlot =
         selectedDoctor && slotDoctors.some((d) => String(d.id) === String(selectedDoctor.id))
       if (!isCurrentDoctorInSlot) {
-        const firstDoc = slotDoctors[0]
+        const firstDoc = slotDoctors.find(doc => String(doc.id) === params.doctorId) || slotDoctors[0]
         setSelectedDoctor(firstDoc)
         if ((firstDoc as any).slotId) {
           setSelectedSlotId((firstDoc as any).slotId)
@@ -229,6 +232,22 @@ export function useSpecialtyBooking() {
       }
     }
   }, [slotDoctors, selectedDoctor])
+
+  const suggestionChecked = useRef(false)
+  useEffect(() => {
+    if (suggestionChecked.current || !params.slotId || !bookingSlotsData) return
+    suggestionChecked.current = true
+    const valid = bookingSlotsData.date === selectedDate && availableSlotsList.some(slot => !slot.isFull
+      && slot.doctors.some(item => item.slotId === params.slotId
+        && String(item.doctorId) === params.doctorId && item.remainingSlots > 0))
+    if (!valid) {
+      setSelectedDate('')
+      setSelectedSlot('')
+      setSelectedSlotId(undefined)
+      setSelectedDoctor(null)
+      Alert.alert('Cần chọn lại lịch khám', 'Lịch được đề xuất không còn khả dụng. Vui lòng chọn lại ngày và giờ khám.')
+    }
+  }, [bookingSlotsData, availableSlotsList, selectedDate, params.slotId, params.doctorId])
 
   // 3. UI Options
   const specialtyOptions: SelectModalOption[] = useMemo(
@@ -491,12 +510,9 @@ export function useSpecialtyBooking() {
       return
     }
 
-    let slotId = selectedSlotId
-    if (!isUuid(slotId) && (selectedDoctor as any)?.slotId) {
-      slotId = (selectedDoctor as any).slotId
-    }
-
-    if (!isUuid(slotId)) {
+    const slotDoctor = currentSlot?.doctors?.find(doc => String(doc.doctorId) === String(selectedDoctor.id) && doc.remainingSlots > 0)
+    const slotId = slotDoctor?.slotId
+    if (!currentSlot || currentSlot.isFull || !isUuid(slotId)) {
       Alert.alert('Cần chọn lại giờ khám', 'Thông tin khung giờ không hợp lệ. Vui lòng chọn lại giờ khám và bác sĩ.')
       return
     }
