@@ -56,7 +56,7 @@ export default function HomeScreen() {
   } = useQuery(homeDoctorsQuery)
 
   const recommendations = useHomeRecommendations(user?.id ? String(user.id) : undefined, isAuthenticated, sessionId, !authLoading)
-  const { data: homeRecs, isLoading: loadingRecs, refetch: refetchRecs } = recommendations
+  const { profile: profileRecs, behavior: behaviorRecs, refetch: refetchRecs } = recommendations
 
   const { data: unreadData, refetch: refetchNotifs } = useQuery({
     queryKey: ['unreadNotifications', user?.id],
@@ -114,7 +114,7 @@ export default function HomeScreen() {
       await Promise.allSettled([
         refetchDoctors(),
         queryClient.refetchQueries({ queryKey: ['clinicHomepage'], exact: true, type: 'active' }),
-        ...(!authLoading && sessionId && !recommendations.loadingProfiles && !recommendations.profilesError ? [refetchRecs()] : []),
+        ...(!authLoading && sessionId ? [refetchRecs()] : []),
         ...(isAuthenticated ? [refetchNotifs(), queryClient.refetchQueries({ queryKey: ['myAppointments', user?.id], exact: true, type: 'active' })] : []),
       ])
     } finally {
@@ -168,18 +168,30 @@ export default function HomeScreen() {
 
         <HeroBanner onStartBooking={openBooking} />
 
-        {/* 1. [Khối Cá nhân hóa] Gợi ý cho bạn & Nhắc lịch khám */}
-        <RecommendationSection
-          packages={homeRecs?.packages || []}
-          isLoading={loadingRecs || recommendations.loadingProfiles}
-          onRefresh={recommendations.refresh}
+        {/* Gợi ý theo hồ sơ và quan tâm gần đây dùng hai nguồn độc lập */}
+        {isAuthenticated && <RecommendationSection
+          source="profile"
+          packages={profileRecs.data?.packages || []}
+          isLoading={profileRecs.isLoading || recommendations.loadingProfiles}
+          onRefresh={recommendations.profileId ? recommendations.refresh : undefined}
           refreshing={recommendations.refreshing}
-          error={Boolean(recommendations.error || recommendations.refreshError || recommendations.profilesError)}
-          onRetry={() => { if (recommendations.profilesError) void recommendations.retryProfiles(); else void refetchRecs() }}
+          error={Boolean(profileRecs.error || recommendations.refreshError || recommendations.profilesError)}
+          onRetry={() => { if (recommendations.profilesError) void recommendations.retryProfiles(); else void profileRecs.refetch() }}
           profiles={recommendations.profiles}
           profileId={recommendations.profileId}
           onSelectProfile={recommendations.selectProfile}
-          trackingToken={homeRecs?.trackingToken}
+          trackingToken={profileRecs.data?.trackingToken}
+          onSelectPackage={handleSelectRecommendedPackage}
+        />}
+        <RecommendationSection
+          source="behavior"
+          packages={behaviorRecs.data?.packages || []}
+          isLoading={authLoading || behaviorRecs.isLoading}
+          onRefresh={() => { void behaviorRecs.refetch() }}
+          refreshing={behaviorRecs.isRefetching}
+          error={Boolean(behaviorRecs.error)}
+          onRetry={() => { void behaviorRecs.refetch() }}
+          trackingToken={behaviorRecs.data?.trackingToken}
           onSelectPackage={handleSelectRecommendedPackage}
         />
 

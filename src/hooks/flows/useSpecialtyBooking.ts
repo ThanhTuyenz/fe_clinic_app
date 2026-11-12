@@ -169,7 +169,6 @@ export function useSpecialtyBooking() {
               price: selectedService?.price
                 ? Number(selectedService.price)
                 : firstDoc.consultationFee || 300000,
-              rating: 4.9,
               experience_years: firstDoc.experienceYears || 0,
               avatar: resolveDoctorAvatarUrl(firstDoc.avatarUrl || undefined),
               roomId: firstDoc.roomId || undefined,
@@ -209,7 +208,6 @@ export function useSpecialtyBooking() {
       specialty_name: selectedSpecialtyObj?.name || 'Chuyên khoa',
       consultation_fee: selectedService?.price ? Number(selectedService.price) : d.consultationFee || 300000,
       price: selectedService?.price ? Number(selectedService.price) : d.consultationFee || 300000,
-      rating: 4.9,
       experience_years: d.experienceYears || 0,
       avatar: resolveDoctorAvatarUrl(d.avatarUrl || undefined),
       roomId: d.roomId || undefined,
@@ -347,7 +345,6 @@ export function useSpecialtyBooking() {
           title: docName,
           subtitle: subtitleParts.join(' • ') || 'Bác sĩ chuyên khoa',
           avatar: d.avatar,
-          badge: d.rating ? `★ ${Number(d.rating).toFixed(1)}` : undefined,
           badgeColor: 'bg-slate-100 border border-slate-200',
           extra: d,
         }
@@ -413,7 +410,6 @@ export function useSpecialtyBooking() {
         specialty_name: selectedSpecialtyObj?.name || 'Chuyên khoa',
         consultation_fee: selectedService?.price ? Number(selectedService.price) : firstDoc.consultationFee || 300000,
         price: selectedService?.price ? Number(selectedService.price) : firstDoc.consultationFee || 300000,
-        rating: 4.9,
         experience_years: firstDoc.experienceYears || 0,
         avatar: resolveDoctorAvatarUrl(firstDoc.avatarUrl || undefined),
         roomId: firstDoc.roomId || undefined,

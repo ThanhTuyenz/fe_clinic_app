@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test:auth": "node --test scripts/auth-refresh.test.cjs",
     "dev": "expo start",
     "start": "expo start",
     "dev-client": "expo start --dev-client",

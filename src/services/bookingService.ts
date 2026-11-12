@@ -82,7 +82,6 @@ function normalizeDoctor(raw: any): Doctor {
     onlineConsultationFee: Number(
       raw.onlineConsultationFee ?? raw.consultationFee ?? raw.consultation_fee ?? 0
     ),
-    rating: Number(raw.ratingAverage ?? raw.rating ?? 5),
     experience_years: raw.experienceYears ?? raw.experience_years ?? 0,
     avatar: resolveDoctorAvatarUrl(raw.avatarUrl || raw.avatar || raw.image),
   }

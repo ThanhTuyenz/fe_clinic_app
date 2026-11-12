@@ -26,4 +26,4 @@ export const telehealthService = {
 
 export const canJoinTelehealth = (appointment: { status: string; isTelehealth?: boolean; bookingMethod?: { code: string } | null }) =>
   (appointment.isTelehealth || appointment.bookingMethod?.code === 'ONLINE_CONSULTATION') &&
-  ['CONFIRMED', 'CHECKED_IN', 'IN_EXAMINATION'].includes(appointment.status.toUpperCase())
+  ['CONFIRMED', 'CHECKED_IN'].includes(appointment.status.toUpperCase())

@@ -3,9 +3,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { resolveApiBaseUrl, STORAGE_KEYS } from '../constants/config'
 import { useAuthStore } from '../store/useAuthStore'
 
+const REQUEST_TIMEOUT = 15000
+const SESSION_EXPIRED = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+class SessionExpiredError extends Error {
+  constructor() { super(SESSION_EXPIRED) }
+}
+type AuthRequest = InternalAxiosRequestConfig & { _retry?: boolean; _sessionVersion?: number }
+type RefreshResponse = { token?: string; accessToken?: string; refreshToken?: string }
+
 export const api = axios.create({
   baseURL: resolveApiBaseUrl(),
-  timeout: 15000,
+  timeout: REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,7 +21,8 @@ export const api = axios.create({
 
 // Request Interceptor: Tự động gắn Bearer Token
 api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
+  async (config: AuthRequest) => {
+    config._sessionVersion ??= useAuthStore.getState().sessionVersion
     try {
       config.baseURL = resolveApiBaseUrl()
       // Preserve an explicit token (getMe) or an explicitly disabled header (Google login).
@@ -30,29 +39,73 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Trạng thái cho hàng đợi khi đang Refresh Token
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (value?: any) => void
-  reject: (reason?: any) => void
-}> = []
+// Requests in the same session share one refresh, including its failure.
+let refreshing: { sessionVersion: number; promise: Promise<string> } | null = null
 
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else {
-      prom.resolve(token)
+function requireCurrentSession(sessionVersion: number) {
+  if (useAuthStore.getState().sessionVersion !== sessionVersion) {
+    throw new axios.CanceledError('Phiên đăng nhập đã thay đổi. Vui lòng thử lại.')
+  }
+}
+
+async function refreshAccessToken(sessionVersion: number): Promise<string> {
+  try {
+    const savedRefreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+    requireCurrentSession(sessionVersion)
+    if (!savedRefreshToken) {
+      throw new SessionExpiredError()
     }
+
+    const currentBase = resolveApiBaseUrl().replace(/\/api\/v1\/?$/, '')
+    // Use raw axios to avoid re-entering the response interceptor.
+    const response = await axios.post(`${currentBase}/api/v1/auth/refresh`, {
+      refreshToken: savedRefreshToken,
+    }, { timeout: REQUEST_TIMEOUT })
+    requireCurrentSession(sessionVersion)
+
+    const result = unwrapNestResponse<RefreshResponse>(response.data)
+    const token = result?.token || result?.accessToken
+    if (typeof token !== 'string' || !token.trim()) {
+      throw new Error('Máy chủ chưa cấp được token mới. Vui lòng thử lại.')
+    }
+    const refreshToken = typeof result.refreshToken === 'string' && result.refreshToken.trim()
+      ? result.refreshToken : savedRefreshToken
+    await useAuthStore.getState().setToken(token, refreshToken)
+    requireCurrentSession(sessionVersion)
+    return token
+  } catch (error) {
+    if (axios.isCancel(error)) throw error
+    requireCurrentSession(sessionVersion)
+    if (error instanceof SessionExpiredError || (axios.isAxiosError(error)
+      && (error.response?.status === 401 || error.response?.status === 403))) {
+      await useAuthStore.getState().logout()
+      throw new SessionExpiredError()
+    }
+    if (axios.isAxiosError(error)) {
+      if (!error.response) {
+        throw new Error('Chưa thể làm mới phiên đăng nhập. Vui lòng kiểm tra kết nối mạng và thử lại.')
+      }
+      throw Object.assign(new Error('Máy chủ chưa thể làm mới phiên đăng nhập. Vui lòng thử lại sau.'), { status: error.response.status })
+    }
+    throw error
+  }
+}
+
+function getRefreshedToken(sessionVersion: number): Promise<string> {
+  if (refreshing?.sessionVersion === sessionVersion) return refreshing.promise
+  const promise = refreshAccessToken(sessionVersion).finally(() => {
+    if (refreshing?.promise === promise) refreshing = null
   })
-  failedQueue = []
+  refreshing = { sessionVersion, promise }
+  return promise
 }
 
 // Response Interceptor: Xử lý lỗi tập trung & Tự động Refresh Token khi gặp 401
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<{ message?: string | string[]; code?: string; errors?: Record<string, string> }>) => {
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+    if (axios.isCancel(error)) return Promise.reject(error)
+    const originalRequest = error.config as AuthRequest | undefined
 
     // 1. Không kết nối được server
     if (!error.response) {
@@ -73,67 +126,23 @@ api.interceptors.response.use(
 
     // 2. Xử lý lỗi 401 Unauthorized (Token hết hạn)
     if (status === 401 && originalRequest && !isAuthRoute) {
+      const sessionVersion = originalRequest._sessionVersion ?? useAuthStore.getState().sessionVersion
+      requireCurrentSession(sessionVersion)
       if (originalRequest._retry) {
-        // Đã thử refresh nhưng vẫn 401 -> Logout
         await useAuthStore.getState().logout()
-        return Promise.reject(new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'))
+        return Promise.reject(new Error(SESSION_EXPIRED))
       }
 
-      if (isRefreshing) {
-        // Nếu đang trong tiến trình refresh, đẩy request vào hàng đợi
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then((newToken) => {
-            if (newToken && originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`
-            }
-            return api(originalRequest)
-          })
-          .catch((err) => Promise.reject(err))
-      }
-
+      // Mark every request before waiting, so queued requests also retry only once.
       originalRequest._retry = true
-      isRefreshing = true
-
-      try {
-        const savedRefreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
-        if (!savedRefreshToken) {
-          throw new Error('Không có refresh token')
-        }
-
-        // Gọi raw axios (không qua interceptor) để tránh vòng lặp 401 vô tận
-        // resolveApiBaseUrl() trả về host không có /api/v1 → cần prepend đầy đủ
-        const currentBase = resolveApiBaseUrl().replace(/\/api\/v1\/?$/, '')
-        const refreshRes = await axios.post(`${currentBase}/api/v1/auth/refresh`, {
-          refreshToken: savedRefreshToken,
-        })
-
-        const refreshData = unwrapNestResponse<any>(refreshRes.data)
-        const result = refreshData || refreshRes.data
-        const newToken = (result.token || result.accessToken) as string
-        const newRefreshToken = (result.refreshToken || savedRefreshToken) as string
-
-        if (!newToken) {
-          throw new Error('Máy chủ không cấp token mới')
-        }
-
-        // Lưu token mới vào AsyncStorage và Zustand Store
-        await useAuthStore.getState().setToken(newToken, newRefreshToken)
-
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`
-        }
-
-        processQueue(null, newToken)
-        return api(originalRequest)
-      } catch (refreshErr) {
-        processQueue(refreshErr, null)
-        await useAuthStore.getState().logout()
-        return Promise.reject(new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'))
-      } finally {
-        isRefreshing = false
-      }
+      // A delayed 401 may arrive after another request already refreshed the token.
+      const currentToken = useAuthStore.getState().token
+      const failedToken = originalRequest.headers.get('Authorization')
+      const newToken = currentToken && failedToken !== `Bearer ${currentToken}`
+        ? currentToken : await getRefreshedToken(sessionVersion)
+      requireCurrentSession(sessionVersion)
+      originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
+      return api(originalRequest)
     }
 
     // 3. Xử lý lỗi đối tượng errors (422 Unprocessable Entity từ NestJS Auth)

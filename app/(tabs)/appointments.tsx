@@ -27,7 +27,7 @@ export default function AppointmentsScreen() {
 
   const isUpcoming = (status?: string) => {
     const s = (status || '').toUpperCase()
-    return s === 'HOLD' || s === 'CONFIRMED' || s === 'CHECKED_IN' || s === 'IN_EXAMINATION' || s === 'PENDING'
+    return s === 'HOLD' || s === 'CONFIRMED' || s === 'CHECKED_IN' || s === 'PENDING'
   }
 
   const isHistory = (status?: string) => {
@@ -49,12 +49,6 @@ export default function AppointmentsScreen() {
         return (
           <View className="bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-lg">
             <Text className="text-[11px] font-bold text-blue-700">Đã tiếp đón</Text>
-          </View>
-        )
-      case 'IN_EXAMINATION':
-        return (
-          <View className="bg-sky-50 border border-sky-200 px-2.5 py-0.5 rounded-lg">
-            <Text className="text-[11px] font-bold text-sky-700">Đang khám</Text>
           </View>
         )
       case 'HOLD':

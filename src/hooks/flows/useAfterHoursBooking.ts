@@ -134,7 +134,6 @@ export function useAfterHoursBooking() {
           title: `${docTitle ? `${docTitle} ` : ''}${docName}`,
           subtitle: `${docSpecialty} • Phí khám: ${formatCurrencyVi(fee)}`,
           avatar: d.avatar,
-          badge: d.rating ? `★ ${Number(d.rating).toFixed(1)}` : undefined,
           badgeColor: 'bg-amber-100',
           extra: d,
         }

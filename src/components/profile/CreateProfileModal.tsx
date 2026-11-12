@@ -80,7 +80,6 @@ export const CreateProfileModal: React.FC<CreateProfileModalProps> = ({
           [
             initialData.streetAddress,
             initialData.wardName,
-            initialData.districtName,
             initialData.provinceName,
           ]
             .filter(Boolean)

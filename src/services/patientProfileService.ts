@@ -14,7 +14,6 @@ export interface PatientProfile {
   address?: string
   streetAddress?: string
   wardName?: string
-  districtName?: string
   provinceName?: string
   isMainProfile?: boolean
 }

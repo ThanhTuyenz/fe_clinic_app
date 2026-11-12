@@ -33,7 +33,7 @@ export function TelehealthScreen({ appointmentId }: { appointmentId: string }) {
   const containerRef = useRef<React.ComponentRef<typeof View>>(null)
   const chatRef = useRef<React.ComponentRef<typeof ScrollView>>(null)
   const active = ['connecting', 'waiting', 'connected', 'disconnected'].includes(call.status)
-  const canJoin = room && ['CONFIRMED', 'CHECKED_IN', 'IN_EXAMINATION'].includes(room.status)
+  const canJoin = room && ['CONFIRMED', 'CHECKED_IN'].includes(room.status)
   const compact = chatOpen && (keyboardVisible || (availableHeight > 0 && availableHeight < 480))
   const hideVideo = compact && availableHeight > 0 && availableHeight < 320
   const canSend = !sending && Boolean(text.trim()) && ['waiting', 'connected'].includes(call.status)

@@ -14,6 +14,7 @@ import { formatDateVi } from '../../utils/date'
 import { useRecommendationImpressions } from '../../hooks/useRecommendationImpressions'
 
 export interface RecommendationSectionProps {
+  source: 'profile' | 'behavior'
   packages: RecommendedPackageItem[]
   isLoading?: boolean
   onRefresh?: () => void
@@ -28,6 +29,7 @@ export interface RecommendationSectionProps {
 }
 
 export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
+  source,
   packages,
   isLoading,
   onRefresh,
@@ -44,7 +46,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
   const { data: appointments = [] } = useQuery({
     queryKey: ['myAppointments', userId],
     queryFn: () => appointmentService.getMyAppointments(),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && source === 'profile',
     staleTime: 30_000,
   })
 
@@ -59,9 +61,9 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       <View className="px-5 flex-row items-start justify-between mb-3.5">
         <View className="flex-1 mr-2">
           <Text className="text-base font-extrabold text-slate-900 tracking-tight">
-            {isAuthenticated ? 'Gợi ý cho bạn' : 'Gói khám nổi bật'}
+            {source === 'profile' ? 'Gợi ý theo hồ sơ sức khỏe' : 'Gợi ý theo quan tâm gần đây'}
           </Text>
-          {isAuthenticated && profiles.length > 0 ? (
+          {source === 'profile' && isAuthenticated && profiles.length > 0 ? (
             <View className="flex-row items-center mt-2">
               <Text className="text-xs text-slate-500 mr-2">Dành cho</Text>
               <TouchableOpacity
@@ -80,9 +82,9 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
             </View>
           ) : (
             <Text className="text-xs text-slate-500 mt-1 leading-4">
-              {isAuthenticated
-                ? 'Khám phá các gói khám phù hợp với nhu cầu của bạn'
-                : 'Khám phá các gói khám nổi bật tại VitaCare Clinic'}
+              {source === 'profile'
+                ? 'Gói khám phù hợp với thông tin sức khỏe đã cung cấp'
+                : 'Từ các gói đã xem, tìm kiếm và lượt đặt khám chưa hoàn tất'}
             </Text>
           )}
         </View>
@@ -106,7 +108,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
         <Text className="text-xs text-slate-500">Đang làm mới gợi ý...</Text>
       </View>}
 
-      {isAuthenticated && profiles.length > 0 && (
+      {source === 'profile' && isAuthenticated && profiles.length > 0 && (
         <SelectModal
           visible={showProfiles}
           title="Chọn hồ sơ nhận gợi ý"
@@ -119,7 +121,7 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
       {error && <View className="mx-5 mb-3 rounded-lg border border-rose-200 bg-rose-50 p-3"><Text className="text-sm text-rose-700">Không thể tải hoặc làm mới gợi ý lúc này.</Text><TouchableOpacity onPress={onRetry}><Text className="mt-2 font-semibold text-primary-700">Thử lại</Text></TouchableOpacity></View>}
 
       {/* 2. Thẻ Nhắc lịch khám (Nếu có lịch hẹn) */}
-      {upcomingAppointment && (
+      {source === 'profile' && upcomingAppointment && (
         <View className="mx-5 mb-4 p-3 bg-primary-50/70 rounded-xl border border-primary-200/80 shadow-2xs">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center flex-1 mr-2">
@@ -146,14 +148,14 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
         </View>
       )}
 
-      {/* 3. Danh sách gói khám AI cá nhân hóa (Hồ sơ + Hành vi) */}
+      {/* Danh sách riêng của nguồn đang hiển thị */}
       {isLoading ? (
         <ActivityIndicator size="small" color="#28a745" className="py-6" />
       ) : error && packages.length === 0 ? null : packages.length === 0 ? (
         <View className="bg-white mx-5 p-5 rounded-lg border border-slate-100 items-center">
           <Ionicons name="sparkles-outline" size={24} color="#cbd5e1" />
           <Text className="text-slate-400 text-xs text-center mt-1.5 font-medium">
-            Chưa có dữ liệu gợi ý. Hãy bắt đầu khám phá các chuyên khoa!
+            {source === 'profile' ? 'Chưa có gợi ý phù hợp với hồ sơ đã chọn.' : 'Chưa có gợi ý từ hoạt động gần đây. Hãy khám phá các gói khám bạn quan tâm.'}
           </Text>
         </View>
       ) : (
@@ -188,9 +190,9 @@ export const RecommendationSection: React.FC<RecommendationSectionProps> = ({
                 bg: 'bg-blue-50 border-blue-200',
                 icon: 'search-outline',
               }
-            } else if (pkg.sourceType === 'PROFILE_AI' || pkg.sourceType === 'BOTH' || pkg.badge === 'Phù hợp hồ sơ') {
+            } else if (pkg.sourceType === 'PROFILE_AI' || pkg.badge === 'Phù hợp hồ sơ') {
               badge = {
-                label: pkg.sourceType === 'BOTH' ? 'Phù hợp cả hai' : 'Phù hợp hồ sơ',
+                label: 'Phù hợp hồ sơ',
                 color: 'text-purple-700',
                 bg: 'bg-purple-50 border-purple-200',
                 icon: 'heart-outline',

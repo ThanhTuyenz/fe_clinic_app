@@ -12,22 +12,27 @@ export interface RecommendedPackageItem {
   priority?: 'HIGH' | 'MEDIUM' | 'LOW'
   badge?: string
   clinicalReason?: string
-  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'RECENT_VIEW' | 'PROFILE_AI' | 'POPULAR' | 'BOTH'
+  sourceType?: 'DROP_OFF' | 'SEARCH_INTENT' | 'RECENT_VIEW' | 'PROFILE_AI'
 }
 
-export interface HomeRecommendationResponse {
+export interface RecommendationSectionResponse {
+  status: 'READY' | 'EMPTY' | 'PENDING'
   trackingToken?: string
-  profileId?: string
+  updatedAt: string
+  fromCache: boolean
+  packages: RecommendedPackageItem[]
+}
+
+export interface ProfileRecommendationSectionResponse extends RecommendationSectionResponse {
+  profileId: string
+  profileName?: string
+}
+
+export interface ProfileRecommendationResponse {
+  profileId: string
   profileName?: string
   updatedAt: string
-  source: 'HYBRID' | 'AI_PROFILE' | 'BEHAVIOR' | 'FALLBACK'
-  event?: string
-  triggerEvent?: string
-  triggerReason?: string
-  dataOrigin?: 'CACHE' | 'NEW'
-  src?: 'cache' | 'new'
-  isCached?: boolean
-  fromCache?: boolean
+  source: 'AI_OPENAI' | 'RULE_FALLBACK' | 'REDIS_CACHE'
   packages: RecommendedPackageItem[]
 }
 
@@ -60,7 +65,6 @@ export interface SearchDoctorItem {
   specialties: string[]
   experienceYears: number
   avatarUrl?: string | null
-  ratingAverage: number
 }
 
 export interface SearchBranchItem {
@@ -82,14 +86,14 @@ export interface SemanticSearchResponse {
 }
 
 export const recommendationService = {
-  async getHomeRecommendations(params?: {
-    profileId?: string
-    sessionId?: string
-  }): Promise<HomeRecommendationResponse> {
-    const res = await api.get('/api/v1/recommendations/home', { params, timeout: 60000 })
-    const data = unwrapNestResponse<HomeRecommendationResponse>(res.data)
-    if (!data || !Array.isArray(data.packages)) throw new Error('Dữ liệu gợi ý không hợp lệ.')
-    return data
+  async getProfileRecommendations(profileId: string, sessionId?: string): Promise<ProfileRecommendationSectionResponse> {
+    const res = await api.get(`/api/v1/recommendations/patient-profile/${encodeURIComponent(profileId)}`, { params: { sessionId }, timeout: 60000 })
+    return unwrapNestResponse<ProfileRecommendationSectionResponse>(res.data)
+  },
+
+  async getBehaviorRecommendations(sessionId?: string): Promise<RecommendationSectionResponse> {
+    const res = await api.get('/api/v1/recommendations/behavior', { params: { sessionId }, timeout: 60000 })
+    return unwrapNestResponse<RecommendationSectionResponse>(res.data)
   },
 
   async trackBehavior(payload: TrackBehaviorPayload): Promise<{ success: boolean }> {
@@ -105,9 +109,9 @@ export const recommendationService = {
 
   async refreshProfileRecommendations(
     profileId: string
-  ): Promise<HomeRecommendationResponse> {
+  ): Promise<ProfileRecommendationResponse> {
     const res = await api.post(`/api/v1/recommendations/patient-profile/${profileId}/refresh`, {}, { timeout: 60000 })
-    return unwrapNestResponse<HomeRecommendationResponse>(res.data)
+    return unwrapNestResponse<ProfileRecommendationResponse>(res.data)
   },
 
   async semanticSearch(

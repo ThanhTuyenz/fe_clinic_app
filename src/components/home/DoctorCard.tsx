@@ -1,7 +1,6 @@
 import React from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import { Image } from 'expo-image'
-import Ionicons from '@expo/vector-icons/Ionicons'
 import { Doctor } from '../../types/doctor'
 import { formatCurrencyVi } from '../../utils/date'
 
@@ -101,11 +100,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, onSelect }) => {
         <View className="mt-3 pt-2.5 border-t border-slate-100">
           <View className="flex-row items-center justify-between mb-2.5">
             <View className="flex-row items-center">
-              <Ionicons name="star" size={13} color="#f59e0b" />
-              <Text className="text-xs font-bold text-slate-700 ml-1">
-                {doctor.rating || 5.0}
-              </Text>
-              <Text className="text-xs text-slate-400 font-medium ml-1.5">• Giá khám</Text>
+              <Text className="text-xs text-slate-400 font-medium">Giá khám</Text>
             </View>
             <Text className="text-sm text-slate-800">{formatCurrencyVi(fee)}</Text>
           </View>

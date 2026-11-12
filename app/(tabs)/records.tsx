@@ -68,7 +68,7 @@ export default function RecordsScreen() {
     const genderLabel = item.gender === 'FEMALE' ? 'Nữ' : 'Nam'
     const fullAddress =
       item.address ||
-      [item.streetAddress, item.wardName, item.districtName, item.provinceName]
+      [item.streetAddress, item.wardName, item.provinceName]
         .filter(Boolean)
         .join(', ')
 

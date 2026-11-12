@@ -78,13 +78,9 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({
 
         <View className="flex-row items-center justify-between mt-2">
           <View className="flex-row items-center">
-            <Ionicons name="star" size={13} color="#f59e0b" />
-            <Text className="text-xs font-semibold text-slate-700 ml-1">
-              {doctor.rating || 5.0}
-            </Text>
             {Boolean(doctor.experience_years) && (
-              <Text className="text-xs text-slate-400 ml-1.5">
-                • {doctor.experience_years} năm KN
+              <Text className="text-xs text-slate-400">
+                {doctor.experience_years} năm KN
               </Text>
             )}
           </View>

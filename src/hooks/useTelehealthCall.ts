@@ -85,7 +85,7 @@ export function useTelehealthCall(appointmentId: string) {
         // Re-check ownership/status before opening camera; the API can also refresh JWT.
         const room = await telehealthService.getRoom(appointmentId)
         if (disposed) return
-        if (!['CONFIRMED', 'CHECKED_IN', 'IN_EXAMINATION'].includes(room.status)) {
+        if (!['CONFIRMED', 'CHECKED_IN'].includes(room.status)) {
           throw new Error('Lịch hẹn chưa được xác nhận hoặc đã kết thúc.')
         }
         let native: WebRTC

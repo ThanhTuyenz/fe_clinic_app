@@ -8,6 +8,7 @@ interface AuthState {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  sessionVersion: number
   initializeAuth: () => Promise<void>
   setAuth: (token: string, user: User, refreshToken?: string) => Promise<void>
   setToken: (token: string, refreshToken?: string) => Promise<void>
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  sessionVersion: 0,
 
   initializeAuth: async () => {
     try {
@@ -56,34 +58,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setAuth: async (token: string, user: User, refreshToken?: string) => {
-    try {
-      const ops: Promise<void>[] = [
-        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token),
-        AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user)),
-      ]
-      if (refreshToken) {
-        ops.push(AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken))
-      }
-      await Promise.all(ops)
-      set({ token, user, isAuthenticated: true })
-    } catch (e) {
-      console.error('Lỗi lưu auth session:', e)
-    }
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token),
+      AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user)),
+      refreshToken
+        ? AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)
+        : AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+    ])
+    set(state => ({ token, user, isAuthenticated: true, sessionVersion: state.sessionVersion + 1 }))
   },
 
   setToken: async (token: string, refreshToken?: string) => {
-    try {
-      const ops: Promise<void>[] = [
-        AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token),
-      ]
-      if (refreshToken) {
-        ops.push(AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken))
-      }
-      await Promise.all(ops)
-      set({ token })
-    } catch (e) {
-      console.error('Lỗi cập nhật token mới:', e)
-    }
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token),
+      ...(refreshToken ? [AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken)] : []),
+    ])
+    set({ token })
   },
 
   updateUser: async (partialUser: Partial<User>) => {
@@ -95,13 +85,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    set(state => ({ token: null, user: null, isAuthenticated: false, sessionVersion: state.sessionVersion + 1 }))
     try {
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
       ])
-      set({ token: null, user: null, isAuthenticated: false })
     } catch (e) {
       console.error('Lỗi khi logout:', e)
     }

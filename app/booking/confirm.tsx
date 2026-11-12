@@ -202,7 +202,7 @@ export default function BookingConfirmScreen() {
 
   const fullAddress =
     profile?.address?.trim() ||
-    [profile?.streetAddress, profile?.wardName, profile?.districtName, profile?.provinceName]
+    [profile?.streetAddress, profile?.wardName, profile?.provinceName]
       .filter(Boolean)
       .join(', ') ||
     user?.address?.trim()

@@ -36,7 +36,6 @@ export interface Doctor {
   price?: number
   consultation_fee?: number
   onlineConsultationFee?: number
-  rating?: number
   bio?: string
   work_schedule?: string
 }

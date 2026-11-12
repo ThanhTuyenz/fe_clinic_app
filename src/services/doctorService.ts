@@ -49,7 +49,6 @@ export const doctorService = {
             d.consultation_fee ??
             0
         ),
-        rating: d.ratingAverage ?? d.rating ?? 5.0,
         experience_years: d.experienceYears ?? d.experience_years ?? 0,
         bio: d.biography || d.bio,
         avatar: resolveDoctorAvatarUrl(d.avatarUrl || d.avatar || d.image || d.profileImage),

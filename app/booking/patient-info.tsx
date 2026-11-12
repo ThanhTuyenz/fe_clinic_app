@@ -92,7 +92,7 @@ export default function PatientInfoScreen() {
   const handleEditProfile = (item: PatientProfile) => {
     const fullAddress =
       item.address?.trim() ||
-      [item.streetAddress, item.wardName, item.districtName, item.provinceName]
+      [item.streetAddress, item.wardName, item.provinceName]
         .filter(Boolean)
         .join(', ')
 
@@ -269,7 +269,7 @@ export default function PatientInfoScreen() {
                 const dobFormatted = formatDob(item.dateOfBirth)
                 const fullAddress =
                   item.address?.trim() ||
-                  [item.streetAddress, item.wardName, item.districtName, item.provinceName]
+                  [item.streetAddress, item.wardName, item.provinceName]
                     .filter(Boolean)
                     .join(', ')
                 const cccdNumber = item.nationalId || item.identityCardNumber
