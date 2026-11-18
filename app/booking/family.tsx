@@ -72,7 +72,7 @@ function FamilyBookingForm() {
     return { branches: flows[0].branches, services: flows.flatMap((data, index) => [...(data.services || []), ...(data.healthPackages || [])].map(service => ({ ...service, bookingMethodCode: service.bookingMethod?.code || ['SPECIALTY_EXAM', 'HEALTH_PACKAGE', 'AFTER_HOURS'][index] }))) }
   } })
   const member = members.find(item => item.profileId === modal?.profileId)
-  const slots = useQuery({ queryKey: ['family-slots', branchId, date, member?.service?.id], queryFn: () => bookingService.getBookingSlots({ branchId, date, servicePackageId: member!.service.id }), enabled: modal?.type === 'slot' && Boolean(branchId && date && member?.service?.id), staleTime: 0 })
+  const slots = useQuery({ queryKey: ['family-slots', branchId, date, member?.service?.id, member?.service?.bookingMethodCode], queryFn: () => bookingService.getBookingSlots({ branchId, date, servicePackageId: member!.service.id, bookingMethodCode: member!.service.bookingMethodCode }), enabled: modal?.type === 'slot' && Boolean(branchId && date && member?.service?.id), staleTime: 0 })
   const services = [...new Map((init.data?.services || []).map(service => [`${service.id}:${service.bookingMethodCode}`, service])).values()]
   const updateMember = (profileId: string, patch: Partial<Member>) => setMembers(list => list.map(item => item.profileId === profileId ? { ...item, ...patch } : item))
   const checkout = async () => {
@@ -93,7 +93,7 @@ function FamilyBookingForm() {
         const items: CheckoutPayload[] = await Promise.all(members.map(async item => ({
           ...await searchAnalytics.checkoutSource({ packageId: item.service.id, branchId }).catch(() => ({})),
           patientProfileId: item.profileId, bookingMethodCode: item.service.bookingMethodCode,
-          servicePackageId: item.service.id, scheduleSlotId: item.slot!.id,
+          servicePackageId: item.service.id, ...(item.service.bookingMethodCode === 'HEALTH_PACKAGE' ? { receptionSlotId: item.slot!.id } : { scheduleSlotId: item.slot!.id }),
         })))
         const order = await appointmentService.batchCheckout(items, voucher)
         existing = { accountId, order }; heldRef.current = existing; setHeld(existing)
@@ -114,7 +114,7 @@ function FamilyBookingForm() {
       if (status.isPaid) { router.replace({ pathname: '/booking/family-result', params: { orderId: heldRef.current.order.bookingOrderId } }); return }
       const current = await appointmentService.getMyAppointments()
       const activeIds = new Set(current.filter(item => ['HOLD', 'PENDING', 'CONFIRMED'].includes(String(item.status).toUpperCase())).map(item => String(item.id)))
-      await Promise.all(heldRef.current.order.appointments.filter(item => activeIds.has(item.appointmentId)).map(item => appointmentService.cancelAppointment(item.appointmentId, 'Hủy đơn gia đình đang giữ chỗ')))
+      await Promise.all(heldRef.current.order.appointments.filter(item => activeIds.has(item.appointmentId)).map(item => appointmentService.cancelAppointment(item.appointmentId, 'Không sắp xếp được thời gian')))
       await AsyncStorage.removeItem(key); heldRef.current = null; setHeld(null); setPayment(null)
       void client.invalidateQueries({ queryKey: ['myAppointments'] })
     } catch (e) { setError(e instanceof Error ? e.message : 'Không thể hủy đơn.') }
@@ -148,7 +148,7 @@ function FamilyBookingForm() {
     </ScrollView>
     <SelectModal visible={modal?.type === 'branch'} title="Chọn cơ sở khám" onClose={() => setModal(null)} options={(init.data?.branches || []).map(branch => ({ id: branch.id, title: branch.name, subtitle: branch.address }))} onSelect={option => { setBranchId(String(option.id)); setMembers(list => list.map(item => ({ profileId: item.profileId }))); setModal(null) }} />
     <SelectModal visible={modal?.type === 'service'} title="Chọn dịch vụ khám" onClose={() => setModal(null)} options={services.map(service => ({ id: `${service.id}:${service.bookingMethodCode}`, title: service.name, subtitle: `${formatCurrencyVi(Number(service.price))} • ${service.bookingMethodCode === 'AFTER_HOURS' ? 'Ngoài giờ' : service.bookingMethodCode === 'HEALTH_PACKAGE' ? 'Gói sức khỏe' : 'Chuyên khoa'}`, extra: service }))} onSelect={option => { if (modal?.profileId) updateMember(modal.profileId, { service: option.extra, slot: undefined }); setModal(null) }} />
-    <SelectModal visible={modal?.type === 'slot'} title="Chọn giờ và bác sĩ" loading={slots.isLoading} emptyText={slots.isError ? 'Không tải được lịch. Đóng và mở lại để thử lại.' : 'Ngày này không còn khung giờ. Vui lòng chọn ngày khác.'} onClose={() => setModal(null)} options={(slots.data?.slots || []).flatMap(slot => slot.doctors.filter(doc => !slot.isFull && doc.remainingSlots > 0).map(doc => ({ id: doc.slotId, title: `${slot.startTime} – ${slot.endTime}`, subtitle: `${doc.doctorName}${doc.roomName ? ` • ${doc.roomName}` : ''}`, extra: { id: doc.slotId, label: `${slot.startTime} • ${doc.doctorName}` } })))} onSelect={option => { if (modal?.profileId) updateMember(modal.profileId, { slot: option.extra }); setModal(null) }} />
+    <SelectModal visible={modal?.type === 'slot'} title={member?.service?.bookingMethodCode === 'HEALTH_PACKAGE' ? 'Chọn giờ tiếp nhận' : 'Chọn giờ và bác sĩ'} loading={slots.isLoading} emptyText={slots.isError ? 'Không tải được lịch. Đóng và mở lại để thử lại.' : 'Ngày này không còn khung giờ. Vui lòng chọn ngày khác.'} onClose={() => setModal(null)} options={(slots.data?.slots || []).flatMap(slot => slot.receptionSlotId ? (!slot.isFull ? [{ id: slot.receptionSlotId, title: `${slot.startTime} – ${slot.endTime}`, subtitle: `Giờ tiếp nhận • Còn ${slot.remainingSlots} chỗ`, extra: { id: slot.receptionSlotId, label: `${slot.startTime} – ${slot.endTime}` } }] : []) : slot.doctors.filter(doc => !slot.isFull && doc.remainingSlots > 0).map(doc => ({ id: doc.slotId, title: `${slot.startTime} – ${slot.endTime}`, subtitle: `${doc.doctorName}${doc.roomName ? ` • ${doc.roomName}` : ''}`, extra: { id: doc.slotId, label: `${slot.startTime} • ${doc.doctorName}` } })))} onSelect={option => { if (modal?.profileId) updateMember(modal.profileId, { slot: option.extra }); setModal(null) }} />
     <CreateProfileModal visible={createProfile} onClose={() => setCreateProfile(false)} onSuccess={() => { setCreateProfile(false); void profiles.refetch() }} />
     <PayosDeepLinkModal visible={showPayment} onClose={() => setShowPayment(false)} appointmentId={held?.order.bookingOrderId || ''} paymentData={payment} onPaymentSuccess={() => {
       if (!held) return

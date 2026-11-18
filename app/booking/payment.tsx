@@ -140,7 +140,7 @@ export default function BookingPaymentScreen() {
           }).catch(() => ({})),
           bookingMethodCode: draft.bookingMethod || (isPackage ? 'HEALTH_PACKAGE' : 'CONSULTATION'),
           patientProfileId: profileId,
-          scheduleSlotId: slotId,
+          ...(isPackage ? { receptionSlotId: slotId } : { scheduleSlotId: slotId }),
           servicePackageId: isPackage
             ? draft.healthPackage?.id ? String(draft.healthPackage.id) : undefined
             : draft.specialtyService?.id ? String(draft.specialtyService.id) : undefined,

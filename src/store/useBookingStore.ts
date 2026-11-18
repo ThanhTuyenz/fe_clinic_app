@@ -12,7 +12,7 @@ interface BookingState {
   setSpecialtyService: (specialtyService: any) => void
   setHealthPackage: (healthPackage: any) => void
   setIsAfterHours: (isAfterHours: boolean) => void
-  setDoctor: (doctor: Doctor) => void
+  setDoctor: (doctor: Doctor | null) => void
   setDateTime: (date: string, slot: string, slotId?: string) => void
   setPatientProfileId: (patientProfileId: string) => void
   setSelectedProfile: (profile: any) => void
@@ -81,7 +81,7 @@ export const useBookingStore = create<BookingState>((set) => ({
       draft: { ...state.draft, isAfterHours },
     })),
 
-  setDoctor: (doctor: Doctor) =>
+  setDoctor: (doctor: Doctor | null) =>
     set((state) => ({
       draft: {
         ...state.draft,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { aiService, type AiChatResponse, type ChatMessage } from '../../src/services/aiService'
@@ -7,12 +7,30 @@ import { ScreenShell } from '../../src/components/common/ScreenShell'
 import { useAuthStore } from '../../src/store/useAuthStore'
 import { useBookingStore } from '../../src/store/useBookingStore'
 import { formatCurrencyVi } from '../../src/utils/date'
+import { resolveDoctorAvatarUrl } from '../../src/services/doctorService'
 
 const greeting: ChatMessage = {
   role: 'assistant',
-  content: 'Xin chào! Tôi có thể giúp bạn tìm dịch vụ, bác sĩ và lịch trống tại VitaCare. Bạn muốn khám gì?',
+  content: 'Xin chào! Tôi hỗ trợ tìm dịch vụ, bác sĩ, lịch trống và tra cứu lịch hẹn tại VitaCare. Tôi không tư vấn triệu chứng hay chẩn đoán bệnh.',
 }
-const suggestions = ['Tìm cơ sở và chuyên khoa', 'Tìm dịch vụ khám mắt', 'Tìm bác sĩ tư vấn trực tuyến']
+const suggestions = ['Tìm gói khám', 'Tìm bác sĩ tư vấn trực tuyến', 'Xem lịch đã đặt']
+
+function DoctorResultCard({ doctor }: { doctor: NonNullable<AiChatResponse['doctors']>[number] }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const source = doctor.avatarUrl?.trim() || null
+  const initials = doctor.fullName.trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toUpperCase()
+  return <View className="mt-3 flex-row items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
+    <View className="h-20 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+      {source && source !== failedUrl ? <Image source={{ uri: resolveDoctorAvatarUrl(source) }} accessibilityLabel={`Ảnh bác sĩ ${doctor.fullName}`} className="h-full w-full" resizeMode="cover" onError={() => setFailedUrl(source)} /> : <Text className="text-lg font-semibold text-slate-500">{initials || 'BS'}</Text>}
+    </View>
+    <View className="min-w-0 flex-1">
+      <Text className="text-sm font-semibold leading-5 text-slate-900">{doctor.fullName}</Text>
+      <Text className="mt-1 text-xs leading-5 text-slate-600">{doctor.specialtyName}</Text>
+      <Text className="text-xs leading-5 text-slate-500">{doctor.branchName}</Text>
+      <Text className="mt-2 text-sm font-semibold text-slate-900">{formatCurrencyVi(doctor.consultationFee)}</Text>
+    </View>
+  </View>
+}
 
 export default function AiChatScreen() {
   const router = useRouter()
@@ -82,16 +100,13 @@ export default function AiChatScreen() {
         </TouchableOpacity>
       ))}
       {item.data?.doctors?.map(doctor => (
-        <View key={doctor.id} className="mt-2 rounded-lg border border-slate-100 p-2">
-          <Text className="font-bold text-slate-800">{doctor.fullName}</Text>
-          <Text className="text-xs text-slate-500">{doctor.specialtyName} · {doctor.branchName} · {formatCurrencyVi(doctor.consultationFee)}</Text>
-        </View>
+        <DoctorResultCard key={doctor.id} doctor={doctor} />
       ))}
     </View>
   )
 
   return (
-    <ScreenShell title="Trợ lý VitaCare">
+    <ScreenShell title="Trợ lý đặt lịch VitaCare">
       <KeyboardAvoidingView className="flex-1 px-4" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity onPress={reset} disabled={busy} className="self-end py-2"><Text className="text-xs text-primary-700">Cuộc trò chuyện mới</Text></TouchableOpacity>
         <FlatList ref={list} data={messages} renderItem={renderMessage} keyExtractor={(_, index) => String(index)}
@@ -114,7 +129,7 @@ export default function AiChatScreen() {
             placeholder="Bạn muốn tìm dịch vụ hoặc lịch khám nào?" className="max-h-24 flex-1 p-2 text-sm text-slate-800" />
           <TouchableOpacity accessibilityLabel="Gửi tin nhắn" disabled={busy || !input.trim()} onPress={() => { void send() }} className="p-2"><Ionicons name="send" size={22} color="#047857" /></TouchableOpacity>
         </View>
-        <Text className="mb-2 text-[10px] text-slate-500">AI hỗ trợ tìm kiếm và đặt lịch, không thay thế chẩn đoán của bác sĩ.</Text>
+        <Text className="mb-2 text-[10px] text-slate-500">Hỗ trợ tìm kiếm và đặt lịch. Không tư vấn triệu chứng hoặc chẩn đoán bệnh.</Text>
       </KeyboardAvoidingView>
     </ScreenShell>
   )

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { SelectModal } from '../../src/components/common/SelectModal'
 import {
   Alert,
   ActivityIndicator,
@@ -22,13 +24,17 @@ export default function BookingConfirmationScreen() {
 
   const client = useQueryClient()
   const userId = useAuthStore(state => state.user?.id)
+  const [cancelDialog, setCancelDialog] = useState(false)
+  const quote = useQuery({ queryKey: ['cancellation-quote', userId, id], queryFn: () => appointmentService.getCancellationQuote(id!), enabled: cancelDialog && Boolean(userId && id), staleTime: 0 })
   const { data: appointment, isLoading, refetch } = useQuery({
     queryKey: ['appointment', userId, id],
     queryFn: () => appointmentService.getAppointmentById(id!),
     enabled: Boolean(userId && id && id !== 'new'),
   })
 
-  const cancel = useMutation({ mutationFn: () => appointmentService.cancelAppointment(id!, 'Bệnh nhân yêu cầu hủy lịch'), onSuccess: async () => {
+  const cancel = useMutation({ mutationFn: (reason: string) => appointmentService.cancelAppointment(id!, reason, quote.data?.quoteKey), onSuccess: async (result) => {
+    setCancelDialog(false)
+    Alert.alert('Hủy lịch khám', result.message)
     await Promise.all([client.invalidateQueries({ queryKey: ['myAppointments'] }), client.invalidateQueries({ queryKey: ['appointment'] }), client.invalidateQueries({ queryKey: ['family-order'] })])
   }, onError: (error: Error) => Alert.alert('Không thể hủy lịch', error.message) })
   if (isLoading) return <ScreenShell title="Thông tin lịch khám"><ActivityIndicator color="#28a745" /></ScreenShell>
@@ -52,8 +58,8 @@ export default function BookingConfirmationScreen() {
   const appointmentCode = appointment.code || appointment.bookingCode || 'Chưa phát hành mã vé'
   const qrString = appointment.qrPayload
   const branchName = appointment?.branch?.name || appointment?.branch?.address || 'Chưa cập nhật cơ sở'
-  const roomName = appointment?.room?.name ? `Phòng ${appointment.room.name}` : null
-  const queueNum = appointment?.queueNumber
+  const roomName = appointment.bookingMethod?.code !== 'HEALTH_PACKAGE' && appointment?.room?.name ? `Phòng ${appointment.room.name}` : null
+  const queueNum = appointment.bookingMethod?.code === 'HEALTH_PACKAGE' ? null : appointment?.queueNumber
   const isOnline = Boolean(appointment?.isTelehealth || appointment?.bookingMethod?.code === 'ONLINE_CONSULTATION')
   const status = appointment?.status?.toUpperCase()
   const statusLabel = appointmentStatusTitle(status)
@@ -147,7 +153,7 @@ export default function BookingConfirmationScreen() {
               )}
             </View>
           </View>
-          {canCancelAppointment(appointment.status) && <TouchableOpacity disabled={cancel.isPending} onPress={() => Alert.alert('Hủy lịch khám', 'Bạn muốn hủy lịch khám này? Phí hoàn trả (nếu có) áp dụng theo chính sách phòng khám.', [{ text: 'Đóng', style: 'cancel' }, { text: 'Hủy lịch', style: 'destructive', onPress: () => cancel.mutate() }])} className="mb-5 rounded-lg border border-rose-200 bg-rose-50 p-3"><Text className="text-center font-semibold text-rose-700">{cancel.isPending ? 'Đang hủy...' : 'Hủy lịch khám'}</Text></TouchableOpacity>}
+          {canCancelAppointment(appointment.status) && <TouchableOpacity disabled={cancel.isPending} onPress={() => setCancelDialog(true)} className="mb-5 rounded-lg border border-rose-200 bg-rose-50 p-3"><Text className="text-center font-semibold text-rose-700">{cancel.isPending ? 'Đang hủy...' : 'Hủy lịch khám'}</Text></TouchableOpacity>}
         </ScrollView>
 
         {/* Cố định Bottom Bar với 2 nút có Icon trực quan */}
@@ -170,6 +176,12 @@ export default function BookingConfirmationScreen() {
             <Text className="text-xs font-bold text-white">Xem lịch hẹn</Text>
           </TouchableOpacity>
         </View>
+        <SelectModal visible={cancelDialog} onClose={() => { if (!cancel.isPending) setCancelDialog(false) }} title="Chọn lý do hủy lịch" loading={quote.isLoading || cancel.isPending}
+          subtitle={quote.data?.isPaid ? quote.data.refundAmount === 0 ? 'Không hoàn tiền: hủy dưới 2 giờ hoặc thiếu dữ liệu tính tiền.' : `Khoản hoàn ${quote.data.refundRate}%: ${Number(quote.data.refundAmount || 0).toLocaleString('vi-VN')} đ. Chưa chuyển tiền.` : 'Lịch chưa thanh toán, không phát sinh khoản hoàn.'}
+          emptyText={quote.isError ? 'Không tải được khoản hoàn. Đóng và mở lại để thử lại.' : 'Đang tải lý do hủy'}
+          options={(quote.data?.cancellationReasons || []).map(reason => ({ id: reason, title: reason }))}
+          onSelect={option => Alert.alert('Xác nhận hủy lịch', `Lý do: ${option.title}. Bạn muốn hủy lịch này?`, [{ text: 'Đóng', style: 'cancel' }, { text: 'Hủy lịch', style: 'destructive', onPress: () => cancel.mutate(String(option.id)) }])}
+        />
       </View>
     </ScreenShell>
   )

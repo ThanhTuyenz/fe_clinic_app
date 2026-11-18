@@ -66,6 +66,7 @@ export function usePackageBooking() {
   const { data: bookingSlots, isLoading: loadingSlots } = useQuery({
     queryKey: ['booking', 'slots', selectedBranchId, selectedPackage?.id, selectedDate],
     queryFn: () => bookingService.getBookingSlots({
+      bookingMethodCode: 'HEALTH_PACKAGE',
       branchId: selectedBranchId,
       servicePackageId: String(selectedPackage!.id),
       date: selectedDate || undefined,
@@ -224,6 +225,7 @@ export function usePackageBooking() {
     setBranchId(selectedBranchId)
     setHealthPackage(selectedPackage)
     useBookingStore.getState().setBookingMethod('HEALTH_PACKAGE')
+    useBookingStore.getState().setDoctor(null)
     setIsAfterHours(false)
     setDateTime(selectedDate, selectedSlot, slotId)
 

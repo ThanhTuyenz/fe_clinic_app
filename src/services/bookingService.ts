@@ -55,6 +55,7 @@ export interface BookingSlot {
   remainingSlots: number
   isFull: boolean
   representativeSlotId: string
+  receptionSlotId?: string
   doctors: BookingSlotDoctor[]
 }
 

@@ -58,6 +58,7 @@ export default function PackageBookingScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 }}
         >
+          <Text className="mb-4 text-sm leading-6 text-slate-600">Chọn giờ đến tiếp nhận. Nhân viên sẽ hướng dẫn và điều phối khi bạn đến; bạn không cần chọn bác sĩ, phòng hoặc số thứ tự.</Text>
           {/* 1. Cơ sở & Gói khám */}
           <View className="mb-7">
             <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3.5">

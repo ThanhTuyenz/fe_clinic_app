@@ -8,7 +8,8 @@ export interface CheckoutPayload {
   analyticsSessionId?: string
   bookingMethodCode: string
   patientProfileId: string
-  scheduleSlotId: string
+  scheduleSlotId?: string
+  receptionSlotId?: string
   servicePackageId?: string
   symptomsDescription?: string
   voucherCode?: string
@@ -16,6 +17,9 @@ export interface CheckoutPayload {
 
 export interface CheckoutResult {
   appointmentId: string
+  bookingOrderId: string
+  orderCode: string
+  groupType: 'SINGLE'
   invoiceId: string
   paymentId: string
   status: string
@@ -43,7 +47,7 @@ export const appointmentService = {
     if (!items.length || items.length > 5) throw new Error('Vui lòng chọn từ 1 đến 5 người khám.')
     if (new Set(items.map(item => item.patientProfileId)).size !== items.length) throw new Error('Mỗi người chỉ được chọn một lần.')
     for (const item of items) {
-      if (!isUuid(item.patientProfileId) || !isUuid(item.scheduleSlotId) || !isUuid(item.servicePackageId)) throw new Error('Vui lòng chọn đủ hồ sơ, dịch vụ và khung giờ hợp lệ cho từng người.')
+      if (!isUuid(item.patientProfileId) || !isUuid(item.bookingMethodCode === 'HEALTH_PACKAGE' ? item.receptionSlotId : item.scheduleSlotId) || !isUuid(item.servicePackageId)) throw new Error('Vui lòng chọn đủ hồ sơ, dịch vụ và khung giờ hợp lệ cho từng người.')
     }
     const res = await api.post('/api/v1/bookings/batch-checkout', { items, groupType: 'FAMILY', ...(voucherCode?.trim() ? { voucherCode: voucherCode.trim() } : {}) })
     const result = unwrapNestResponse<FamilyCheckoutResult>(res.data)
@@ -135,7 +139,7 @@ export const appointmentService = {
   },
 
   async checkout(payload: CheckoutPayload): Promise<CheckoutResult> {
-    if (!isUuid(payload.scheduleSlotId)) {
+    if (!isUuid(payload.bookingMethodCode === 'HEALTH_PACKAGE' ? payload.receptionSlotId : payload.scheduleSlotId)) {
       throw new Error('Khung giờ không hợp lệ. Vui lòng chọn lại giờ khám.')
     }
     if (!isUuid(payload.patientProfileId)) {
@@ -148,9 +152,13 @@ export const appointmentService = {
     return unwrapNestResponse<CheckoutResult>(res.data)
   },
 
-  async cancelAppointment(id: string | number, reason?: string): Promise<{ success: boolean; message: string }> {
+  async getCancellationQuote(id: string | number): Promise<{ isPaid: boolean; refundAmount: number | null; refundRate: number | null; quoteKey: string; cancellationReasons: string[] }> {
+    return unwrapNestResponse((await api.get(`/api/v1/appointments/${id}/cancellation-quote`)).data)
+  },
+
+  async cancelAppointment(id: string | number, reason: string, expectedRefundQuote?: string): Promise<{ success: boolean; message: string }> {
     const res = await api.post(`/api/v1/appointments/${id}/cancel`, {
-      reason: reason || 'Bệnh nhân bận việc đột xuất',
+      reason, expectedRefundQuote,
     })
     return unwrapNestResponse<{ success: boolean; message: string }>(res.data)
   },

@@ -24,7 +24,7 @@ export interface AiChatResponse {
   step: 'GREETING' | 'COLLECTING_INFO' | 'PROPOSED' | 'ERROR'
   proposal?: AiProposal | null
   proposedPackages?: Array<{ id: string; name: string; price: number }>
-  doctors?: Array<{ id: string; fullName: string; specialtyName: string; branchName: string; consultationFee: number }>
+  doctors?: Array<{ id: string; fullName: string; title?: string; avatarUrl?: string | null; specialtyName: string; branchName: string; consultationFee: number }>
 }
 
 export interface ChatMessage {

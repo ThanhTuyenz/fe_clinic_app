@@ -174,6 +174,7 @@ export default function PatientInfoScreen() {
           } else if (packageId) {
             const slots = await bookingService.getBookingSlots({
               servicePackageId: String(packageId),
+              bookingMethodCode: draft.bookingMethod,
               date: effectiveDate,
               branchId: draft.branchId,
             })

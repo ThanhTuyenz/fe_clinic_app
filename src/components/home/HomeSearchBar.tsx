@@ -59,7 +59,7 @@ export const HomeSearchBar: React.FC<HomeSearchBarProps> = ({
       <View className="flex-row items-center bg-slate-50 border border-slate-200/80 rounded-xl px-3.5" style={{ minHeight: 52 }}>
         <Ionicons name="search-outline" size={20} color="#64748b" style={{ marginRight: 10 }} />
         <TextInput
-          placeholder="Mô tả triệu chứng, tìm gói khám, bác sĩ..."
+          placeholder="Tìm gói khám, dịch vụ, bác sĩ hoặc cơ sở..."
           placeholderTextColor="#94a3b8"
           value={value}
           onChangeText={onChangeText}

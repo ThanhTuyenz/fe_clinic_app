@@ -94,8 +94,8 @@ export default function AppointmentsScreen() {
     const isOnline = Boolean(item.isTelehealth || item.bookingMethod?.code === 'ONLINE_CONSULTATION')
     const bookingCode = item.bookingCode || item.code || ''
     const patientName = (item as any).patient?.fullName || (item as any).patientProfile?.fullName || ''
-    const roomName = (item as any).room?.name ? `Phòng ${(item as any).room.name}` : ''
-    const queueNumber = item.queueNumber
+    const roomName = item.bookingMethod?.code !== 'HEALTH_PACKAGE' && (item as any).room?.name ? `Phòng ${(item as any).room.name}` : ''
+    const queueNumber = item.bookingMethod?.code === 'HEALTH_PACKAGE' ? null : item.queueNumber
     const totalAmount = item.totalAmount || (item as any).consultation_fee
     const canJoin = canJoinTelehealth(item)
 
