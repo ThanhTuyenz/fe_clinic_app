@@ -3,27 +3,67 @@
     "name": "VitaCare Clinic",
     "slug": "fe_clinic_app",
     "version": "1.0.0",
+    "scheme": "vitacare",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-notifications",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Cho phép VitaCare sử dụng camera để tư vấn video với bác sĩ.",
+          "microphonePermission": "Cho phép VitaCare sử dụng micro để tư vấn với bác sĩ."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép VitaCare sử dụng camera để quét CCCD và tư vấn video.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-image"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.vitacare.clinic",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "13056804-f3a8-4924-9d63-ae42f2185865"
+      }
+    },
+    "owner": "ntnghiajr"
   }
 }

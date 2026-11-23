@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Tắt viền và hiệu ứng hover/focus/active của trình duyệt web */
+input,
+textarea,
+select,
+input:hover,
+textarea:hover,
+select:hover,
+input:focus,
+textarea:focus,
+select:focus,
+input:active,
+textarea:active,
+select:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+

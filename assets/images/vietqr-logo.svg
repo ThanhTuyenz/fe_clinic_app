@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 115 34" width="115" height="34" fill="none">
+  <!-- VietQR Frame icon -->
+  <g transform="translate(1, 1)">
+    <!-- Top-left corner -->
+    <path d="M0 8V2a2 2 0 0 1 2-2h7v3.5H3.5V8H0z" fill="#005BAA"/>
+    <!-- Top-right corner -->
+    <path d="M23 0h7a2 2 0 0 1 2 2v6h-3.5V3.5H23V0z" fill="#EA1D25"/>
+    <!-- Bottom-left corner -->
+    <path d="M0 24v6a2 2 0 0 0 2 2h7v-3.5H3.5V24H0z" fill="#005BAA"/>
+    <!-- Bottom-right corner -->
+    <path d="M32 24v6a2 2 0 0 1-2 2h-7v-3.5h5.5V24H32z" fill="#EA1D25"/>
+    <!-- Inner QR squares -->
+    <rect x="5.5" y="5.5" width="7" height="7" rx="1.5" fill="#005BAA"/>
+    <rect x="19.5" y="5.5" width="7" height="7" rx="1.5" fill="#EA1D25"/>
+    <rect x="5.5" y="19.5" width="7" height="7" rx="1.5" fill="#005BAA"/>
+    <rect x="19.5" y="19.5" width="4.5" height="4.5" rx="1" fill="#EA1D25"/>
+  </g>
+  <!-- Viet text -->
+  <text x="38" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="900" fill="#005BAA" letter-spacing="-0.5">Viet</text>
+  <!-- QR text -->
+  <text x="80" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="900" fill="#EA1D25" letter-spacing="-0.5">QR</text>
+</svg>
