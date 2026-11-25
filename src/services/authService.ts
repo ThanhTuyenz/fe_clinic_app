@@ -1,4 +1,5 @@
 import { Platform } from 'react-native'
+import { isAxiosError } from 'axios'
 import { api, unwrapNestResponse } from './api'
 import { resolveApiBaseUrl } from '../constants/config'
 import { User } from '../types/user'
@@ -22,20 +23,63 @@ export interface VerifyOtpPayload {
   otp: string
 }
 
+/**
+ * Mật khẩu phải có từ 6 đến 24 ký tự.
+ */
+function validatePassword(
+  password: string,
+  message = 'Mật khẩu phải có từ 6 đến 24 ký tự.'
+): void {
+  if (typeof password !== 'string' || password.length < 6 || password.length > 24) {
+    throw new Error(message)
+  }
+}
+
+const LOGIN_ERROR_MESSAGE = 'Email hoặc mật khẩu không chính xác'
+
 export const authService = {
   /**
    * Đăng nhập bằng Email hoặc Số điện thoại
    */
   async login(payload: LoginPayload) {
-    const res = await api.post('/api/v1/auth/login', payload)
-    const data = unwrapNestResponse<any>(res.data)
-    const result = data || res.data
-    return {
-      token: (result.token || result.accessToken) as string,
-      refreshToken: result.refreshToken as string | undefined,
-      tokenExpires: result.tokenExpires as number | undefined,
-      user: result.user as User,
-      message: result.message as string | undefined,
+    validatePassword(payload.password, LOGIN_ERROR_MESSAGE)
+
+    try {
+      const res = await api.post('/api/v1/auth/login', payload)
+      const data = unwrapNestResponse<any>(res.data)
+      const result = data || res.data
+      return {
+        token: (result.token || result.accessToken) as string,
+        refreshToken: result.refreshToken as string | undefined,
+        tokenExpires: result.tokenExpires as number | undefined,
+        user: result.user as User,
+        message: result.message as string | undefined,
+      }
+    } catch (error: unknown) {
+      if (isAxiosError(error) && error.response) {
+        const { status, data } = error.response
+        let invalidCredentials = status === 401
+
+        // Một số backend trả lỗi thông tin đăng nhập bằng mã 400 hoặc 422.
+        // Chỉ đổi thông báo khi có mã lỗi xác định email/mật khẩu không đúng.
+        if (status === 400 || status === 422) {
+          const details = unwrapNestResponse<any>(data) || data
+          invalidCredentials =
+            details?.code === 'INVALID_CREDENTIALS' ||
+            details?.errors?.email === 'notFound' ||
+            details?.errors?.password === 'incorrectPassword'
+        }
+
+        if (invalidCredentials) {
+          error.message = LOGIN_ERROR_MESSAGE
+          error.response.data = {
+            ...(data && typeof data === 'object' && !Array.isArray(data) ? data : {}),
+            message: LOGIN_ERROR_MESSAGE,
+          }
+        }
+      }
+
+      throw error
     }
   },
 
@@ -45,6 +89,8 @@ export const authService = {
    * - Nếu đăng ký bằng Email: Backend gửi mã OTP qua Gmail
    */
   async register(payload: RegisterPayload) {
+    validatePassword(payload.password)
+
     const res = await api.post('/api/v1/auth/register', payload)
     return res.data
   },
@@ -88,6 +134,8 @@ export const authService = {
    * Đặt lại mật khẩu với hash/token
    */
   async resetPassword(payload: { hash: string; password: string }) {
+    validatePassword(payload.password)
+
     const res = await api.post('/api/v1/auth/reset-password', payload)
     return res.data
   },
@@ -120,7 +168,7 @@ export const authService = {
    */
   async loginWithGoogle(step: GoogleLoginStep = createGoogleLoginStep()) {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const baseUrl = resolveApiBaseUrl().replace(/\/$/, '')
+      const baseUrl = resolveApiBaseUrl().replace(/\/+$/, '')
       const authUrl = `${baseUrl}/api/v1/auth/google?state=${encodeURIComponent(window.location.origin)}`
       window.location.href = authUrl
       return null
@@ -178,6 +226,10 @@ export const authService = {
     fullName?: string
     otp: string
   }) {
+    if (payload.password !== undefined) {
+      validatePassword(payload.password)
+    }
+
     const res = await api.post('/api/v1/auth/confirm-link-account', payload)
     const data = unwrapNestResponse<any>(res.data)
     const result = data || res.data

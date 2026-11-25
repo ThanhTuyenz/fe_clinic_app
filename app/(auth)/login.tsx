@@ -146,7 +146,7 @@ export default function LoginScreen() {
                 name="identifier"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
-                    label="Email hoặc Số điện thoại"
+                    label="Email"
                     placeholder="name@gmail.com"
                     keyboardType="email-address"
                     leftIcon={
