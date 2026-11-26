@@ -65,7 +65,7 @@ export const PackageCard: React.FC<PackageCardProps> = ({
   return (
     <View
       className="w-64 bg-white rounded-lg border border-slate-200/90 shadow-2xs overflow-hidden mr-3.5 justify-between"
-      style={{ width: 256 }}
+      style={{ width: 180 }}
     >
       {/* Ảnh bìa + Floating Badge nếu có */}
       <TouchableOpacity activeOpacity={0.9} onPress={handleDetail} className="h-32 w-full bg-slate-100 relative">
