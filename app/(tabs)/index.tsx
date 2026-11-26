@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
-import { RefreshControl, ScrollView } from 'react-native'
+import { Alert, RefreshControl, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../src/store/useAuthStore'
@@ -23,7 +23,6 @@ import { BookingMethodsModal } from '../../src/components/booking/BookingMethods
 import {
   HomeHeader,
   HomeSearchBar,
-  HeroBanner,
   RecommendationSection,
   SpecialtiesGridSection,
   ExplorePackagesSection,
@@ -32,6 +31,7 @@ import {
   ClinicStatsSection,
   MedicalNewsSection,
 } from '../../src/components/home'
+import { HomeQuickActions } from '../../src/components/home/HomeQuickActions'
 
 export default function HomeScreen() {
   const router = useRouter()
@@ -166,7 +166,13 @@ export default function HomeScreen() {
         />
 
 
-        <HeroBanner onStartBooking={openBooking} />
+        <HomeQuickActions
+          onBookAtFacility={openBooking}
+          onVideoConsultation={() => Alert.alert('Gọi video với bác sĩ', 'Chưa kết nối màn hình.')}
+          onHealthPackages={() => Alert.alert('Gói khám sức khỏe', 'Chưa kết nối màn hình.')}
+          onAfterHoursBooking={() => Alert.alert('Đặt khám ngoài giờ', 'Chưa kết nối màn hình.')}
+          onBookingHistory={() => Alert.alert('Lịch sử đặt khám', 'Chưa kết nối màn hình.')}
+        />
 
         {/* Gợi ý theo hồ sơ và quan tâm gần đây dùng hai nguồn độc lập */}
         {isAuthenticated && <RecommendationSection
